@@ -47,10 +47,7 @@ export class EmissionFactorRepository extends SupabaseRepository<EmissionFactorE
   }
 
   async findBySetId(setId: string): Promise<readonly EmissionFactor[]> {
-    const { data, error } = await this.client
-      .from(this.tableName)
-      .select('*')
-      .eq('set_id', setId);
+    const { data, error } = await this.client.from(this.tableName).select('*').eq('set_id', setId);
     if (error ?? !data) return [];
     return (data as Record<string, unknown>[]).map((row) => this.toEntity(row).factor);
   }

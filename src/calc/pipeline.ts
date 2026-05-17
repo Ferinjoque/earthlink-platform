@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * The pure FP pipeline — implemented fully in feat/phase-2-calc-engine.
  * Stubs here so the module graph resolves and CI passes on Phase 0.
@@ -22,9 +23,6 @@ export function aggregate(_results: readonly EmissionResult[]): EvaluationTotals
   throw new Error('Not implemented — Phase 2');
 }
 
-export function score(
-  _totals: EvaluationTotals,
-  _history: readonly EvaluationTotals[],
-): RiskScore {
+export function score(_totals: EvaluationTotals, _history: readonly EvaluationTotals[]): RiskScore {
   throw new Error('Not implemented — Phase 2');
 }
