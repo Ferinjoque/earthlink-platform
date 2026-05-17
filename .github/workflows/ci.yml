@@ -17,31 +17,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm typecheck
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
 
   test:
     name: Unit Tests (coverage gate)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm test:coverage
+          cache: npm
+      - run: npm ci
+      - run: npm run test:coverage
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
@@ -54,15 +48,15 @@ jobs:
     needs: [lint, test]
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-key
 
   e2e:
     name: E2E Tests
@@ -70,20 +64,20 @@ jobs:
     needs: [build]
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm dlx playwright install --with-deps chromium firefox webkit
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium firefox webkit
       - name: Build and run server
-        run: pnpm build && pnpm start &
+        run: npm run build && npm run start &
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-key
       - name: Wait for server
         run: npx wait-on http://localhost:3000 --timeout 60000
-      - run: PLAYWRIGHT_BASE_URL=http://localhost:3000 pnpm test:e2e
+      - run: PLAYWRIGHT_BASE_URL=http://localhost:3000 npm run test:e2e
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v4
