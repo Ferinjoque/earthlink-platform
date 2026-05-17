@@ -48,8 +48,8 @@ export class StationaryCombustionSource extends Scope1Source {
   }
 
   allowedUnits(): readonly Unit[] {
-    if (this.fuel === 'natural_gas') return ['m3', 'GJ', 'therms'];
-    return ['liters', 'gallons_us', 'gallons_uk', 'kg'];
+    if (this.fuel === 'natural_gas') return ['m3_ng', 'ft3_ng', 'kWh', 'GJ', 'therms', 'MMBtu'];
+    return ['L', 'gallon', 'imp_gallon'];
   }
 
   requiredEvidence(): string {
@@ -70,7 +70,7 @@ export class MobileCombustionSource extends Scope1Source {
   }
 
   allowedUnits(): readonly Unit[] {
-    return ['liters', 'gallons_us', 'gallons_uk'];
+    return ['L', 'gallon', 'imp_gallon'];
   }
 
   requiredEvidence(): string {
@@ -136,7 +136,7 @@ export class PurchasedSteamSource extends Scope2Source {
   readonly activityKind: ActivityKind = { kind: 'purchased_steam' };
 
   allowedUnits(): readonly Unit[] {
-    return ['GJ', 'kWh', 'MWh', 'tonnes'];
+    return ['GJ', 'kWh', 'MWh'];
   }
 
   requiredEvidence(): string {

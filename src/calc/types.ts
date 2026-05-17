@@ -3,9 +3,11 @@
  * All types are readonly — mutation is never allowed inside calc/.
  */
 
-// ── Activity kinds (discriminated union, exhaustive) ─────────────────────────
+// ── Grid regions (must match grid_regions.code in DB) ────────────────────────
 
-export type GridRegion = 'PERU' | 'LATAM_AVG' | 'WORLD_AVG' | 'US_AVG' | 'EU_AVG';
+export type GridRegion = 'SEIN_PERU' | 'LATAM_AVG' | 'US_AVERAGE' | 'EU_AVERAGE';
+
+// ── Activity kinds (discriminated union, exhaustive) ─────────────────────────
 
 export type ActivityKind =
   | { readonly kind: 'stationary_combustion'; readonly fuel: 'natural_gas' | 'diesel' | 'lpg' }
@@ -16,25 +18,36 @@ export type ActivityKind =
 
 export type GhgScope = 'scope1' | 'scope2';
 
-// ── Units ─────────────────────────────────────────────────────────────────────
+// ── Units (accepted input + canonical normalized units) ───────────────────────
 
 export type Unit =
+  // Energy — standard for gas & electricity
   | 'kWh'
   | 'MWh'
   | 'GJ'
-  | 'liters'
-  | 'gallons_us'
-  | 'gallons_uk'
-  | 'm3'
+  | 'MJ'
+  | 'kJ'
+  | 'therms'
+  | 'MMBtu'
+  | 'MBtu'
+  | 'BTU'
+  // Natural gas volume
+  | 'm3_ng'
+  | 'ft3_ng'
+  // Liquid fuels — standard for diesel, LPG, gasoline
+  | 'L'
+  | 'gallon'
+  | 'imp_gallon'
+  // Mass — standard for refrigerants
   | 'kg'
-  | 'tonnes'
-  | 'therms';
+  | 'tonne'
+  | 'lb';
 
 export const STANDARD_UNITS: Record<ActivityKind['kind'], Unit> = {
-  stationary_combustion: 'liters',
-  mobile_combustion: 'liters',
+  stationary_combustion: 'L',
+  mobile_combustion: 'L',
   purchased_electricity: 'kWh',
-  purchased_steam: 'GJ',
+  purchased_steam: 'kWh',
   fugitive: 'kg',
 };
 
@@ -61,6 +74,8 @@ export type EmissionFactor = Readonly<{
 }>;
 
 export type FactorTable = ReadonlyMap<string, EmissionFactor>;
+
+export type ConversionTable = ReadonlyMap<string, number>;
 
 export type EmissionResult = Readonly<{
   activityRecordId: string;
