@@ -88,8 +88,8 @@ export default function LandingPage() {
           margin: 0,
         }}
       >
-        Every tCO₂e traced back to its raw input, emission factor version, and
-        calculation engine version. Built on GHG Protocol. Powered by immutable audit logs.
+        Every tCO₂e traced back to its raw input, emission factor version, and calculation engine
+        version. Built on GHG Protocol. Powered by immutable audit logs.
       </p>
 
       {/* Architecture callout */}
