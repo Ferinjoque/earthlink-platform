@@ -1,0 +1,71 @@
+import { SupabaseRepository } from './SupabaseRepository';
+import { AnomalyFlag } from '../domain/AnomalyFlag';
+import type { AnomalyDetector, AnomalySeverity } from '../types/database';
+
+export class AnomalyFlagRepository extends SupabaseRepository<AnomalyFlag> {
+  protected readonly tableName = 'anomaly_flags';
+
+  async findByActivityEntryId(entryId: string): Promise<readonly AnomalyFlag[]> {
+    const { data, error } = await this.client
+      .from(this.tableName)
+      .select('*')
+      .eq('activity_entry_id', entryId);
+    if (error ?? !data) return [];
+    return (data as Record<string, unknown>[]).map((row) => this.toEntity(row));
+  }
+
+  async findUnresolved(): Promise<readonly AnomalyFlag[]> {
+    const { data, error } = await this.client
+      .from(this.tableName)
+      .select('*')
+      .eq('is_resolved', false)
+      .order('flagged_at', { ascending: false });
+    if (error ?? !data) return [];
+    return (data as Record<string, unknown>[]).map((row) => this.toEntity(row));
+  }
+
+  async resolve(id: string, resolvedBy: string): Promise<AnomalyFlag> {
+    const { data, error } = await this.client
+      .from(this.tableName)
+      .update({ is_resolved: true, resolved_by: resolvedBy, resolved_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error ?? !data)
+      throw new Error(`Failed to resolve anomaly flag: ${error?.message ?? 'no data'}`);
+    return this.toEntity(data as Record<string, unknown>);
+  }
+
+  protected toEntity(row: Record<string, unknown>): AnomalyFlag {
+    return new AnomalyFlag({
+      id: row['id'] as string,
+      activityEntryId: row['activity_entry_id'] as string,
+      detector: row['detector'] as AnomalyDetector,
+      severity: row['severity'] as AnomalySeverity,
+      zScore: (row['z_score'] as number | null) ?? null,
+      thresholdUsed: (row['threshold_used'] as number | null) ?? null,
+      message: row['message'] as string,
+      isResolved: row['is_resolved'] as boolean,
+      resolvedBy: (row['resolved_by'] as string | null) ?? null,
+      resolvedAt: row['resolved_at'] ? new Date(row['resolved_at'] as string) : null,
+      flaggedAt: new Date(row['flagged_at'] as string),
+      createdAt: new Date(row['flagged_at'] as string),
+    });
+  }
+
+  protected toRow(entity: AnomalyFlag): Record<string, unknown> {
+    return {
+      id: entity.id,
+      activity_entry_id: entity.activityEntryId,
+      detector: entity.detector,
+      severity: entity.severity,
+      z_score: entity.zScore,
+      threshold_used: entity.thresholdUsed,
+      message: entity.message,
+      is_resolved: entity.isResolved,
+      resolved_by: entity.resolvedBy,
+      resolved_at: entity.resolvedAt?.toISOString() ?? null,
+      flagged_at: entity.flaggedAt.toISOString(),
+    };
+  }
+}
