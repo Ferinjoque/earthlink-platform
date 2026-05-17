@@ -15,6 +15,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
       include: [
+        'src/calc/pipeline.ts',
         'src/domain/**/*.ts',
         'src/repos/Repository.ts',
         'src/repos/InMemoryRepository.ts',
@@ -24,8 +25,6 @@ export default defineConfig({
         'src/calc/types.ts',
         'src/calc/version.ts',
         'src/calc/index.ts',
-        // Stubs — implemented in later phases
-        'src/calc/pipeline.ts',
         // Infrastructure — integration-tested, not unit-tested
         'src/repos/Supabase*.ts',
         'src/repos/*Repository.ts',
@@ -36,10 +35,10 @@ export default defineConfig({
         '**/*.spec.ts',
       ],
       thresholds: {
-        lines: 80,
-        functions: 80,
-        branches: 70,
-        statements: 80,
+        lines: 85,
+        functions: 85,
+        branches: 75,
+        statements: 85,
       },
     },
   },
