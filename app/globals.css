@@ -1,6 +1,6 @@
-@import "tailwindcss";
-@import "../src/styles/tokens.css";
-@import "../src/styles/typography.css";
+@import 'tailwindcss';
+@import '../src/styles/tokens.css';
+@import '../src/styles/typography.css';
 
 @layer base {
   html {
