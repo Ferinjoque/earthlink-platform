@@ -1,8 +1,7 @@
-/** Stub — implemented in feat/phase-3-domain-repos */
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseRepository } from './SupabaseRepository';
 import { Entity } from '../domain/Entity';
-import type { EmissionFactor } from '../calc/types';
+import type { EmissionFactor, FactorTable, Unit } from '../calc/types';
 
 class EmissionFactorEntity extends Entity {
   constructor(
@@ -23,12 +22,12 @@ export class EmissionFactorRepository extends SupabaseRepository<EmissionFactorE
   protected toEntity(row: Record<string, unknown>): EmissionFactorEntity {
     const factor: EmissionFactor = {
       id: row['id'] as string,
-      setId: row['set_id'] as string,
-      setVersion: row['set_version'] as string,
-      activityKey: row['activity_key'] as string,
-      region: row['region'] as string,
-      factorKgCo2ePerUnit: Number(row['factor_kg_co2e_per_unit']),
-      standardUnit: row['standard_unit'] as EmissionFactor['standardUnit'],
+      setId: (row['set_id'] as string | null) ?? (row['source_db'] as string),
+      setVersion: (row['set_version'] as string | null) ?? '1',
+      activityKey: (row['activity_key'] as string | null) ?? '',
+      region: (row['grid_region_id'] as string | null) ?? 'GLOBAL',
+      factorKgCo2ePerUnit: Number(row['co2e_per_unit']),
+      standardUnit: row['unit'] as Unit,
     };
     return new EmissionFactorEntity(factor, new Date(row['created_at'] as string));
   }
@@ -36,19 +35,30 @@ export class EmissionFactorRepository extends SupabaseRepository<EmissionFactorE
   protected toRow(entity: EmissionFactorEntity): Record<string, unknown> {
     return {
       id: entity.factor.id,
-      set_id: entity.factor.setId,
-      set_version: entity.factor.setVersion,
-      activity_key: entity.factor.activityKey,
-      region: entity.factor.region,
-      factor_kg_co2e_per_unit: entity.factor.factorKgCo2ePerUnit,
-      standard_unit: entity.factor.standardUnit,
+      co2e_per_unit: entity.factor.factorKgCo2ePerUnit,
+      unit: entity.factor.standardUnit,
       created_at: entity.createdAt.toISOString(),
     };
   }
 
-  async findBySetId(setId: string): Promise<readonly EmissionFactor[]> {
-    const { data, error } = await this.client.from(this.tableName).select('*').eq('set_id', setId);
-    if (error ?? !data) return [];
-    return (data as Record<string, unknown>[]).map((row) => this.toEntity(row).factor);
+  async buildFactorTable(): Promise<FactorTable> {
+    const entities = await this.findAll();
+    const map = new Map<string, EmissionFactor>();
+    for (const entity of entities as EmissionFactorEntity[]) {
+      if (entity.factor.activityKey) {
+        map.set(entity.factor.activityKey, entity.factor);
+      }
+    }
+    return map;
+  }
+
+  async findByActivityKey(activityKey: string): Promise<EmissionFactor | null> {
+    const { data, error } = await this.client
+      .from(this.tableName)
+      .select('*')
+      .eq('activity_key', activityKey)
+      .maybeSingle();
+    if (error ?? !data) return null;
+    return this.toEntity(data as Record<string, unknown>).factor;
   }
 }
