@@ -1,52 +1,46 @@
 @import "tailwindcss";
+@import "../src/styles/tokens.css";
+@import "../src/styles/typography.css";
 
 @layer base {
+  html {
+    font-family: var(--font-sans);
+    color: var(--color-ink-1);
+    background-color: var(--color-surface-0);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 
-    /* Transiciones suaves */
-    * {
-        @apply transition-colors duration-200;
-    }
+  body {
+    line-height: var(--leading-normal);
+  }
 
-    /* Scrollbar personalizada */
-    ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-    }
+  ::selection {
+    background-color: color-mix(in oklch, var(--color-accent) 20%, transparent);
+    color: var(--color-ink-1);
+  }
 
-    ::-webkit-scrollbar-track {
-        @apply bg-gray-100;
-    }
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
 
-    ::-webkit-scrollbar-thumb {
-        @apply bg-green-600 rounded-full;
-    }
+  ::-webkit-scrollbar-track {
+    background: var(--color-surface-1);
+  }
 
-    ::-webkit-scrollbar-thumb:hover {
-        @apply bg-green-700;
-    }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: var(--radius-pill);
+  }
 
-    /* Selección de texto */
-    ::selection {
-        @apply bg-green-200 text-green-900;
-    }
-}
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-ink-3);
+  }
 
-@layer components {
-
-    /* Clases personalizadas */
-    .container-custom {
-        @apply container mx-auto px-4 sm:px-6 lg:px-8;
-    }
-
-    .card {
-        @apply bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300;
-    }
-
-    .btn-primary {
-        @apply bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors;
-    }
-
-    .btn-secondary {
-        @apply bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors;
-    }
+  /* Tabular numbers for data displays */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+    font-family: var(--font-mono);
+  }
 }
