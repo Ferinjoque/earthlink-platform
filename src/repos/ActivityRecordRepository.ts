@@ -1,4 +1,2 @@
-/** Stub — implemented in feat/phase-3-domain-repos */
-export class ActivityRecordRepository {
-  // Full implementation in feat/phase-3-domain-repos
-}
+// Kept for backward compatibility — use ActivityEntryRepository directly.
+export { ActivityEntryRepository as ActivityRecordRepository } from './ActivityEntryRepository';

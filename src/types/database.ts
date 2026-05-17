@@ -101,6 +101,10 @@ export type Database = {
           valid_from: string;
           valid_to: string | null;
           created_at: string;
+          // Derived by trigger (migration 006)
+          activity_key: string | null;
+          set_id: string | null;
+          set_version: string | null;
         };
         Insert: {
           id?: string;
@@ -115,6 +119,9 @@ export type Database = {
           valid_from: string;
           valid_to?: string | null;
           created_at?: string;
+          activity_key?: string | null;
+          set_id?: string | null;
+          set_version?: string | null;
         };
         Update: {
           id?: string;
@@ -129,6 +136,9 @@ export type Database = {
           valid_from?: string;
           valid_to?: string | null;
           created_at?: string;
+          activity_key?: string | null;
+          set_id?: string | null;
+          set_version?: string | null;
         };
       };
 
