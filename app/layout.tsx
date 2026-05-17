@@ -1,32 +1,27 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import Header from '@/src/components/layout/Header';
-import Footer from '@/src/components/layout/Footer';
-
-const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-    title: 'ESG Supplier Auditor - Sistema de Evaluación de Sostenibilidad',
-    description: 'Automatización de evaluación ambiental para proveedores. Calcula huella de carbono e hídrica en tiempo real.',
-    keywords: 'ESG, sostenibilidad, huella de carbono, evaluación proveedores, medio ambiente, POO',
-    authors: [{ name: 'ESG Auditor Team' }],
+  title: {
+    default: 'EarthLink — Carbon Audit Platform',
+    template: '%s · EarthLink',
+  },
+  description:
+    'Automated GHG accounting for Scope 1 & 2 emissions. Turn spreadsheet chaos into an auditable, immutable carbon ledger.',
+  keywords: ['ESG', 'GHG', 'carbon accounting', 'Scope 1', 'Scope 2', 'sustainability audit'],
+  authors: [{ name: 'EarthLink Engineering' }],
+  robots: { index: false, follow: false }, // keep private until launch
 };
 
-export default function RootLayout({
-    children,
-}: {
-    children: React.ReactNode;
-}) {
-    return (
-        <html lang="es">
-            <body className={`${inter.className} flex flex-col min-h-screen`}>
-                <Header />
-                <main className="flex-grow">
-                    {children}
-                </main>
-                <Footer />
-            </body>
-        </html>
-    );
+export const viewport: Viewport = {
+  themeColor: '#0e1628',
+  colorScheme: 'light dark',
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body>{children}</body>
+    </html>
+  );
 }
