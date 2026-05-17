@@ -83,7 +83,7 @@ export type EvaluationTotals = Readonly<{
 }>;
 
 export type RiskScore = Readonly<{
-  score: number;        // 0–100
+  score: number; // 0–100
   level: 'low' | 'medium' | 'high' | 'critical';
   anomalyCount: number;
   trend: 'up' | 'down' | 'stable';

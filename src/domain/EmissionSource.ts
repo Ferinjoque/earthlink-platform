@@ -8,9 +8,7 @@
  */
 import type { Unit, GhgScope, ActivityKind, GridRegion } from '../calc/types';
 
-export type ValidationResult =
-  | { valid: true }
-  | { valid: false; reason: string };
+export type ValidationResult = { valid: true } | { valid: false; reason: string };
 
 // ── Abstract base ─────────────────────────────────────────────────────────────
 
