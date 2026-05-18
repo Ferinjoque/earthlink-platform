@@ -81,31 +81,46 @@ export function ActivityForm({ periods }: ActivityFormProps) {
       action={formAction}
       style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}
     >
+      <style>{`@keyframes ringSpin { to { transform: rotate(360deg); } }`}</style>
+
       {state?.error && (
         <div
           style={{
-            padding: 'var(--space-3)',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 'var(--space-3)',
+            padding: 'var(--space-4)',
             background: 'var(--color-signal-hi-bg)',
-            color: 'var(--color-signal-hi)',
+            border: '1px solid var(--color-signal-hi)',
             borderRadius: 'var(--radius-md)',
             fontSize: 'var(--text-sm)',
           }}
         >
-          {state.error}
+          <span style={{ fontSize: '15px', lineHeight: 1, flexShrink: 0, color: 'var(--color-signal-hi)' }}>✗</span>
+          <span style={{ color: 'var(--color-ink-1)' }}>{state.error}</span>
         </div>
       )}
 
       {state?.success && (
         <div
           style={{
-            padding: 'var(--space-3)',
-            background: 'color-mix(in oklch, var(--color-accent) 12%, transparent)',
-            color: 'var(--color-accent)',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 'var(--space-3)',
+            padding: 'var(--space-4)',
+            background: 'var(--color-signal-ok-bg)',
+            border: '1px solid var(--color-signal-ok)',
             borderRadius: 'var(--radius-md)',
             fontSize: 'var(--text-sm)',
           }}
         >
-          Registro enviado exitosamente.
+          <span style={{ fontSize: '15px', lineHeight: 1, flexShrink: 0, color: 'var(--color-signal-ok)' }}>✓</span>
+          <div>
+            <strong style={{ color: 'var(--color-signal-ok)', display: 'block', marginBottom: '2px' }}>
+              Registro enviado
+            </strong>
+            <span style={{ color: 'var(--color-ink-2)' }}>El dato fue registrado correctamente.</span>
+          </div>
         </div>
       )}
 
@@ -121,7 +136,7 @@ export function ActivityForm({ periods }: ActivityFormProps) {
           id="af-period"
           name="reporting_period_id"
           required
-          style={estiloSelect}
+          style={estiloSelect(!!errCampo('reporting_period_id'))}
           disabled={periods.length === 0}
         >
           {periods.length === 0 ? (
@@ -149,7 +164,7 @@ export function ActivityForm({ periods }: ActivityFormProps) {
           id="af-source"
           name="source_type"
           required
-          style={estiloSelect}
+          style={estiloSelect()}
           value={sourceType}
           onChange={(e) => setSourceType(e.target.value as EmissionSourceType)}
         >
@@ -170,7 +185,7 @@ export function ActivityForm({ periods }: ActivityFormProps) {
           >
             {labelSecundario}
           </label>
-          <select id="af-secondary" name="secondary" required style={estiloSelect}>
+          <select id="af-secondary" name="secondary" required style={estiloSelect(!!errCampo('secondary'))}>
             {opcionesSecundarias.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
@@ -200,7 +215,7 @@ export function ActivityForm({ periods }: ActivityFormProps) {
             min="0"
             required
             placeholder="0.00"
-            style={estiloInput}
+            style={estiloInput(!!errCampo('raw_quantity'))}
           />
           {errCampo('raw_quantity') && <ErrorCampo msg={errCampo('raw_quantity')!} />}
         </div>
@@ -212,7 +227,7 @@ export function ActivityForm({ periods }: ActivityFormProps) {
           >
             Unidad
           </label>
-          <select id="af-unit" name="raw_unit" required style={estiloSelect}>
+          <select id="af-unit" name="raw_unit" required style={estiloSelect(!!errCampo('raw_unit'))}>
             {opcionesUnidad.map((u) => (
               <option key={u} value={u}>
                 {u}
@@ -236,7 +251,7 @@ export function ActivityForm({ periods }: ActivityFormProps) {
           name="notes"
           rows={2}
           placeholder="Descripción de la fuente, ID de medidor, referencia de factura…"
-          style={{ ...estiloInput, resize: 'vertical', fontFamily: 'inherit' }}
+          style={{ ...estiloInput(), resize: 'vertical', fontFamily: 'inherit' }}
         />
       </div>
 
@@ -245,44 +260,65 @@ export function ActivityForm({ periods }: ActivityFormProps) {
         disabled={isPending || periods.length === 0}
         style={{
           padding: 'var(--space-2) var(--space-4)',
-          background: isPending ? 'var(--color-ink-3)' : 'var(--color-accent)',
+          background: isPending || periods.length === 0 ? 'var(--color-ink-3)' : 'var(--color-accent)',
           color: '#fff',
           border: 'none',
           borderRadius: 'var(--radius-md)',
           fontSize: 'var(--text-sm)',
           fontWeight: 600,
-          cursor: isPending ? 'not-allowed' : 'pointer',
+          cursor: isPending || periods.length === 0 ? 'not-allowed' : 'pointer',
           alignSelf: 'flex-start',
           transition: 'opacity 150ms',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 'var(--space-2)',
         }}
       >
-        {isPending ? 'Enviando…' : 'Enviar registro'}
+        {isPending ? (
+          <>
+            <span
+              style={{
+                width: '12px', height: '12px',
+                border: '2px solid rgba(255,255,255,0.3)',
+                borderTopColor: 'white',
+                borderRadius: '50%',
+                display: 'inline-block',
+                animation: 'ringSpin 0.7s linear infinite',
+              }}
+            />
+            Enviando…
+          </>
+        ) : 'Enviar registro'}
       </button>
     </form>
   );
 }
 
-const estiloInput: React.CSSProperties = {
-  padding: 'var(--space-2) var(--space-3)',
-  background: 'var(--color-surface-2)',
-  border: '1px solid var(--color-border)',
-  borderRadius: 'var(--radius-md)',
-  fontSize: 'var(--text-sm)',
-  color: 'var(--color-ink-1)',
-  outline: 'none',
-  width: '100%',
-  boxSizing: 'border-box',
-};
+function estiloInput(hasError = false): React.CSSProperties {
+  return {
+    padding: 'var(--space-2) var(--space-3)',
+    background: 'var(--color-surface-2)',
+    border: `1px solid ${hasError ? 'var(--color-signal-hi)' : 'var(--color-border)'}`,
+    borderRadius: 'var(--radius-md)',
+    fontSize: 'var(--text-sm)',
+    color: 'var(--color-ink-1)',
+    outline: 'none',
+    width: '100%',
+    boxSizing: 'border-box',
+  };
+}
 
-const estiloSelect: React.CSSProperties = {
-  ...estiloInput,
-  appearance: 'none',
-  backgroundImage:
-    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")",
-  backgroundRepeat: 'no-repeat',
-  backgroundPosition: 'right 10px center',
-  paddingRight: '28px',
-};
+function estiloSelect(hasError = false): React.CSSProperties {
+  return {
+    ...estiloInput(hasError),
+    appearance: 'none',
+    backgroundImage:
+      "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")",
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'right 10px center',
+    paddingRight: '28px',
+  };
+}
 
 function ErrorCampo({ msg }: { msg: string }) {
   return <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-signal-hi)' }}>{msg}</span>;

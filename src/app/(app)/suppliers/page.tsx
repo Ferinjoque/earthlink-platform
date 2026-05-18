@@ -77,6 +77,8 @@ export default async function ProveedoresPage() {
           </p>
         </div>
 
+        <style>{`.supplier-row:hover { background: var(--color-surface-2) !important; }`}</style>
+
         {suppliersData.length === 0 ? (
           <p
             style={{
@@ -128,14 +130,8 @@ export default async function ProveedoresPage() {
                   return (
                     <tr
                       key={s.id}
+                      className="supplier-row"
                       style={{ borderBottom: '1px solid var(--color-border)' }}
-                      onMouseEnter={(e) =>
-                        ((e.currentTarget as HTMLTableRowElement).style.background =
-                          'var(--color-surface-2)')
-                      }
-                      onMouseLeave={(e) =>
-                        ((e.currentTarget as HTMLTableRowElement).style.background = 'transparent')
-                      }
                     >
                       <td
                         style={{

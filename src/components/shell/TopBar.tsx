@@ -11,6 +11,7 @@ export function TopBar({ title, email, section }: TopBarProps) {
     <header
       style={{
         height: 'var(--topbar-h)',
+        minHeight: 'var(--topbar-h)',
         borderBottom: '1px solid var(--color-border)',
         background: 'color-mix(in oklch, var(--color-surface-0) 85%, transparent)',
         backdropFilter: 'blur(12px)',
@@ -22,6 +23,8 @@ export function TopBar({ title, email, section }: TopBarProps) {
         position: 'sticky',
         top: 0,
         zIndex: 'var(--z-raised)',
+        overflow: 'hidden',
+        flexShrink: 0,
       }}
     >
       {/* Título + sección */}

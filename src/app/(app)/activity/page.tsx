@@ -27,9 +27,26 @@ export default async function ActividadPage() {
     .eq('user_id', user?.id ?? '');
   const memberships = (rawMemberships ?? []) as MembershipRow[];
 
-  const supplierIds = memberships
+  // supplier role → direct supplier access
+  const supplierRoleIds = memberships
     .map((m) => m.supplier_id)
     .filter((id): id is string => id !== null);
+
+  // admin/consultant → access to all suppliers in their orgs
+  const adminOrgIds = memberships
+    .filter((m) => m.role === 'admin' || m.role === 'consultant')
+    .map((m) => m.organization_id);
+
+  const adminSupplierIds: string[] = [];
+  if (adminOrgIds.length) {
+    const { data } = await supabase
+      .from('suppliers')
+      .select('id, name')
+      .in('organization_id', adminOrgIds);
+    if (data) adminSupplierIds.push(...(data as Pick<SupplierRow, 'id' | 'name'>[]).map((s) => s.id));
+  }
+
+  const supplierIds = [...new Set([...supplierRoleIds, ...adminSupplierIds])];
 
   const suppliersData: Pick<SupplierRow, 'id' | 'name'>[] = [];
   if (supplierIds.length) {
