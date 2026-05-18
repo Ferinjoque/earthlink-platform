@@ -47,9 +47,9 @@ export default async function AuditoriaPage() {
 
   const { data: rawMemberships } = await supabase
     .from('memberships')
-    .select('*')
+    .select('organization_id, supplier_id')
     .eq('user_id', user?.id ?? '');
-  const memberships = (rawMemberships ?? []) as MembershipRow[];
+  const memberships = (rawMemberships ?? []) as Pick<MembershipRow, 'organization_id' | 'supplier_id'>[];
 
   const orgIds = [...new Set(memberships.map((m) => m.organization_id).filter((x): x is string => x !== null))];
   const memberSupplierIds = [...new Set(memberships.map((m) => m.supplier_id).filter((x): x is string => x !== null))];
