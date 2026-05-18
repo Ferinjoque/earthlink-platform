@@ -10,6 +10,7 @@ import {
   type SupplierActionState,
 } from '@/actions/suppliers';
 import { CATEGORIAS_VALIDAS } from '@/lib/supplier-constants';
+import { useToast } from '@/components/ui/Toast';
 import type { SupplierRow } from '@/types/database';
 
 interface OrgOption {
@@ -73,12 +74,18 @@ function FormProveedor({
     null,
   );
 
+  const { toast } = useToast();
+
   // Auto-close on success
   useEffect(() => {
     if (!state?.success) return;
+    toast(
+      mode === 'create' ? 'Proveedor creado correctamente' : 'Proveedor actualizado',
+      'success',
+    );
     const t = setTimeout(() => onCancel(), 300);
     return () => clearTimeout(t);
-  }, [state?.success, onCancel]);
+  }, [state?.success, mode, onCancel, toast]);
 
   const fe = state?.fieldErrors ?? {};
 
@@ -335,6 +342,14 @@ function ConfirmacionArchivo({
     archiveSupplier,
     null,
   );
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (state?.success) {
+      toast(`${supplier.name} archivado`, 'info');
+      onCancel();
+    }
+  }, [state?.success, supplier.name, onCancel, toast]);
 
   return (
     <form
@@ -498,7 +513,7 @@ export function SupplierTable({ suppliers, organizationId, organizations }: Prop
         {mostrarFormCrear && (
           <FormProveedor
             organizationId={organizationId}
-            organizations={organizations}
+            {...(organizations ? { organizations } : {})}
             mode="create"
             onCancel={() => setMostrarFormCrear(false)}
           />
