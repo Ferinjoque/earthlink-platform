@@ -116,6 +116,28 @@ describe('FugitiveEmissionSource', () => {
   });
 });
 
+describe('requiredEvidence', () => {
+  it('StationaryCombustionSource returns non-empty string', () => {
+    expect(new StationaryCombustionSource('diesel').requiredEvidence().length).toBeGreaterThan(0);
+  });
+
+  it('MobileCombustionSource returns non-empty string', () => {
+    expect(new MobileCombustionSource('gasoline').requiredEvidence().length).toBeGreaterThan(0);
+  });
+
+  it('FugitiveEmissionSource returns non-empty string', () => {
+    expect(new FugitiveEmissionSource('R410A').requiredEvidence().length).toBeGreaterThan(0);
+  });
+
+  it('PurchasedElectricitySource returns non-empty string', () => {
+    expect(new PurchasedElectricitySource('SEIN_PERU').requiredEvidence().length).toBeGreaterThan(0);
+  });
+
+  it('PurchasedSteamSource returns non-empty string', () => {
+    expect(new PurchasedSteamSource().requiredEvidence().length).toBeGreaterThan(0);
+  });
+});
+
 describe('EmissionSource polymorphism', () => {
   it('validate can be called uniformly across all source types', () => {
     const sources = [
