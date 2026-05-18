@@ -12,6 +12,7 @@ import type {
   ActivityEntryRow,
   AnomalyFlagRow,
 } from '@/types/database';
+import { variantEstadoPeriodo, etiquetaEstadoPeriodo } from '@/lib/reporting-period';
 import type { PeriodStatus } from '@/domain/ReportingPeriod';
 import type {
   PeriodoFila,
@@ -21,24 +22,6 @@ import type {
 } from '@/components/audit/AuditTable';
 
 export const metadata: Metadata = { title: 'Auditoría' };
-
-function variantEstado(
-  status: PeriodStatus,
-): 'open' | 'calculating' | 'under_review' | 'locked' | 'neutral' {
-  if (status === 'open') return 'open';
-  if (status === 'calculating') return 'calculating';
-  if (status === 'under_review') return 'under_review';
-  if (status === 'locked') return 'locked';
-  return 'neutral';
-}
-
-function etiquetaEstado(status: PeriodStatus): string {
-  if (status === 'open') return 'Abierto';
-  if (status === 'calculating') return 'Calculando…';
-  if (status === 'under_review') return 'En revisión';
-  if (status === 'locked') return 'Bloqueado';
-  return status;
-}
 
 export default async function AuditoriaPage() {
   const supabase = await createServerClient();
@@ -281,7 +264,7 @@ export default async function AuditoriaPage() {
             ] as [PeriodStatus, string][]
           ).map(([s]) => (
             <span key={s} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-              <Badge variant={variantEstado(s)}>{etiquetaEstado(s)}</Badge>
+              <Badge variant={variantEstadoPeriodo(s)}>{etiquetaEstadoPeriodo(s)}</Badge>
               <span
                 style={{
                   fontFamily: 'var(--font-mono)',

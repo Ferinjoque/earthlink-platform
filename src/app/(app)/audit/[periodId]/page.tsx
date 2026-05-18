@@ -15,6 +15,8 @@ import type {
   MembershipRow,
   AnomalyFlagRow,
 } from '@/types/database';
+import { variantEstadoPeriodo, etiquetaEstadoPeriodo } from '@/lib/reporting-period';
+import { traducirMensajeAnomalia } from '@/lib/anomaly';
 import type { PeriodStatus } from '@/domain/ReportingPeriod';
 
 const COLOR_SEVERIDAD: Record<string, string> = {
@@ -44,26 +46,6 @@ function formatearKg(kg: number): string {
   if (kg >= 1_000_000) return `${(kg / 1_000_000).toFixed(3)} MtCO₂e`;
   if (kg >= 1_000) return `${(kg / 1_000).toFixed(3)} tCO₂e`;
   return `${kg.toFixed(2)} kg CO₂e`;
-}
-
-function etiquetaEstado(status: PeriodStatus): string {
-  const map: Record<PeriodStatus, string> = {
-    open: 'Abierto',
-    calculating: 'Calculando…',
-    under_review: 'En revisión',
-    locked: 'Bloqueado',
-  };
-  return map[status] ?? status;
-}
-
-function variantEstado(
-  status: PeriodStatus,
-): 'open' | 'calculating' | 'under_review' | 'locked' | 'neutral' {
-  if (status === 'open') return 'open';
-  if (status === 'calculating') return 'calculating';
-  if (status === 'under_review') return 'under_review';
-  if (status === 'locked') return 'locked';
-  return 'neutral';
 }
 
 export default async function DetallePeriodoPage({
@@ -298,8 +280,8 @@ export default async function DetallePeriodoPage({
             >
               {supplier.name} — {period.label}
             </h2>
-            <Badge variant={variantEstado(period.status as PeriodStatus)}>
-              {etiquetaEstado(period.status as PeriodStatus)}
+            <Badge variant={variantEstadoPeriodo(period.status as PeriodStatus)}>
+              {etiquetaEstadoPeriodo(period.status as PeriodStatus)}
             </Badge>
             {membership.role === 'admin' && (
               <span
@@ -450,7 +432,7 @@ export default async function DetallePeriodoPage({
                     <span
                       style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)', flex: 1 }}
                     >
-                      {f.message}
+                      {traducirMensajeAnomalia(f.message)}
                     </span>
                     <span
                       style={{
@@ -787,8 +769,8 @@ export default async function DetallePeriodoPage({
                         {accion}
                       </span>
                       {nuevoEstado && (
-                        <Badge variant={variantEstado(nuevoEstado as PeriodStatus)}>
-                          {etiquetaEstado(nuevoEstado as PeriodStatus)}
+                        <Badge variant={variantEstadoPeriodo(nuevoEstado as PeriodStatus)}>
+                          {etiquetaEstadoPeriodo(nuevoEstado as PeriodStatus)}
                         </Badge>
                       )}
                       <span
