@@ -33,7 +33,14 @@ export function Sidebar({ anomaliaCount = 0 }: SidebarProps) {
     { href: '/suppliers', label: 'Proveedores', icon: <Building2 size={18} /> },
     { href: '/activity', label: 'Actividad', icon: <ClipboardList size={18} /> },
     ...(anomaliaCount > 0
-      ? [{ href: '/audit', label: 'Auditoría', icon: <ShieldCheck size={18} />, badge: anomaliaCount }]
+      ? [
+          {
+            href: '/audit',
+            label: 'Auditoría',
+            icon: <ShieldCheck size={18} />,
+            badge: anomaliaCount,
+          },
+        ]
       : [{ href: '/audit', label: 'Auditoría', icon: <ShieldCheck size={18} /> }]),
     { href: '/reports', label: 'Reportes', icon: <FileText size={18} /> },
     { href: '/settings', label: 'Configuración', icon: <Settings size={18} /> },
@@ -229,7 +236,6 @@ export function Sidebar({ anomaliaCount = 0 }: SidebarProps) {
           </button>
         </form>
       </div>
-
     </aside>
   );
 }

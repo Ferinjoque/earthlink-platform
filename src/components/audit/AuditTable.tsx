@@ -4,7 +4,12 @@ import Link from 'next/link';
 import { Fragment, useState, useActionState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { PeriodActions } from '@/components/audit/PeriodActions';
-import { resolveAnomaly, createPeriod, type ResolveAnomalyState, type CreatePeriodState } from '@/actions/audit';
+import {
+  resolveAnomaly,
+  createPeriod,
+  type ResolveAnomalyState,
+  type CreatePeriodState,
+} from '@/actions/audit';
 import type { PeriodStatus } from '@/domain/ReportingPeriod';
 import type { AnomalySeverity } from '@/types/database';
 
@@ -128,9 +133,7 @@ function ResultadosPanel({ results }: { results: ResultadoDetalle[] }) {
 
   return (
     <div style={{ overflowX: 'auto' }}>
-      <table
-        style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-xs)' }}
-      >
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-xs)' }}>
         <thead>
           <tr>
             {['Fuente', 'Cantidad', 'CO₂e', 'Alcance', 'Factor', 'Calculado'].map((h) => (
@@ -154,9 +157,7 @@ function ResultadosPanel({ results }: { results: ResultadoDetalle[] }) {
         <tbody>
           {results.map((r) => (
             <tr key={r.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-              <td style={estiloCeldaMini}>
-                {FUENTE_CORTA[r.source_type] ?? r.source_type}
-              </td>
+              <td style={estiloCeldaMini}>{FUENTE_CORTA[r.source_type] ?? r.source_type}</td>
               <td
                 style={{
                   ...estiloCeldaMini,
@@ -177,9 +178,7 @@ function ResultadosPanel({ results }: { results: ResultadoDetalle[] }) {
               >
                 {formatearKg(r.co2e_kg)}
               </td>
-              <td style={{ ...estiloCeldaMini, fontFamily: 'var(--font-mono)' }}>
-                {r.scope}
-              </td>
+              <td style={{ ...estiloCeldaMini, fontFamily: 'var(--font-mono)' }}>{r.scope}</td>
               <td
                 style={{
                   ...estiloCeldaMini,
@@ -635,9 +634,7 @@ export function AuditTable({ periodos, suppliers }: AuditTableProps) {
   const [expandidoAnomalias, setExpandidoAnomalias] = useState<string | null>(null);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
 
-  const filtrados = periodos.filter(
-    (p) => filtroEstado === 'todos' || p.status === filtroEstado,
-  );
+  const filtrados = periodos.filter((p) => filtroEstado === 'todos' || p.status === filtroEstado);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
@@ -698,7 +695,9 @@ export function AuditTable({ periodos, suppliers }: AuditTableProps) {
       )}
 
       {/* ── Filtro de estado ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+      <div
+        style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}
+      >
         <span
           style={{
             fontSize: 'var(--text-xs)',
@@ -722,10 +721,8 @@ export function AuditTable({ periodos, suppliers }: AuditTableProps) {
                 filtroEstado === valor
                   ? '1px solid var(--color-accent)'
                   : '1px solid var(--color-border)',
-              background:
-                filtroEstado === valor ? 'var(--color-accent-soft)' : 'transparent',
-              color:
-                filtroEstado === valor ? 'var(--color-accent)' : 'var(--color-ink-3)',
+              background: filtroEstado === valor ? 'var(--color-accent-soft)' : 'transparent',
+              color: filtroEstado === valor ? 'var(--color-accent)' : 'var(--color-ink-3)',
               cursor: 'pointer',
             }}
           >
@@ -769,9 +766,7 @@ export function AuditTable({ periodos, suppliers }: AuditTableProps) {
           }}
         >
           <style>{'.audit-row:hover { background: var(--color-surface-2) !important; }'}</style>
-          <table
-            style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}
-          >
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
             <thead>
               <tr>
                 {[
@@ -840,8 +835,14 @@ export function AuditTable({ periodos, suppliers }: AuditTableProps) {
                             textDecoration: 'none',
                             fontFamily: 'var(--font-mono)',
                           }}
-                          onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = 'var(--color-accent)'; }}
-                          onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = 'var(--color-ink-1)'; }}
+                          onMouseEnter={(e) => {
+                            (e.currentTarget as HTMLAnchorElement).style.color =
+                              'var(--color-accent)';
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLAnchorElement).style.color =
+                              'var(--color-ink-1)';
+                          }}
                         >
                           {p.label}
                         </Link>
@@ -858,9 +859,7 @@ export function AuditTable({ periodos, suppliers }: AuditTableProps) {
                         {inicioFmt} – {finFmt}
                       </td>
                       <td style={{ padding: 'var(--space-3) var(--space-4)' }}>
-                        <Badge variant={variantEstado(p.status)}>
-                          {etiquetaEstado(p.status)}
-                        </Badge>
+                        <Badge variant={variantEstado(p.status)}>{etiquetaEstado(p.status)}</Badge>
                       </td>
                       <td
                         style={{
@@ -957,9 +956,7 @@ export function AuditTable({ periodos, suppliers }: AuditTableProps) {
                           </span>
                         )}
                       </td>
-                      <td
-                        style={{ padding: 'var(--space-3) var(--space-4)', minWidth: '160px' }}
-                      >
+                      <td style={{ padding: 'var(--space-3) var(--space-4)', minWidth: '160px' }}>
                         <PeriodActions periodId={p.id} status={p.status} />
                       </td>
                     </tr>

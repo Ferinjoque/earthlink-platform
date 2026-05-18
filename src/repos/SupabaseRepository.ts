@@ -34,7 +34,11 @@ export abstract class SupabaseRepository<
 
   async save(entity: TEntity): Promise<TEntity> {
     const row = this.toRow(entity);
-    const { data, error } = await this.client.from(this.tableName).upsert(row).select(this.selectColumns).single();
+    const { data, error } = await this.client
+      .from(this.tableName)
+      .upsert(row)
+      .select(this.selectColumns)
+      .single();
     if (error ?? !data) throw new Error(`Failed to save ${this.tableName}: ${error?.message}`);
     return this.toEntity(data as unknown as Record<string, unknown>);
   }

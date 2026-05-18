@@ -3,7 +3,13 @@
 import { createHash } from 'crypto';
 import { z } from 'zod';
 import { createServerClient } from '@/services/supabase/server';
-import type { MembershipRow, EmissionResultRow, ActivityEntryRow, ReportingPeriodRow, SupplierRow } from '@/types/database';
+import type {
+  MembershipRow,
+  EmissionResultRow,
+  ActivityEntryRow,
+  ReportingPeriodRow,
+  SupplierRow,
+} from '@/types/database';
 
 const exportSchema = z.object({
   period_ids: z.string().min(1, 'Selecciona al menos un periodo'),
@@ -46,7 +52,9 @@ export async function exportCsv(
     .select('organization_id')
     .eq('user_id', user.id);
   const memberships = (rawMemberships ?? []) as Pick<MembershipRow, 'organization_id'>[];
-  const orgIds = memberships.map((m) => m.organization_id).filter((id): id is string => id !== null);
+  const orgIds = memberships
+    .map((m) => m.organization_id)
+    .filter((id): id is string => id !== null);
   if (orgIds.length === 0) return { error: 'Sin organizaciones asociadas' };
 
   // Fetch period + supplier info
@@ -67,9 +75,7 @@ export async function exportCsv(
 
   // Authorization: periods must belong to user's orgs
   const allowedSupplierIds = new Set(
-    suppliers
-      .filter((s) => orgIds.includes(s.organization_id))
-      .map((s) => s.id),
+    suppliers.filter((s) => orgIds.includes(s.organization_id)).map((s) => s.id),
   );
   const authorizedPeriodIds = periods
     .filter((p) => allowedSupplierIds.has(p.supplier_id))

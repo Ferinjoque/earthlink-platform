@@ -30,7 +30,10 @@ export default async function ActividadPage() {
     .from('memberships')
     .select('organization_id, supplier_id, role')
     .eq('user_id', user.id);
-  const memberships = (rawMemberships ?? []) as Pick<MembershipRow, 'organization_id' | 'supplier_id' | 'role'>[];
+  const memberships = (rawMemberships ?? []) as Pick<
+    MembershipRow,
+    'organization_id' | 'supplier_id' | 'role'
+  >[];
 
   // supplier role → direct supplier access
   const supplierRoleIds = memberships
@@ -48,7 +51,8 @@ export default async function ActividadPage() {
       .from('suppliers')
       .select('id, name')
       .in('organization_id', adminOrgIds);
-    if (data) adminSupplierIds.push(...(data as Pick<SupplierRow, 'id' | 'name'>[]).map((s) => s.id));
+    if (data)
+      adminSupplierIds.push(...(data as Pick<SupplierRow, 'id' | 'name'>[]).map((s) => s.id));
   }
 
   const supplierIds = [...new Set([...supplierRoleIds, ...adminSupplierIds])];
@@ -192,8 +196,8 @@ export default async function ActividadPage() {
                 Sin periodos abiertos
               </h2>
               <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-3)', margin: 0 }}>
-                No hay periodos de reporte abiertos asignados a tu cuenta. Crea un periodo
-                desde la consola de auditoría para poder registrar actividad.
+                No hay periodos de reporte abiertos asignados a tu cuenta. Crea un periodo desde la
+                consola de auditoría para poder registrar actividad.
               </p>
             </div>
             <Link

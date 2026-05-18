@@ -5,12 +5,15 @@ import type { ActivityEntryStatus, EmissionSourceType } from '../types/database'
 
 export class ActivityEntryRepository extends SupabaseRepository<ActivityEntry> {
   protected readonly tableName = 'activity_entries';
-  protected override readonly selectColumns = 'id, reporting_period_id, source_type, activity_kind, raw_quantity, raw_unit, status, submitted_at, submitted_by, created_at';
+  protected override readonly selectColumns =
+    'id, reporting_period_id, source_type, activity_kind, raw_quantity, raw_unit, status, submitted_at, submitted_by, created_at';
 
   async findByPeriodId(periodId: string): Promise<readonly ActivityEntry[]> {
     const { data, error } = await this.client
       .from(this.tableName)
-      .select('id, reporting_period_id, source_type, activity_kind, raw_quantity, raw_unit, status, submitted_at, submitted_by, created_at')
+      .select(
+        'id, reporting_period_id, source_type, activity_kind, raw_quantity, raw_unit, status, submitted_at, submitted_by, created_at',
+      )
       .eq('reporting_period_id', periodId)
       .order('created_at', { ascending: true });
     if (error ?? !data) return [];
@@ -23,7 +26,9 @@ export class ActivityEntryRepository extends SupabaseRepository<ActivityEntry> {
   ): Promise<readonly ActivityEntry[]> {
     const { data, error } = await this.client
       .from(this.tableName)
-      .select('id, reporting_period_id, source_type, activity_kind, raw_quantity, raw_unit, status, submitted_at, submitted_by, created_at')
+      .select(
+        'id, reporting_period_id, source_type, activity_kind, raw_quantity, raw_unit, status, submitted_at, submitted_by, created_at',
+      )
       .eq('reporting_period_id', periodId)
       .eq('status', status);
     if (error ?? !data) return [];

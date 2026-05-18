@@ -26,7 +26,9 @@ export default async function ReportesPage() {
     .eq('user_id', user.id);
   const memberships = (rawMemberships ?? []) as Pick<MembershipRow, 'organization_id'>[];
 
-  const orgIds = [...new Set(memberships.map((m) => m.organization_id).filter((id): id is string => id !== null))];
+  const orgIds = [
+    ...new Set(memberships.map((m) => m.organization_id).filter((id): id is string => id !== null)),
+  ];
 
   const suppliersData: Pick<SupplierRow, 'id' | 'name'>[] = [];
   if (orgIds.length) {
@@ -143,8 +145,8 @@ export default async function ReportesPage() {
               maxWidth: '52ch',
             }}
           >
-            Genera reportes CSV con huella de emisiones trazables. Cada archivo incluye un
-            hash sha256 para verificación de integridad.
+            Genera reportes CSV con huella de emisiones trazables. Cada archivo incluye un hash
+            sha256 para verificación de integridad.
           </p>
         </div>
 
