@@ -109,26 +109,47 @@ export default async function PanelPage() {
     periodSupplierMap.set(p.id, p.supplier_id);
   }
 
-  // ── KPI + trend data ──
+  // ── Phase 1: parallel queries on periodIds ──
   type EmissionRow = { co2e_kg: number; scope: number; calculated_at: string };
-  const emissionRows: EmissionRow[] = [];
+  type EntradaFeedRaw = {
+    id: string;
+    source_type: string;
+    raw_quantity: number;
+    raw_unit: string;
+    status: string;
+    created_at: string;
+    reporting_period_id: string;
+  };
+  type AlertEntryRaw = { id: string; reporting_period_id: string };
+
+  const [emissionsResult, feedEntriesResult, alertEntryIdsResult] = periodIds.length
+    ? await Promise.all([
+        supabase
+          .from('emission_results')
+          .select('co2e_kg, scope, calculated_at')
+          .in('reporting_period_id', periodIds),
+        supabase
+          .from('activity_entries')
+          .select('id, source_type, raw_quantity, raw_unit, status, created_at, reporting_period_id')
+          .in('reporting_period_id', periodIds)
+          .order('created_at', { ascending: false })
+          .limit(8),
+        supabase
+          .from('activity_entries')
+          .select('id, reporting_period_id')
+          .in('reporting_period_id', periodIds),
+      ])
+    : [{ data: null }, { data: null }, { data: null }];
+
+  // ── KPI + trend data ──
+  const emissionRows = (emissionsResult.data as EmissionRow[] | null) ?? [];
   let totalCo2eKg = 0;
   let scope1Co2eKg = 0;
   let scope2Co2eKg = 0;
-
-  if (periodIds.length) {
-    const { data } = await supabase
-      .from('emission_results')
-      .select('co2e_kg, scope, calculated_at')
-      .in('reporting_period_id', periodIds);
-    if (data) {
-      for (const r of data as EmissionRow[]) {
-        emissionRows.push(r);
-        totalCo2eKg += r.co2e_kg;
-        if (r.scope === 1) scope1Co2eKg += r.co2e_kg;
-        else scope2Co2eKg += r.co2e_kg;
-      }
-    }
+  for (const r of emissionRows) {
+    totalCo2eKg += r.co2e_kg;
+    if (r.scope === 1) scope1Co2eKg += r.co2e_kg;
+    else scope2Co2eKg += r.co2e_kg;
   }
 
   // ── Trend: group by month (last 6) ──
@@ -151,47 +172,49 @@ export default async function PanelPage() {
   const maxKg = Math.max(...trendData.map((m) => m.kg), 1);
   const hayTrend = trendData.some((m) => m.kg > 0);
 
+  // ── Phase 2: anomaly flag queries (depend on entry IDs from phase 1) ──
+  const rawFeedEntries = (feedEntriesResult.data as EntradaFeedRaw[] | null) ?? [];
+  const feedEntryIds = rawFeedEntries.map((e) => e.id);
+
+  const alertEntryRows = (alertEntryIdsResult.data as AlertEntryRaw[] | null) ?? [];
+  const allAlertEntryIds = alertEntryRows.map((e) => e.id);
+
+  const [feedFlagsResult, alertFlagsResult] = await Promise.all([
+    feedEntryIds.length
+      ? supabase
+          .from('anomaly_flags')
+          .select('activity_entry_id, severity, z_score')
+          .in('activity_entry_id', feedEntryIds)
+          .eq('is_resolved', false)
+      : Promise.resolve({ data: null }),
+    allAlertEntryIds.length
+      ? supabase
+          .from('anomaly_flags')
+          .select('id, activity_entry_id, severity, z_score, message, flagged_at')
+          .in('activity_entry_id', allAlertEntryIds)
+          .eq('is_resolved', false)
+          .order('severity', { ascending: false })
+          .order('z_score', { ascending: false })
+          .limit(20)
+      : Promise.resolve({ data: null }),
+  ]);
+
   // ── Activity feed: last 8 entries ──
-  type EntradaFeed = {
-    id: string;
-    source_type: string;
-    raw_quantity: number;
-    raw_unit: string;
-    status: string;
-    created_at: string;
-    reporting_period_id: string;
+  type EntradaFeed = EntradaFeedRaw & {
     anomaly?: { severity: AnomalySeverity; z_score: number } | null;
   };
   const entradaFeed: EntradaFeed[] = [];
-
-  if (periodIds.length) {
-    const { data: rawEntries } = await supabase
-      .from('activity_entries')
-      .select('id, source_type, raw_quantity, raw_unit, status, created_at, reporting_period_id')
-      .in('reporting_period_id', periodIds)
-      .order('created_at', { ascending: false })
-      .limit(8);
-
-    if (rawEntries) {
-      const entryIds = (rawEntries as { id: string }[]).map((e) => e.id);
-      const { data: flags } = await supabase
-        .from('anomaly_flags')
-        .select('activity_entry_id, severity, z_score')
-        .in('activity_entry_id', entryIds)
-        .eq('is_resolved', false);
-
-      const flagMap = new Map<string, { severity: AnomalySeverity; z_score: number }>();
-      for (const f of (flags ?? []) as {
-        activity_entry_id: string;
-        severity: AnomalySeverity;
-        z_score: number;
-      }[]) {
-        flagMap.set(f.activity_entry_id, { severity: f.severity, z_score: f.z_score });
-      }
-
-      for (const e of rawEntries as EntradaFeed[]) {
-        entradaFeed.push({ ...e, anomaly: flagMap.get(e.id) ?? null });
-      }
+  if (rawFeedEntries.length > 0) {
+    const feedFlagMap = new Map<string, { severity: AnomalySeverity; z_score: number }>();
+    for (const f of (feedFlagsResult.data ?? []) as {
+      activity_entry_id: string;
+      severity: AnomalySeverity;
+      z_score: number;
+    }[]) {
+      feedFlagMap.set(f.activity_entry_id, { severity: f.severity, z_score: f.z_score });
+    }
+    for (const e of rawFeedEntries) {
+      entradaFeed.push({ ...e, anomaly: feedFlagMap.get(e.id) ?? null });
     }
   }
 
@@ -206,39 +229,16 @@ export default async function PanelPage() {
     supplierName: string | undefined;
   };
   const anomalyAlerts: AnomalyAlert[] = [];
-
-  if (periodIds.length) {
-    const { data: rawEntryIds } = await supabase
-      .from('activity_entries')
-      .select('id, reporting_period_id')
-      .in('reporting_period_id', periodIds);
-
-    if (rawEntryIds && (rawEntryIds as { id: string }[]).length > 0) {
-      const allEntryIds = (rawEntryIds as { id: string; reporting_period_id: string }[]).map(
-        (e) => e.id,
-      );
-      const entryPeriodMap = new Map<string, string>();
-      for (const e of rawEntryIds as { id: string; reporting_period_id: string }[]) {
-        entryPeriodMap.set(e.id, e.reporting_period_id);
-      }
-
-      const { data: rawFlags } = await supabase
-        .from('anomaly_flags')
-        .select('id, activity_entry_id, severity, z_score, message, flagged_at')
-        .in('activity_entry_id', allEntryIds)
-        .eq('is_resolved', false)
-        .order('severity', { ascending: false })
-        .order('z_score', { ascending: false })
-        .limit(20);
-
-      if (rawFlags) {
-        for (const f of rawFlags as AnomalyAlert[]) {
-          const periodId = entryPeriodMap.get(f.activity_entry_id);
-          const supplierId = periodId ? periodSupplierMap.get(periodId) : undefined;
-          const supplierName = supplierId ? supplierNameMap.get(supplierId) : undefined;
-          anomalyAlerts.push({ ...f, supplierName });
-        }
-      }
+  if (allAlertEntryIds.length > 0) {
+    const entryPeriodMap = new Map<string, string>();
+    for (const e of alertEntryRows) {
+      entryPeriodMap.set(e.id, e.reporting_period_id);
+    }
+    for (const f of (alertFlagsResult.data ?? []) as AnomalyAlert[]) {
+      const periodId = entryPeriodMap.get(f.activity_entry_id);
+      const supplierId = periodId ? periodSupplierMap.get(periodId) : undefined;
+      const supplierName = supplierId ? supplierNameMap.get(supplierId) : undefined;
+      anomalyAlerts.push({ ...f, supplierName });
     }
   }
 
