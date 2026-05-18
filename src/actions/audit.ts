@@ -186,7 +186,7 @@ export async function resolveAnomaly(
       is_resolved: true,
       resolved_by: user.id,
       resolved_at: new Date().toISOString(),
-    } as never)
+    })
     .eq('id', flagId);
 
   if (error) return { error: `Error al resolver anomalía: ${error.message}` };
@@ -255,7 +255,7 @@ export async function createPeriod(
     start_date: fecha_inicio,
     end_date: fecha_fin,
     status: 'open',
-  } as never);
+  });
 
   if (error) return { error: `Error al crear el periodo: ${error.message}` };
 

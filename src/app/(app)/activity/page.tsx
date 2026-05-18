@@ -13,6 +13,7 @@ import type {
   ReportingPeriodRow,
   ActivityEntryRow,
   AnomalyFlagRow,
+  ActivityEntryStatus,
 } from '@/types/database';
 
 export const metadata: Metadata = { title: 'Actividad' };
@@ -137,7 +138,7 @@ export default async function ActividadPage() {
     source_type: e.source_type,
     raw_quantity: e.raw_quantity,
     raw_unit: e.raw_unit,
-    status: e.status,
+    status: e.status as ActivityEntryStatus,
     submitted_at: e.submitted_at,
     notes: e.notes,
     anomaly: flagMap.get(e.id),
