@@ -1,42 +1,10 @@
 import type { Metadata } from 'next';
 import { createServerClient } from '@/services/supabase/server';
 import { TopBar } from '@/components/shell/TopBar';
-import { StatCard } from '@/components/ui/Card';
-import { TrendingDown, Activity, AlertTriangle, FileCheck } from 'lucide-react';
+import { Activity, AlertTriangle, TrendingDown, FileCheck, ArrowRight } from 'lucide-react';
 import type { MembershipRow, ReportingPeriodRow } from '@/types/database';
 
 export const metadata: Metadata = { title: 'Panel' };
-
-const MODULOS = [
-  {
-    icon: <Activity size={20} />,
-    titulo: 'Registros de actividad',
-    descripcion: 'Envía y revisa datos de consumo de Alcance 1 y 2 de tus proveedores.',
-    fase: 'Fase 5',
-    color: 'var(--color-signal-ok)',
-  },
-  {
-    icon: <AlertTriangle size={20} />,
-    titulo: 'Detección de anomalías',
-    descripcion: 'Detección por Z-score que señala patrones de consumo inusuales.',
-    fase: 'Fase 5',
-    color: 'var(--color-signal-md)',
-  },
-  {
-    icon: <TrendingDown size={20} />,
-    titulo: 'Consola de auditoría',
-    descripcion: 'Bloquea periodos de reporte y consulta el registro de auditoría inmutable.',
-    fase: 'Fase 6',
-    color: 'var(--color-accent)',
-  },
-  {
-    icon: <FileCheck size={20} />,
-    titulo: 'Reportes',
-    descripcion: 'Genera exportaciones PDF y CSV con verificación sha256.',
-    fase: 'Fase 7',
-    color: 'var(--color-ink-2)',
-  },
-];
 
 function formatearCo2e(kg: number): { valor: string; unidad: string } {
   if (kg === 0) return { valor: '0', unidad: 'kg' };
@@ -44,6 +12,41 @@ function formatearCo2e(kg: number): { valor: string; unidad: string } {
   if (kg >= 1_000) return { valor: (kg / 1_000).toFixed(3), unidad: 'tCO₂e' };
   return { valor: kg.toFixed(1), unidad: 'kg CO₂e' };
 }
+
+const MODULOS = [
+  {
+    href: '/activity',
+    icono: Activity,
+    titulo: 'Registros de actividad',
+    descripcion: 'Envía y revisa datos de consumo Alcance 1 y 2.',
+    fase: 'Fase 5',
+    colorIcono: 'var(--color-signal-ok)',
+  },
+  {
+    href: '/activity',
+    icono: AlertTriangle,
+    titulo: 'Detección de anomalías',
+    descripcion: 'Z-score señala patrones de consumo inusuales.',
+    fase: 'Fase 5',
+    colorIcono: 'var(--color-signal-md)',
+  },
+  {
+    href: '/audit',
+    icono: TrendingDown,
+    titulo: 'Consola de auditoría',
+    descripcion: 'Bloquea periodos y consulta el registro inmutable.',
+    fase: 'Fase 6',
+    colorIcono: 'var(--color-accent)',
+  },
+  {
+    href: '/reports',
+    icono: FileCheck,
+    titulo: 'Reportes',
+    descripcion: 'Exportaciones PDF y CSV con verificación sha256.',
+    fase: 'Fase 7',
+    colorIcono: 'var(--color-ink-3)',
+  },
+];
 
 export default async function PanelPage() {
   const supabase = await createServerClient();
@@ -119,9 +122,10 @@ export default async function PanelPage() {
           display: 'flex',
           flexDirection: 'column',
           gap: 'var(--space-8)',
+          maxWidth: 'var(--max-w-content)',
         }}
       >
-        {/* Hero editorial */}
+        {/* ── Titular editorial ── */}
         <section>
           <p className="eyebrow" style={{ marginBottom: 'var(--space-3)' }}>
             Protocolo GHG · Alcances 1 y 2
@@ -134,8 +138,8 @@ export default async function PanelPage() {
               fontStyle: 'italic',
               color: 'var(--color-ink-1)',
               margin: '0 0 var(--space-2)',
-              letterSpacing: 'var(--tracking-tightest)',
-              lineHeight: 'var(--leading-tight)',
+              letterSpacing: '-0.032em',
+              lineHeight: 1.1,
             }}
           >
             Huella de carbono de la cadena de suministro
@@ -150,43 +154,176 @@ export default async function PanelPage() {
           >
             {tieneDatos
               ? 'Acumulado en todos los periodos calculados.'
-              : 'Los datos se poblarán cuando los proveedores envíen sus registros de actividad.'}
+              : 'Los datos aparecerán cuando los proveedores envíen sus registros de actividad.'}
           </p>
         </section>
 
-        {/* KPIs */}
+        {/* ── KPI strip editorial (no card-grid uniforme) ── */}
         <section
-          aria-label="Indicadores clave"
           style={{
+            background: 'var(--color-surface-1)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-lg)',
+            padding: 'var(--space-6) var(--space-8)',
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: 'var(--space-4)',
+            gridTemplateColumns: tieneDatos ? '1fr auto auto' : '1fr',
+            gap: 'var(--space-6)',
+            alignItems: 'center',
           }}
         >
-          <StatCard
-            label="Total CO₂e"
-            value={tieneDatos ? total.valor : '—'}
-            unit={tieneDatos ? total.unidad : ''}
-            accent
-          />
-          <StatCard
-            label="Alcance 1"
-            value={tieneDatos ? s1.valor : '—'}
-            unit={tieneDatos ? s1.unidad : ''}
-          />
-          <StatCard
-            label="Alcance 2"
-            value={tieneDatos ? s2.valor : '—'}
-            unit={tieneDatos ? s2.unidad : ''}
-          />
-          <StatCard
-            label="Periodos abiertos"
-            value={periodosAbiertos > 0 ? periodosAbiertos : '—'}
-            unit=""
-          />
+          {/* Total — protagonista */}
+          <div>
+            <p
+              className="eyebrow"
+              style={{ marginBottom: 'var(--space-2)', color: 'var(--color-accent)' }}
+            >
+              Total CO₂e
+            </p>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--space-3)' }}>
+              <span
+                className="numeric-tabular"
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 'var(--text-4xl)',
+                  fontWeight: 700,
+                  color: 'var(--color-ink-1)',
+                  letterSpacing: '-0.03em',
+                  lineHeight: 1,
+                }}
+              >
+                {tieneDatos ? total.valor : '—'}
+              </span>
+              {tieneDatos && (
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-2)' }}>
+                  {total.unidad}
+                </span>
+              )}
+            </div>
+            <p
+              style={{
+                fontSize: 'var(--text-xs)',
+                color: 'var(--color-ink-3)',
+                marginTop: 'var(--space-1)',
+              }}
+            >
+              {tieneDatos ? 'acumulado en periodos calculados' : 'sin datos aún'}
+            </p>
+          </div>
+
+          {/* Alcance 1 */}
+          {tieneDatos && (
+            <div
+              style={{
+                borderLeft: '1px solid var(--color-border)',
+                paddingLeft: 'var(--space-6)',
+              }}
+            >
+              <p className="eyebrow" style={{ marginBottom: 'var(--space-2)' }}>
+                Alcance 1
+              </p>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--space-2)' }}>
+                <span
+                  className="numeric-tabular"
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 'var(--text-2xl)',
+                    fontWeight: 700,
+                    color: 'var(--color-accent)',
+                    letterSpacing: '-0.025em',
+                    lineHeight: 1,
+                  }}
+                >
+                  {s1.valor}
+                </span>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)' }}>
+                  {s1.unidad}
+                </span>
+              </div>
+              <p
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--color-ink-3)',
+                  marginTop: 'var(--space-1)',
+                }}
+              >
+                Emisiones directas
+              </p>
+            </div>
+          )}
+
+          {/* Alcance 2 */}
+          {tieneDatos && (
+            <div
+              style={{
+                borderLeft: '1px solid var(--color-border)',
+                paddingLeft: 'var(--space-6)',
+              }}
+            >
+              <p className="eyebrow" style={{ marginBottom: 'var(--space-2)' }}>
+                Alcance 2
+              </p>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--space-2)' }}>
+                <span
+                  className="numeric-tabular"
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 'var(--text-2xl)',
+                    fontWeight: 700,
+                    color: '#8b5cf6',
+                    letterSpacing: '-0.025em',
+                    lineHeight: 1,
+                  }}
+                >
+                  {s2.valor}
+                </span>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)' }}>
+                  {s2.unidad}
+                </span>
+              </div>
+              <p
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--color-ink-3)',
+                  marginTop: 'var(--space-1)',
+                }}
+              >
+                Emisiones indirectas
+              </p>
+            </div>
+          )}
         </section>
 
-        {/* Barra de alcances */}
+        {/* ── Indicador periodos abiertos ── */}
+        {periodosAbiertos > 0 && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-3)',
+              marginTop: 'calc(var(--space-8) * -0.6)',
+            }}
+          >
+            <span
+              style={{
+                width: '7px',
+                height: '7px',
+                borderRadius: '50%',
+                background: 'var(--color-signal-ok)',
+                flexShrink: 0,
+                boxShadow: '0 0 0 3px oklch(42% 0.12 155 / 16%)',
+              }}
+            />
+            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-2)' }}>
+              <strong style={{ color: 'var(--color-ink-1)', fontFamily: 'var(--font-mono)' }}>
+                {periodosAbiertos}
+              </strong>{' '}
+              periodo{periodosAbiertos !== 1 ? 's' : ''} abierto
+              {periodosAbiertos !== 1 ? 's' : ''} pendientes de actividad
+            </span>
+          </div>
+        )}
+
+        {/* ── Distribución por alcance ── */}
         {tieneDatos && (
           <section
             style={{
@@ -196,17 +333,21 @@ export default async function PanelPage() {
               padding: 'var(--space-6)',
             }}
           >
-            <p className="eyebrow" style={{ marginBottom: 'var(--space-4)' }}>
+            <p className="eyebrow" style={{ marginBottom: 'var(--space-5)' }}>
               Distribución por alcance
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
               {[
                 {
                   etiqueta: 'Alcance 1 — Directas',
                   valor: scope1Co2eKg,
                   color: 'var(--color-accent)',
                 },
-                { etiqueta: 'Alcance 2 — Indirectas', valor: scope2Co2eKg, color: '#8b5cf6' },
+                {
+                  etiqueta: 'Alcance 2 — Indirectas',
+                  valor: scope2Co2eKg,
+                  color: '#8b5cf6',
+                },
               ].map(({ etiqueta, valor, color }) => {
                 const pct = totalCo2eKg > 0 ? (valor / totalCo2eKg) * 100 : 0;
                 const fmt = formatearCo2e(valor);
@@ -217,13 +358,14 @@ export default async function PanelPage() {
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'baseline',
-                        marginBottom: 'var(--space-1)',
+                        marginBottom: 'var(--space-2)',
                       }}
                     >
                       <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)' }}>
                         {etiqueta}
                       </span>
                       <span
+                        className="numeric-tabular"
                         style={{
                           fontFamily: 'var(--font-mono)',
                           fontSize: 'var(--text-xs)',
@@ -235,8 +377,8 @@ export default async function PanelPage() {
                     </div>
                     <div
                       style={{
-                        height: '6px',
-                        background: 'var(--color-border)',
+                        height: '5px',
+                        background: 'var(--color-surface-2)',
                         borderRadius: '9999px',
                         overflow: 'hidden',
                       }}
@@ -247,7 +389,7 @@ export default async function PanelPage() {
                           width: `${pct}%`,
                           background: color,
                           borderRadius: '9999px',
-                          transition: 'width 600ms cubic-bezier(0.16, 1, 0.3, 1)',
+                          transition: 'width 700ms cubic-bezier(0.16, 1, 0.3, 1)',
                         }}
                       />
                     </div>
@@ -258,130 +400,82 @@ export default async function PanelPage() {
           </section>
         )}
 
-        {/* Módulos */}
+        {/* ── Módulos — lista editorial (no uniform card grid) ── */}
         <section>
-          <p className="eyebrow" style={{ marginBottom: 'var(--space-5)' }}>
+          <p className="eyebrow" style={{ marginBottom: 'var(--space-4)' }}>
             Módulos de la plataforma
           </p>
           <div
             style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-              gap: 'var(--space-4)',
+              background: 'var(--color-surface-1)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-lg)',
+              overflow: 'hidden',
             }}
           >
-            {MODULOS.map(({ icon, titulo, descripcion, fase, color }) => (
+            {MODULOS.map(({ icono: Icono, titulo, descripcion, fase, colorIcono }, i) => (
               <div
                 key={titulo}
                 style={{
-                  background: 'var(--color-surface-1)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-lg)',
-                  padding: 'var(--space-6)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 'var(--space-3)',
+                  display: 'grid',
+                  gridTemplateColumns: 'auto 1fr auto',
+                  alignItems: 'center',
+                  gap: 'var(--space-4)',
+                  padding: 'var(--space-4) var(--space-6)',
+                  borderBottom: i < MODULOS.length - 1 ? '1px solid var(--color-border)' : 'none',
                 }}
               >
-                <div
+                <span
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
+                    width: '34px',
+                    height: '34px',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'var(--color-surface-2)',
+                    display: 'grid',
+                    placeItems: 'center',
+                    color: colorIcono,
+                    flexShrink: 0,
                   }}
                 >
-                  <span style={{ color }}>{icon}</span>
-                  <span
-                    style={{
-                      fontSize: 'var(--text-xs)',
-                      fontWeight: 'var(--fw-medium)',
-                      color: 'var(--color-ink-3)',
-                      fontFamily: 'var(--font-mono)',
-                    }}
-                  >
-                    {fase}
-                  </span>
-                </div>
+                  <Icono size={16} />
+                </span>
                 <div>
                   <p
                     style={{
-                      fontWeight: 'var(--fw-semibold)',
-                      fontSize: 'var(--text-base)',
+                      fontWeight: 'var(--fw-medium)',
+                      fontSize: 'var(--text-sm)',
                       color: 'var(--color-ink-1)',
-                      margin: '0 0 var(--space-1)',
+                      margin: 0,
                     }}
                   >
                     {titulo}
                   </p>
                   <p
                     style={{
-                      fontSize: 'var(--text-sm)',
-                      color: 'var(--color-ink-2)',
-                      lineHeight: 'var(--leading-relaxed)',
-                      margin: 0,
+                      fontSize: 'var(--text-xs)',
+                      color: 'var(--color-ink-3)',
+                      margin: 'var(--space-1) 0 0',
                     }}
                   >
                     {descripcion}
                   </p>
                 </div>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 'var(--text-xs)',
+                    color: 'var(--color-ink-3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--space-2)',
+                  }}
+                >
+                  {fase}
+                  <ArrowRight size={13} style={{ opacity: 0.4 }} />
+                </span>
               </div>
             ))}
           </div>
-        </section>
-
-        {/* Arquitectura */}
-        <section
-          style={{
-            background: 'var(--color-surface-1)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-lg)',
-            padding: 'var(--space-6)',
-          }}
-        >
-          <p className="eyebrow" style={{ marginBottom: 'var(--space-5)' }}>
-            Arquitectura
-          </p>
-          <dl
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-              gap: 'var(--space-4)',
-              margin: 0,
-            }}
-          >
-            {[
-              ['Paradigma', 'OOP + FP híbrido'],
-              ['Lenguaje', 'TypeScript'],
-              ['Base de datos', 'Supabase / PostgreSQL'],
-              ['Autenticación', 'Supabase Auth + RLS'],
-              ['Motor de cálculo', 'FP puro · big.js · sha256'],
-              ['Pruebas', '160 pruebas unitarias · Vitest'],
-            ].map(([clave, valor]) => (
-              <div key={clave}>
-                <dt
-                  style={{
-                    fontSize: 'var(--text-xs)',
-                    color: 'var(--color-ink-3)',
-                    textTransform: 'uppercase',
-                    letterSpacing: 'var(--tracking-wide)',
-                    marginBottom: 'var(--space-1)',
-                  }}
-                >
-                  {clave}
-                </dt>
-                <dd
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 'var(--text-sm)',
-                    color: 'var(--color-ink-1)',
-                    margin: 0,
-                  }}
-                >
-                  {valor}
-                </dd>
-              </div>
-            ))}
-          </dl>
         </section>
       </main>
     </>
