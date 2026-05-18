@@ -3,6 +3,7 @@
 import { Fragment, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { AnomalyBadge } from '@/components/activity/AnomalyBadge';
+import { traducirMensajeAnomalia } from '@/lib/anomaly';
 import type { ActivityEntryStatus, AnomalySeverity, EmissionSourceType } from '@/types/database';
 
 export interface ActivityEntryView {
@@ -442,7 +443,7 @@ export function ActivityList({ entries, periodos }: ActivityListProps) {
                                 margin: 0,
                               }}
                             >
-                              {entry.anomaly.message}
+                              {traducirMensajeAnomalia(entry.anomaly.message)}
                             </p>
                           </div>
 
