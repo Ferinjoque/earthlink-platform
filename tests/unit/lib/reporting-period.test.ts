@@ -52,4 +52,17 @@ describe('etiquetaEstadoPeriodo', () => {
       expect(label).not.toBe(s);
     }
   });
+
+  it('returns raw status string for unknown values', () => {
+    const unknown = 'draft' as unknown as PeriodStatus;
+    expect(etiquetaEstadoPeriodo(unknown)).toBe('draft');
+  });
+});
+
+// Tests for fallback branches in variantEstadoPeriodo
+describe('variantEstadoPeriodo — fallback', () => {
+  it('returns neutral for unknown status values', () => {
+    const unknown = 'archived' as unknown as PeriodStatus;
+    expect(variantEstadoPeriodo(unknown)).toBe('neutral');
+  });
 });

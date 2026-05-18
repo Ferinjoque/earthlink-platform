@@ -129,3 +129,33 @@ describe('AnomalyService._internals', () => {
     expect(AnomalyService._internals.severityFor(5.0)).toBe('high');
   });
 });
+
+describe('AnomalyService.detect() — message fallback for unknown source types', () => {
+  it('uses raw sourceType in message when source has no Spanish label', () => {
+    const svc = new AnomalyService();
+    const unknownType = 'biogenic_combustion' as ActivityEntry['sourceType'];
+
+    function makeUnknownEntry(qty: number): ActivityEntry {
+      return new ActivityEntry({
+        id: `unk-${qty}`,
+        reportingPeriodId: 'period-x',
+        sourceType: unknownType,
+        activityKind: { kind: 'stationary_combustion', fuel: 'diesel' },
+        rawQuantity: qty,
+        rawUnit: 'kg',
+        status: 'submitted',
+        submittedAt: NOW,
+        submittedBy: null,
+        createdAt: NOW,
+      });
+    }
+
+    const historical = [makeUnknownEntry(100), makeUnknownEntry(102), makeUnknownEntry(98)];
+    const current = [makeUnknownEntry(500)]; // extreme outlier
+
+    const result = svc.detect(current, historical);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.message).toContain('biogenic_combustion');
+    expect(result[0]!.message).not.toContain('undefined');
+  });
+});

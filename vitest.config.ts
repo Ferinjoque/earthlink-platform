@@ -25,6 +25,13 @@ export default defineConfig({
         'src/actions/suppliers.ts',
         'src/actions/periods.ts',
         'src/actions/reports.ts',
+        'src/lib/csv.ts',
+        'src/lib/anomaly.ts',
+        'src/lib/reporting-period.ts',
+        'src/proxy.ts',
+        'src/services/AuditService.ts',
+        'src/services/AnomalyService.ts',
+        'src/services/EvaluationService.ts',
       ],
       exclude: [
         // Types-only files — no runtime coverage possible
@@ -34,8 +41,8 @@ export default defineConfig({
         // Infrastructure — integration-tested, not unit-tested
         'src/repos/Supabase*.ts',
         'src/repos/*Repository.ts',
-        'src/services/**',
-        'src/lib/**',
+        'src/lib/env.ts',
+        'src/lib/supplier-constants.ts',
         '**/*.d.ts',
         '**/*.test.ts',
         '**/*.spec.ts',
