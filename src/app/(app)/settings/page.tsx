@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { createServerClient } from '@/services/supabase/server';
 import { TopBar } from '@/components/shell/TopBar';
 import { signOut } from '@/actions/auth';
@@ -18,6 +19,7 @@ export default async function ConfiguracionPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
 
   const { data: rawMemberships } = await supabase
     .from('memberships')
