@@ -15,18 +15,25 @@ interface NavItem {
   href: string;
   label: string;
   icon: React.ReactNode;
+  badge?: number;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { href: '/dashboard', label: 'Panel', icon: <LayoutDashboard size={18} /> },
-  { href: '/suppliers', label: 'Proveedores', icon: <Building2 size={18} /> },
-  { href: '/activity', label: 'Actividad', icon: <ClipboardList size={18} /> },
-  { href: '/audit', label: 'Auditoría', icon: <ShieldCheck size={18} /> },
-  { href: '/reports', label: 'Reportes', icon: <FileText size={18} /> },
-];
+interface SidebarProps {
+  anomaliaCount?: number;
+}
 
-export function Sidebar() {
+export function Sidebar({ anomaliaCount = 0 }: SidebarProps) {
   const pathname = usePathname();
+
+  const NAV_ITEMS: NavItem[] = [
+    { href: '/dashboard', label: 'Panel', icon: <LayoutDashboard size={18} /> },
+    { href: '/suppliers', label: 'Proveedores', icon: <Building2 size={18} /> },
+    { href: '/activity', label: 'Actividad', icon: <ClipboardList size={18} /> },
+    ...(anomaliaCount > 0
+      ? [{ href: '/audit', label: 'Auditoría', icon: <ShieldCheck size={18} />, badge: anomaliaCount }]
+      : [{ href: '/audit', label: 'Auditoría', icon: <ShieldCheck size={18} /> }]),
+    { href: '/reports', label: 'Reportes', icon: <FileText size={18} /> },
+  ];
 
   return (
     <aside
@@ -108,7 +115,7 @@ export function Sidebar() {
           gap: '2px',
         }}
       >
-        {NAV_ITEMS.map(({ href, label, icon }) => {
+        {NAV_ITEMS.map(({ href, label, icon, badge }) => {
           const isActive = pathname === href || pathname.startsWith(href + '/');
           return (
             <Link
@@ -152,7 +159,26 @@ export function Sidebar() {
               >
                 {icon}
               </span>
-              {label}
+              <span style={{ flex: 1 }}>{label}</span>
+              {badge !== undefined && (
+                <span
+                  style={{
+                    fontSize: '10px',
+                    fontFamily: 'var(--font-mono)',
+                    fontWeight: 700,
+                    color: 'oklch(14% 0.04 75)',
+                    background: 'var(--color-signal-md)',
+                    padding: '1px 6px',
+                    borderRadius: 'var(--radius-pill)',
+                    lineHeight: '16px',
+                    minWidth: '18px',
+                    textAlign: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  {badge > 99 ? '99+' : badge}
+                </span>
+              )}
             </Link>
           );
         })}
