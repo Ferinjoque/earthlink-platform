@@ -48,13 +48,7 @@ const VARIANT_STYLES: Record<ToastVariant, { background: string; color: string; 
     },
   };
 
-function ToastBubble({
-  item,
-  onDismiss,
-}: {
-  item: ToastItem;
-  onDismiss: (id: number) => void;
-}) {
+function ToastBubble({ item, onDismiss }: { item: ToastItem; onDismiss: (id: number) => void }) {
   const styles = VARIANT_STYLES[item.variant];
 
   return (
@@ -136,13 +130,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
+    const timers = timersRef.current;
     return () => {
-      for (const timer of timersRef.current.values()) clearTimeout(timer);
+      for (const timer of timers.values()) clearTimeout(timer);
     };
   }, []);
 
-  const container =
-    typeof document !== 'undefined' ? document.getElementById('toast-root') : null;
+  const container = typeof document !== 'undefined' ? document.getElementById('toast-root') : null;
 
   return (
     <ToastContext.Provider value={{ toast }}>
