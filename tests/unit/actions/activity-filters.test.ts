@@ -6,17 +6,23 @@ function filtrarEntradas(
   entries: ActivityEntryView[],
   filtroEstado: string,
   filtroFuente: string,
+  filtroPeriodo = 'todos',
 ): ActivityEntryView[] {
   return entries.filter((e) => {
     if (filtroEstado !== 'todos' && e.status !== filtroEstado) return false;
     if (filtroFuente !== 'todos' && e.source_type !== filtroFuente) return false;
+    if (filtroPeriodo !== 'todos' && e.period_id !== filtroPeriodo) return false;
     return true;
   });
 }
 
+const PERIOD_A = 'aaaaaaaa-0000-4000-8000-000000000001';
+const PERIOD_B = 'bbbbbbbb-0000-4000-8000-000000000002';
+
 const BASE: ActivityEntryView[] = [
   {
     id: '1',
+    period_id: PERIOD_A,
     period_label: 'Q1-2026',
     source_type: 'stationary_combustion',
     raw_quantity: 100,
@@ -27,6 +33,7 @@ const BASE: ActivityEntryView[] = [
   },
   {
     id: '2',
+    period_id: PERIOD_A,
     period_label: 'Q1-2026',
     source_type: 'purchased_electricity',
     raw_quantity: 200,
@@ -38,6 +45,7 @@ const BASE: ActivityEntryView[] = [
   },
   {
     id: '3',
+    period_id: PERIOD_B,
     period_label: 'Q4-2025',
     source_type: 'fugitive',
     raw_quantity: 5,
@@ -90,5 +98,27 @@ describe('filtrarEntradas', () => {
 
   it('array vacío de entrada devuelve array vacío', () => {
     expect(filtrarEntradas([], 'draft', 'stationary_combustion')).toHaveLength(0);
+  });
+
+  it('filtrar por periodo A devuelve 2 entradas', () => {
+    const resultado = filtrarEntradas(BASE, 'todos', 'todos', PERIOD_A);
+    expect(resultado).toHaveLength(2);
+    expect(resultado.every((e) => e.period_id === PERIOD_A)).toBe(true);
+  });
+
+  it('filtrar por periodo B devuelve 1 entrada', () => {
+    const resultado = filtrarEntradas(BASE, 'todos', 'todos', PERIOD_B);
+    expect(resultado).toHaveLength(1);
+    expect(resultado[0]?.id).toBe('3');
+  });
+
+  it('combinar estado + periodo', () => {
+    const resultado = filtrarEntradas(BASE, 'submitted', 'todos', PERIOD_A);
+    expect(resultado).toHaveLength(1);
+    expect(resultado[0]?.id).toBe('2');
+  });
+
+  it('periodo sin entradas devuelve array vacío', () => {
+    expect(filtrarEntradas(BASE, 'todos', 'todos', 'cccccccc-0000-4000-8000-000000000003')).toHaveLength(0);
   });
 });

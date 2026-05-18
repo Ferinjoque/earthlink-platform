@@ -140,6 +140,7 @@ export default async function ActividadPage() {
 
   const entries: ActivityEntryView[] = entriesData.map((e) => ({
     id: e.id,
+    period_id: e.reporting_period_id,
     period_label: periodLabelMap.get(e.reporting_period_id) ?? '—',
     source_type: e.source_type,
     raw_quantity: e.raw_quantity,
@@ -318,7 +319,7 @@ export default async function ActividadPage() {
                 </p>
               </div>
             ) : (
-              <ActivityList entries={entries} />
+              <ActivityList entries={entries} periodos={periods} />
             )}
           </div>
         </section>
