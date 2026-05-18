@@ -1,58 +1,57 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { createServerClient } from '@/services/supabase/server';
 import { TopBar } from '@/components/shell/TopBar';
-import { Activity, AlertTriangle, TrendingDown, FileCheck, ArrowRight } from 'lucide-react';
-import type { MembershipRow, ReportingPeriodRow } from '@/types/database';
+import { Badge } from '@/components/ui/Badge';
+import { AnomalyBadge } from '@/components/activity/AnomalyBadge';
+import {
+  Activity,
+  AlertTriangle,
+  TrendingDown,
+  FileCheck,
+  ArrowRight,
+  ShieldAlert,
+} from 'lucide-react';
+import type { MembershipRow, ReportingPeriodRow, AnomalySeverity } from '@/types/database';
 
 export const metadata: Metadata = { title: 'Panel' };
 
-function formatearCo2e(kg: number): { valor: string; unidad: string } {
+export function formatearCo2e(kg: number): { valor: string; unidad: string } {
   if (kg === 0) return { valor: '0', unidad: 'kg' };
   if (kg >= 1_000_000) return { valor: (kg / 1_000_000).toFixed(2), unidad: 'MtCO₂e' };
   if (kg >= 1_000) return { valor: (kg / 1_000).toFixed(3), unidad: 'tCO₂e' };
   return { valor: kg.toFixed(1), unidad: 'kg CO₂e' };
 }
 
+const FUENTE_LABELS: Record<string, string> = {
+  stationary_combustion: 'Combustión estacionaria',
+  mobile_combustion: 'Combustión móvil',
+  purchased_electricity: 'Electricidad',
+  purchased_steam: 'Vapor',
+  fugitive: 'Fugitivo',
+  electricity: 'Electricidad',
+  steam: 'Vapor',
+};
+
+const ESTADO_LABELS: Record<string, string> = {
+  draft: 'Borrador',
+  submitted: 'Enviado',
+  validated: 'Validado',
+  rejected: 'Rechazado',
+};
+
+const MESES_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
 const MODULOS = [
-  {
-    href: '/activity',
-    icono: Activity,
-    titulo: 'Registros de actividad',
-    descripcion: 'Envía y revisa datos de consumo Alcance 1 y 2.',
-    fase: 'Fase 5',
-    colorIcono: 'var(--color-signal-ok)',
-  },
-  {
-    href: '/activity',
-    icono: AlertTriangle,
-    titulo: 'Detección de anomalías',
-    descripcion: 'Z-score señala patrones de consumo inusuales.',
-    fase: 'Fase 5',
-    colorIcono: 'var(--color-signal-md)',
-  },
-  {
-    href: '/audit',
-    icono: TrendingDown,
-    titulo: 'Consola de auditoría',
-    descripcion: 'Bloquea periodos y consulta el registro inmutable.',
-    fase: 'Fase 6',
-    colorIcono: 'var(--color-accent)',
-  },
-  {
-    href: '/reports',
-    icono: FileCheck,
-    titulo: 'Reportes',
-    descripcion: 'Exportaciones PDF y CSV con verificación sha256.',
-    fase: 'Fase 7',
-    colorIcono: 'var(--color-ink-3)',
-  },
+  { href: '/activity', icono: Activity, titulo: 'Registros de actividad', descripcion: 'Envía y revisa datos de consumo Alcance 1 y 2.', fase: 'Fase 5', colorIcono: 'var(--color-signal-ok)' },
+  { href: '/activity', icono: AlertTriangle, titulo: 'Detección de anomalías', descripcion: 'Z-score señala patrones de consumo inusuales.', fase: 'Fase 5', colorIcono: 'var(--color-signal-md)' },
+  { href: '/audit', icono: TrendingDown, titulo: 'Consola de auditoría', descripcion: 'Bloquea periodos y consulta el registro inmutable.', fase: 'Fase 6', colorIcono: 'var(--color-accent)' },
+  { href: '/reports', icono: FileCheck, titulo: 'Reportes', descripcion: 'Exportaciones PDF y CSV con verificación sha256.', fase: 'Fase 7', colorIcono: 'var(--color-ink-3)' },
 ];
 
 export default async function PanelPage() {
   const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
   const { data: rawMemberships } = await supabase
     .from('memberships')
@@ -69,20 +68,31 @@ export default async function PanelPage() {
 
   const allSupplierIds: string[] = [...memberSupplierIds];
   if (orgIds.length) {
-    const { data } = await supabase.from('suppliers').select('id').in('organization_id', orgIds);
+    const { data } = await supabase.from('suppliers').select('id, name').in('organization_id', orgIds);
     if (data) {
-      for (const s of data as Array<{ id: string }>) {
+      for (const s of data as Array<{ id: string; name: string }>) {
         if (!allSupplierIds.includes(s.id)) allSupplierIds.push(s.id);
       }
     }
   }
 
-  type FilaPeriodo = Pick<ReportingPeriodRow, 'id' | 'status'>;
+  // Build supplier name map
+  const supplierNameMap = new Map<string, string>();
+  if (orgIds.length) {
+    const { data } = await supabase.from('suppliers').select('id, name').in('organization_id', orgIds);
+    if (data) {
+      for (const s of data as Array<{ id: string; name: string }>) {
+        supplierNameMap.set(s.id, s.name);
+      }
+    }
+  }
+
+  type FilaPeriodo = Pick<ReportingPeriodRow, 'id' | 'status' | 'supplier_id'>;
   const periodsData: FilaPeriodo[] = [];
   if (allSupplierIds.length) {
     const { data } = await supabase
       .from('reporting_periods')
-      .select('id, status')
+      .select('id, status, supplier_id')
       .in('supplier_id', allSupplierIds);
     if (data) periodsData.push(...(data as FilaPeriodo[]));
   }
@@ -90,22 +100,141 @@ export default async function PanelPage() {
   const periodosAbiertos = periodsData.filter((p) => p.status === 'open').length;
   const periodIds = periodsData.map((p) => p.id);
 
+  // Period → supplier map for activity feed
+  const periodSupplierMap = new Map<string, string>();
+  for (const p of periodsData) {
+    periodSupplierMap.set(p.id, p.supplier_id);
+  }
+
+  // ── KPI + trend data ──
+  type EmissionRow = { co2e_kg: number; scope: number; calculated_at: string };
+  const emissionRows: EmissionRow[] = [];
   let totalCo2eKg = 0;
   let scope1Co2eKg = 0;
   let scope2Co2eKg = 0;
+
   if (periodIds.length) {
     const { data } = await supabase
       .from('emission_results')
-      .select('co2e_kg, scope')
+      .select('co2e_kg, scope, calculated_at')
       .in('reporting_period_id', periodIds);
     if (data) {
-      for (const r of data as Array<{ co2e_kg: number; scope: number }>) {
+      for (const r of data as EmissionRow[]) {
+        emissionRows.push(r);
         totalCo2eKg += r.co2e_kg;
         if (r.scope === 1) scope1Co2eKg += r.co2e_kg;
         else scope2Co2eKg += r.co2e_kg;
       }
     }
   }
+
+  // ── Trend: group by month (last 6) ──
+  const ahora = new Date();
+  type MesDatum = { label: string; kg: number };
+  const mesesMap = new Map<string, MesDatum>();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(ahora.getFullYear(), ahora.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = `${MESES_ES[d.getMonth()] ?? '?'} ${String(d.getFullYear()).slice(2)}`;
+    mesesMap.set(key, { label, kg: 0 });
+  }
+  for (const r of emissionRows) {
+    const d = new Date(r.calculated_at);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const existing = mesesMap.get(key);
+    if (existing) existing.kg += r.co2e_kg;
+  }
+  const trendData = [...mesesMap.values()];
+  const maxKg = Math.max(...trendData.map((m) => m.kg), 1);
+  const hayTrend = trendData.some((m) => m.kg > 0);
+
+  // ── Activity feed: last 8 entries ──
+  type EntradaFeed = {
+    id: string;
+    source_type: string;
+    raw_quantity: number;
+    raw_unit: string;
+    status: string;
+    created_at: string;
+    reporting_period_id: string;
+    anomaly?: { severity: AnomalySeverity; z_score: number } | null;
+  };
+  const entradaFeed: EntradaFeed[] = [];
+
+  if (periodIds.length) {
+    const { data: rawEntries } = await supabase
+      .from('activity_entries')
+      .select('id, source_type, raw_quantity, raw_unit, status, created_at, reporting_period_id')
+      .in('reporting_period_id', periodIds)
+      .order('created_at', { ascending: false })
+      .limit(8);
+
+    if (rawEntries) {
+      const entryIds = (rawEntries as { id: string }[]).map((e) => e.id);
+      const { data: flags } = await supabase
+        .from('anomaly_flags')
+        .select('activity_entry_id, severity, z_score')
+        .in('activity_entry_id', entryIds)
+        .eq('is_resolved', false);
+
+      const flagMap = new Map<string, { severity: AnomalySeverity; z_score: number }>();
+      for (const f of (flags ?? []) as { activity_entry_id: string; severity: AnomalySeverity; z_score: number }[]) {
+        flagMap.set(f.activity_entry_id, { severity: f.severity, z_score: f.z_score });
+      }
+
+      for (const e of rawEntries as EntradaFeed[]) {
+        entradaFeed.push({ ...e, anomaly: flagMap.get(e.id) ?? null });
+      }
+    }
+  }
+
+  // ── Anomaly alerts ──
+  type AnomalyAlert = {
+    id: string;
+    activity_entry_id: string;
+    severity: AnomalySeverity;
+    z_score: number | null;
+    message: string;
+    flagged_at: string;
+    supplierName: string | undefined;
+  };
+  const anomalyAlerts: AnomalyAlert[] = [];
+
+  if (periodIds.length) {
+    const { data: rawEntryIds } = await supabase
+      .from('activity_entries')
+      .select('id, reporting_period_id')
+      .in('reporting_period_id', periodIds);
+
+    if (rawEntryIds && (rawEntryIds as { id: string }[]).length > 0) {
+      const allEntryIds = (rawEntryIds as { id: string; reporting_period_id: string }[]).map((e) => e.id);
+      const entryPeriodMap = new Map<string, string>();
+      for (const e of rawEntryIds as { id: string; reporting_period_id: string }[]) {
+        entryPeriodMap.set(e.id, e.reporting_period_id);
+      }
+
+      const { data: rawFlags } = await supabase
+        .from('anomaly_flags')
+        .select('id, activity_entry_id, severity, z_score, message, flagged_at')
+        .in('activity_entry_id', allEntryIds)
+        .eq('is_resolved', false)
+        .order('severity', { ascending: false })
+        .order('z_score', { ascending: false })
+        .limit(20);
+
+      if (rawFlags) {
+        for (const f of rawFlags as AnomalyAlert[]) {
+          const periodId = entryPeriodMap.get(f.activity_entry_id);
+          const supplierId = periodId ? periodSupplierMap.get(periodId) : undefined;
+          const supplierName = supplierId ? supplierNameMap.get(supplierId) : undefined;
+          anomalyAlerts.push({ ...f, supplierName });
+        }
+      }
+    }
+  }
+
+  const totalAnomalias = anomalyAlerts.length;
+  const top3Anomalias = anomalyAlerts.slice(0, 3);
 
   const tieneDatos = totalCo2eKg > 0;
   const total = formatearCo2e(totalCo2eKg);
@@ -144,21 +273,14 @@ export default async function PanelPage() {
           >
             Huella de carbono de la cadena de suministro
           </h2>
-          <p
-            style={{
-              fontSize: 'var(--text-sm)',
-              color: 'var(--color-ink-2)',
-              margin: 0,
-              maxWidth: '52ch',
-            }}
-          >
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-2)', margin: 0, maxWidth: '52ch' }}>
             {tieneDatos
               ? 'Acumulado en todos los periodos calculados.'
               : 'Los datos aparecerán cuando los proveedores envíen sus registros de actividad.'}
           </p>
         </section>
 
-        {/* ── KPI strip editorial (no card-grid uniforme) ── */}
+        {/* ── KPI strip editorial ── */}
         <section
           style={{
             background: 'var(--color-surface-1)',
@@ -171,227 +293,80 @@ export default async function PanelPage() {
             alignItems: 'center',
           }}
         >
-          {/* Total — protagonista */}
           <div>
-            <p
-              className="eyebrow"
-              style={{ marginBottom: 'var(--space-2)', color: 'var(--color-accent)' }}
-            >
+            <p className="eyebrow" style={{ marginBottom: 'var(--space-2)', color: 'var(--color-accent)' }}>
               Total CO₂e
             </p>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--space-3)' }}>
-              <span
-                className="numeric-tabular"
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 'var(--text-4xl)',
-                  fontWeight: 700,
-                  color: 'var(--color-ink-1)',
-                  letterSpacing: '-0.03em',
-                  lineHeight: 1,
-                }}
-              >
+              <span className="numeric-tabular" style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-4xl)', fontWeight: 700, color: 'var(--color-ink-1)', letterSpacing: '-0.03em', lineHeight: 1 }}>
                 {tieneDatos ? total.valor : '—'}
               </span>
-              {tieneDatos && (
-                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-2)' }}>
-                  {total.unidad}
-                </span>
-              )}
+              {tieneDatos && <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-2)' }}>{total.unidad}</span>}
             </div>
-            <p
-              style={{
-                fontSize: 'var(--text-xs)',
-                color: 'var(--color-ink-3)',
-                marginTop: 'var(--space-1)',
-              }}
-            >
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', marginTop: 'var(--space-1)' }}>
               {tieneDatos ? 'acumulado en periodos calculados' : 'sin datos aún'}
             </p>
           </div>
 
-          {/* Alcance 1 */}
           {tieneDatos && (
-            <div
-              style={{
-                borderLeft: '1px solid var(--color-border)',
-                paddingLeft: 'var(--space-6)',
-              }}
-            >
-              <p className="eyebrow" style={{ marginBottom: 'var(--space-2)' }}>
-                Alcance 1
-              </p>
+            <div style={{ borderLeft: '1px solid var(--color-border)', paddingLeft: 'var(--space-6)' }}>
+              <p className="eyebrow" style={{ marginBottom: 'var(--space-2)' }}>Alcance 1</p>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--space-2)' }}>
-                <span
-                  className="numeric-tabular"
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 'var(--text-2xl)',
-                    fontWeight: 700,
-                    color: 'var(--color-accent)',
-                    letterSpacing: '-0.025em',
-                    lineHeight: 1,
-                  }}
-                >
+                <span className="numeric-tabular" style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--color-accent)', letterSpacing: '-0.025em', lineHeight: 1 }}>
                   {s1.valor}
                 </span>
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)' }}>
-                  {s1.unidad}
-                </span>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)' }}>{s1.unidad}</span>
               </div>
-              <p
-                style={{
-                  fontSize: 'var(--text-xs)',
-                  color: 'var(--color-ink-3)',
-                  marginTop: 'var(--space-1)',
-                }}
-              >
-                Emisiones directas
-              </p>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', marginTop: 'var(--space-1)' }}>Emisiones directas</p>
             </div>
           )}
 
-          {/* Alcance 2 */}
           {tieneDatos && (
-            <div
-              style={{
-                borderLeft: '1px solid var(--color-border)',
-                paddingLeft: 'var(--space-6)',
-              }}
-            >
-              <p className="eyebrow" style={{ marginBottom: 'var(--space-2)' }}>
-                Alcance 2
-              </p>
+            <div style={{ borderLeft: '1px solid var(--color-border)', paddingLeft: 'var(--space-6)' }}>
+              <p className="eyebrow" style={{ marginBottom: 'var(--space-2)' }}>Alcance 2</p>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--space-2)' }}>
-                <span
-                  className="numeric-tabular"
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 'var(--text-2xl)',
-                    fontWeight: 700,
-                    color: 'var(--color-scope2)',
-                    letterSpacing: '-0.025em',
-                    lineHeight: 1,
-                  }}
-                >
+                <span className="numeric-tabular" style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--color-scope2)', letterSpacing: '-0.025em', lineHeight: 1 }}>
                   {s2.valor}
                 </span>
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)' }}>
-                  {s2.unidad}
-                </span>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)' }}>{s2.unidad}</span>
               </div>
-              <p
-                style={{
-                  fontSize: 'var(--text-xs)',
-                  color: 'var(--color-ink-3)',
-                  marginTop: 'var(--space-1)',
-                }}
-              >
-                Emisiones indirectas
-              </p>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', marginTop: 'var(--space-1)' }}>Emisiones indirectas</p>
             </div>
           )}
         </section>
 
         {/* ── Indicador periodos abiertos ── */}
         {periodosAbiertos > 0 && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--space-3)',
-              marginTop: 'calc(var(--space-8) * -0.6)',
-            }}
-          >
-            <span
-              style={{
-                width: '7px',
-                height: '7px',
-                borderRadius: '50%',
-                background: 'var(--color-signal-ok)',
-                flexShrink: 0,
-                boxShadow: '0 0 0 3px oklch(42% 0.12 155 / 16%)',
-              }}
-            />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginTop: 'calc(var(--space-8) * -0.6)' }}>
+            <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'var(--color-signal-ok)', flexShrink: 0, boxShadow: '0 0 0 3px oklch(42% 0.12 155 / 16%)' }} />
             <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-2)' }}>
-              <strong style={{ color: 'var(--color-ink-1)', fontFamily: 'var(--font-mono)' }}>
-                {periodosAbiertos}
-              </strong>{' '}
-              periodo{periodosAbiertos !== 1 ? 's' : ''} abierto
-              {periodosAbiertos !== 1 ? 's' : ''} pendientes de actividad
+              <strong style={{ color: 'var(--color-ink-1)', fontFamily: 'var(--font-mono)' }}>{periodosAbiertos}</strong>{' '}
+              periodo{periodosAbiertos !== 1 ? 's' : ''} abierto{periodosAbiertos !== 1 ? 's' : ''} pendientes de actividad
             </span>
           </div>
         )}
 
         {/* ── Distribución por alcance ── */}
         {tieneDatos && (
-          <section
-            style={{
-              background: 'var(--color-surface-1)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-lg)',
-              padding: 'var(--space-6)',
-            }}
-          >
-            <p className="eyebrow" style={{ marginBottom: 'var(--space-5)' }}>
-              Distribución por alcance
-            </p>
+          <section style={{ background: 'var(--color-surface-1)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-6)' }}>
+            <p className="eyebrow" style={{ marginBottom: 'var(--space-5)' }}>Distribución por alcance</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
               {[
-                {
-                  etiqueta: 'Alcance 1 — Directas',
-                  valor: scope1Co2eKg,
-                  color: 'var(--color-accent)',
-                },
-                {
-                  etiqueta: 'Alcance 2 — Indirectas',
-                  valor: scope2Co2eKg,
-                  color: 'var(--color-scope2)',
-                },
+                { etiqueta: 'Alcance 1 — Directas', valor: scope1Co2eKg, color: 'var(--color-accent)' },
+                { etiqueta: 'Alcance 2 — Indirectas', valor: scope2Co2eKg, color: 'var(--color-scope2)' },
               ].map(({ etiqueta, valor, color }) => {
                 const pct = totalCo2eKg > 0 ? (valor / totalCo2eKg) * 100 : 0;
                 const fmt = formatearCo2e(valor);
                 return (
                   <div key={etiqueta}>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'baseline',
-                        marginBottom: 'var(--space-2)',
-                      }}
-                    >
-                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)' }}>
-                        {etiqueta}
-                      </span>
-                      <span
-                        className="numeric-tabular"
-                        style={{
-                          fontFamily: 'var(--font-mono)',
-                          fontSize: 'var(--text-xs)',
-                          color: 'var(--color-ink-1)',
-                        }}
-                      >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 'var(--space-2)' }}>
+                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)' }}>{etiqueta}</span>
+                      <span className="numeric-tabular" style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--color-ink-1)' }}>
                         {fmt.valor} {fmt.unidad} ({pct.toFixed(1)}%)
                       </span>
                     </div>
-                    <div
-                      style={{
-                        height: '5px',
-                        background: 'var(--color-surface-2)',
-                        borderRadius: '9999px',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      <div
-                        style={{
-                          height: '100%',
-                          width: `${pct}%`,
-                          background: color,
-                          borderRadius: '9999px',
-                          transition: 'width 700ms cubic-bezier(0.16, 1, 0.3, 1)',
-                        }}
-                      />
+                    <div style={{ height: '5px', background: 'var(--color-surface-2)', borderRadius: '9999px', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '9999px', transition: 'width 700ms cubic-bezier(0.16, 1, 0.3, 1)' }} />
                     </div>
                   </div>
                 );
@@ -400,19 +375,168 @@ export default async function PanelPage() {
           </section>
         )}
 
-        {/* ── Módulos — lista editorial (no uniform card grid) ── */}
+        {/* ── Tendencia mensual CO₂e (SVG artesanal) ── */}
+        <section style={{ background: 'var(--color-surface-1)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-6)' }}>
+          <p className="eyebrow" style={{ marginBottom: 'var(--space-5)' }}>Tendencia mensual CO₂e</p>
+          {!hayTrend ? (
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-3)', textAlign: 'center', padding: 'var(--space-8) 0', margin: 0 }}>
+              Sin datos de emisiones en los últimos 6 meses.
+            </p>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <svg
+                viewBox="0 0 540 160"
+                style={{ width: '100%', minWidth: '320px', display: 'block' }}
+                aria-label="Tendencia mensual de emisiones CO₂e"
+              >
+                {trendData.map((mes, i) => {
+                  const barW = 60;
+                  const gap = 30;
+                  const x = i * (barW + gap) + gap / 2;
+                  const maxH = 100;
+                  const barH = mes.kg > 0 ? Math.max((mes.kg / maxKg) * maxH, 4) : 2;
+                  const y = 110 - barH;
+                  const fmt = formatearCo2e(mes.kg);
+                  return (
+                    <g key={mes.label}>
+                      <rect
+                        x={x}
+                        y={y}
+                        width={barW}
+                        height={barH}
+                        rx="3"
+                        fill="var(--color-accent)"
+                        opacity={mes.kg === 0 ? 0.2 : 0.85}
+                      />
+                      {mes.kg > 0 && (
+                        <text
+                          x={x + barW / 2}
+                          y={y - 5}
+                          textAnchor="middle"
+                          fontSize="9"
+                          fill="var(--color-ink-2)"
+                          fontFamily="var(--font-mono)"
+                        >
+                          {fmt.valor}
+                        </text>
+                      )}
+                      <text
+                        x={x + barW / 2}
+                        y={128}
+                        textAnchor="middle"
+                        fontSize="9"
+                        fill="var(--color-ink-3)"
+                        fontFamily="var(--font-mono)"
+                      >
+                        {mes.label}
+                      </text>
+                    </g>
+                  );
+                })}
+                <line x1="15" y1="110" x2="525" y2="110" stroke="var(--color-border)" strokeWidth="1" />
+              </svg>
+            </div>
+          )}
+        </section>
+
+        {/* ── Anomalías pendientes ── */}
+        {totalAnomalias > 0 && (
+          <section style={{ background: 'var(--color-signal-hi-bg)', border: '1px solid oklch(50% 0.16 20 / 20%)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-6)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-5)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                <ShieldAlert size={16} style={{ color: 'var(--color-signal-hi)' }} />
+                <p className="eyebrow" style={{ color: 'var(--color-signal-hi)' }}>
+                  {totalAnomalias} anomalía{totalAnomalias !== 1 ? 's' : ''} pendiente{totalAnomalias !== 1 ? 's' : ''}
+                </p>
+              </div>
+              <Link
+                href="/audit"
+                style={{ fontSize: 'var(--text-xs)', color: 'var(--color-signal-hi)', fontWeight: 'var(--fw-medium)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}
+              >
+                Ver en auditoría <ArrowRight size={12} />
+              </Link>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+              {top3Anomalias.map((a) => (
+                <div
+                  key={a.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--space-4)',
+                    padding: 'var(--space-3) var(--space-4)',
+                    background: 'var(--color-surface-1)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--color-border)',
+                  }}
+                >
+                  <AnomalyBadge severity={a.severity} zScore={a.z_score ?? undefined} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-1)', margin: 0, fontWeight: 'var(--fw-medium)' }}>
+                      {a.supplierName ?? 'Proveedor'}
+                    </p>
+                    <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', margin: 'var(--space-1) 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {a.message}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ── Feed actividad reciente ── */}
+        {entradaFeed.length > 0 && (
+          <section>
+            <p className="eyebrow" style={{ marginBottom: 'var(--space-4)' }}>Actividad reciente</p>
+            <div style={{ background: 'var(--color-surface-1)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+              {entradaFeed.map((e, i) => {
+                const supplierId = periodSupplierMap.get(e.reporting_period_id);
+                const supplierName = supplierId ? supplierNameMap.get(supplierId) : undefined;
+                return (
+                  <div
+                    key={e.id}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr auto',
+                      alignItems: 'center',
+                      gap: 'var(--space-4)',
+                      padding: 'var(--space-4) var(--space-5)',
+                      borderBottom: i < entradaFeed.length - 1 ? '1px solid var(--color-border)' : 'none',
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+                        <p style={{ fontWeight: 'var(--fw-medium)', fontSize: 'var(--text-sm)', color: 'var(--color-ink-1)', margin: 0 }}>
+                          {FUENTE_LABELS[e.source_type] ?? e.source_type}
+                        </p>
+                        {supplierName && (
+                          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)' }}>
+                            {supplierName}
+                          </span>
+                        )}
+                        {e.anomaly && (
+                          <AnomalyBadge severity={e.anomaly.severity} zScore={e.anomaly.z_score} />
+                        )}
+                      </div>
+                      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', margin: 'var(--space-1) 0 0', fontFamily: 'var(--font-mono)' }}>
+                        {e.raw_quantity} {e.raw_unit} · {new Date(e.created_at).toLocaleDateString('es-PE')}
+                      </p>
+                    </div>
+                    <Badge variant={e.status as 'draft' | 'submitted' | 'validated' | 'rejected'}>
+                      {ESTADO_LABELS[e.status] ?? e.status}
+                    </Badge>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ── Módulos — lista editorial ── */}
         <section>
-          <p className="eyebrow" style={{ marginBottom: 'var(--space-4)' }}>
-            Módulos de la plataforma
-          </p>
-          <div
-            style={{
-              background: 'var(--color-surface-1)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-lg)',
-              overflow: 'hidden',
-            }}
-          >
+          <p className="eyebrow" style={{ marginBottom: 'var(--space-4)' }}>Módulos de la plataforma</p>
+          <div style={{ background: 'var(--color-surface-1)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
             {MODULOS.map(({ icono: Icono, titulo, descripcion, fase, colorIcono }, i) => (
               <div
                 key={titulo}
@@ -425,51 +549,14 @@ export default async function PanelPage() {
                   borderBottom: i < MODULOS.length - 1 ? '1px solid var(--color-border)' : 'none',
                 }}
               >
-                <span
-                  style={{
-                    width: '34px',
-                    height: '34px',
-                    borderRadius: 'var(--radius-md)',
-                    background: 'var(--color-surface-2)',
-                    display: 'grid',
-                    placeItems: 'center',
-                    color: colorIcono,
-                    flexShrink: 0,
-                  }}
-                >
+                <span style={{ width: '34px', height: '34px', borderRadius: 'var(--radius-md)', background: 'var(--color-surface-2)', display: 'grid', placeItems: 'center', color: colorIcono, flexShrink: 0 }}>
                   <Icono size={16} />
                 </span>
                 <div>
-                  <p
-                    style={{
-                      fontWeight: 'var(--fw-medium)',
-                      fontSize: 'var(--text-sm)',
-                      color: 'var(--color-ink-1)',
-                      margin: 0,
-                    }}
-                  >
-                    {titulo}
-                  </p>
-                  <p
-                    style={{
-                      fontSize: 'var(--text-xs)',
-                      color: 'var(--color-ink-3)',
-                      margin: 'var(--space-1) 0 0',
-                    }}
-                  >
-                    {descripcion}
-                  </p>
+                  <p style={{ fontWeight: 'var(--fw-medium)', fontSize: 'var(--text-sm)', color: 'var(--color-ink-1)', margin: 0 }}>{titulo}</p>
+                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', margin: 'var(--space-1) 0 0' }}>{descripcion}</p>
                 </div>
-                <span
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 'var(--text-xs)',
-                    color: 'var(--color-ink-3)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 'var(--space-2)',
-                  }}
-                >
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                   {fase}
                   <ArrowRight size={13} style={{ opacity: 0.4 }} />
                 </span>
