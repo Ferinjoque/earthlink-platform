@@ -3,11 +3,12 @@ import { ReportingPeriod, type PeriodStatus } from '../domain/ReportingPeriod';
 
 export class ReportingPeriodRepository extends SupabaseRepository<ReportingPeriod> {
   protected readonly tableName = 'reporting_periods';
+  protected override readonly selectColumns = 'id, supplier_id, label, start_date, end_date, status, created_at';
 
   async findBySupplierId(supplierId: string): Promise<readonly ReportingPeriod[]> {
     const { data, error } = await this.client
       .from(this.tableName)
-      .select('*')
+      .select('id, supplier_id, label, start_date, end_date, status, created_at')
       .eq('supplier_id', supplierId)
       .order('start_date', { ascending: false });
     if (error ?? !data) return [];

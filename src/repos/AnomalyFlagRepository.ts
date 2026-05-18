@@ -4,11 +4,12 @@ import type { AnomalyDetector, AnomalySeverity } from '../types/database';
 
 export class AnomalyFlagRepository extends SupabaseRepository<AnomalyFlag> {
   protected readonly tableName = 'anomaly_flags';
+  protected override readonly selectColumns = 'id, activity_entry_id, detector, severity, z_score, threshold_used, message, is_resolved, resolved_by, resolved_at, flagged_at';
 
   async findByActivityEntryId(entryId: string): Promise<readonly AnomalyFlag[]> {
     const { data, error } = await this.client
       .from(this.tableName)
-      .select('*')
+      .select('id, activity_entry_id, detector, severity, z_score, threshold_used, message, is_resolved, resolved_by, resolved_at, flagged_at')
       .eq('activity_entry_id', entryId);
     if (error ?? !data) return [];
     return (data as Record<string, unknown>[]).map((row) => this.toEntity(row));
@@ -17,7 +18,7 @@ export class AnomalyFlagRepository extends SupabaseRepository<AnomalyFlag> {
   async findUnresolved(): Promise<readonly AnomalyFlag[]> {
     const { data, error } = await this.client
       .from(this.tableName)
-      .select('*')
+      .select('id, activity_entry_id, detector, severity, z_score, threshold_used, message, is_resolved, resolved_by, resolved_at, flagged_at')
       .eq('is_resolved', false)
       .order('flagged_at', { ascending: false });
     if (error ?? !data) return [];
