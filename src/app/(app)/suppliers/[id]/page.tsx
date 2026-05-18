@@ -6,12 +6,13 @@ import { TopBar } from '@/components/shell/TopBar';
 import { Badge } from '@/components/ui/Badge';
 import { AnomalyBadge } from '@/components/activity/AnomalyBadge';
 import { NuevoPeriodoForm } from '@/components/suppliers/NuevoPeriodoForm';
+import { variantEstadoPeriodo, etiquetaEstadoPeriodo } from '@/lib/reporting-period';
 import type {
   SupplierRow,
   ReportingPeriodRow,
   ActivityEntryRow,
-  PeriodStatus,
 } from '@/types/database';
+import type { PeriodStatus } from '@/domain/ReportingPeriod';
 import { ArrowLeft, ClipboardList } from 'lucide-react';
 
 export const metadata: Metadata = { title: 'Detalle de proveedor' };
@@ -22,13 +23,6 @@ const FUENTE_LABELS: Record<string, string> = {
   electricity: 'Electricidad',
   steam: 'Vapor',
   fugitive: 'Fugitivo',
-};
-
-const PERIODO_LABELS: Record<string, string> = {
-  open: 'Abierto',
-  calculating: 'Calculando',
-  under_review: 'En revisión',
-  locked: 'Bloqueado',
 };
 
 const ESTADO_LABELS: Record<string, string> = {
@@ -91,66 +85,57 @@ export default async function DetalleProveedorPage({
 
   const periodIds = periods.map((p) => p.id);
 
-  const co2eByPeriod = new Map<string, number>();
-  if (periodIds.length) {
-    const { data: results } = await supabase
-      .from('emission_results')
-      .select('reporting_period_id, co2e_kg')
-      .in('reporting_period_id', periodIds);
-
-    for (const r of (results ?? []) as { reporting_period_id: string; co2e_kg: number }[]) {
-      co2eByPeriod.set(
-        r.reporting_period_id,
-        (co2eByPeriod.get(r.reporting_period_id) ?? 0) + r.co2e_kg,
-      );
-    }
-  }
-
-  const entradas: (Pick<
+  // Parallel: emission_results + recent activity_entries (both depend only on periodIds)
+  type FilaResultado = { reporting_period_id: string; co2e_kg: number };
+  type FilaEntrada = Pick<
     ActivityEntryRow,
     'id' | 'source_type' | 'raw_quantity' | 'raw_unit' | 'status' | 'created_at'
-  > & {
-    anomaly?: { severity: string; z_score: number; message: string } | null;
-  })[] = [];
+  >;
 
-  if (periodIds.length) {
-    const { data: rawEntries } = await supabase
-      .from('activity_entries')
-      .select('id, source_type, raw_quantity, raw_unit, status, created_at, reporting_period_id')
-      .in('reporting_period_id', periodIds)
-      .order('created_at', { ascending: false })
-      .limit(5);
+  const [resultsRaw, rawEntriesRaw] = periodIds.length
+    ? await Promise.all([
+        supabase
+          .from('emission_results')
+          .select('reporting_period_id, co2e_kg')
+          .in('reporting_period_id', periodIds),
+        supabase
+          .from('activity_entries')
+          .select('id, source_type, raw_quantity, raw_unit, status, created_at')
+          .in('reporting_period_id', periodIds)
+          .order('created_at', { ascending: false })
+          .limit(5),
+      ])
+    : [{ data: [] as FilaResultado[] }, { data: [] as FilaEntrada[] }];
 
-    if (rawEntries) {
-      const entryIds = (rawEntries as { id: string }[]).map((e) => e.id);
-      const { data: flags } = await supabase
-        .from('anomaly_flags')
-        .select('activity_entry_id, severity, z_score, message')
-        .in('activity_entry_id', entryIds)
-        .eq('is_resolved', false);
+  const co2eByPeriod = new Map<string, number>();
+  for (const r of (resultsRaw.data ?? []) as FilaResultado[]) {
+    co2eByPeriod.set(
+      r.reporting_period_id,
+      (co2eByPeriod.get(r.reporting_period_id) ?? 0) + r.co2e_kg,
+    );
+  }
 
-      const flagMap = new Map<string, { severity: string; z_score: number; message: string }>();
-      for (const f of (flags ?? []) as {
-        activity_entry_id: string;
-        severity: string;
-        z_score: number;
-        message: string;
-      }[]) {
-        flagMap.set(f.activity_entry_id, {
-          severity: f.severity,
-          z_score: f.z_score,
-          message: f.message,
-        });
-      }
+  const rawEntries = (rawEntriesRaw.data ?? []) as FilaEntrada[];
+  const entryIds = rawEntries.map((e) => e.id);
 
-      for (const e of rawEntries as Pick<
-        ActivityEntryRow,
-        'id' | 'source_type' | 'raw_quantity' | 'raw_unit' | 'status' | 'created_at'
-      >[]) {
-        entradas.push({ ...e, anomaly: flagMap.get(e.id) ?? null });
-      }
+  const flagMap = new Map<string, { severity: string; z_score: number; message: string }>();
+  if (entryIds.length) {
+    const { data: flags } = await supabase
+      .from('anomaly_flags')
+      .select('activity_entry_id, severity, z_score, message')
+      .in('activity_entry_id', entryIds)
+      .eq('is_resolved', false);
+    for (const f of (flags ?? []) as {
+      activity_entry_id: string;
+      severity: string;
+      z_score: number;
+      message: string;
+    }[]) {
+      flagMap.set(f.activity_entry_id, { severity: f.severity, z_score: f.z_score, message: f.message });
     }
   }
+
+  const entradas = rawEntries.map((e) => ({ ...e, anomaly: flagMap.get(e.id) ?? null }));
 
   return (
     <>
@@ -323,8 +308,8 @@ export default async function DetalleProveedorPage({
                           {new Date(p.end_date).toLocaleDateString('es-PE')}
                         </td>
                         <td style={{ padding: 'var(--space-3) var(--space-4)' }}>
-                          <Badge variant={p.status as PeriodStatus}>
-                            {PERIODO_LABELS[p.status] ?? p.status}
+                          <Badge variant={variantEstadoPeriodo(p.status as PeriodStatus)}>
+                            {etiquetaEstadoPeriodo(p.status as PeriodStatus)}
                           </Badge>
                         </td>
                         <td
