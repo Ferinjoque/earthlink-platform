@@ -9,6 +9,8 @@ type BadgeVariant =
   | 'validated'
   | 'rejected'
   | 'open'
+  | 'calculating'
+  | 'under_review'
   | 'locked'
   | 'neutral';
 
@@ -49,6 +51,14 @@ const VARIANT_STYLES: Record<BadgeVariant, CSSProperties> = {
   open: {
     background: 'color-mix(in oklch, var(--color-accent) 15%, transparent)',
     color: 'var(--color-accent)',
+  },
+  calculating: {
+    background: 'color-mix(in oklch, #f59e0b 15%, transparent)',
+    color: '#d97706',
+  },
+  under_review: {
+    background: 'color-mix(in oklch, #8b5cf6 15%, transparent)',
+    color: '#7c3aed',
   },
   locked: {
     background: 'color-mix(in oklch, var(--color-ink-3) 20%, transparent)',
