@@ -10,6 +10,7 @@ import {
   FileText,
   LogOut,
   Leaf,
+  Settings,
 } from 'lucide-react';
 import { signOut } from '@/actions/auth';
 
@@ -25,6 +26,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/activity', label: 'Actividad', icon: <ClipboardList size={18} /> },
   { href: '/audit', label: 'Auditoría', icon: <ShieldCheck size={18} /> },
   { href: '/reports', label: 'Reportes', icon: <FileText size={18} /> },
+  { href: '/settings', label: 'Configuración', icon: <Settings size={18} /> },
 ];
 
 export function Sidebar() {
@@ -94,7 +96,7 @@ export function Sidebar() {
               textTransform: 'uppercase',
             }}
           >
-            ESG Auditor
+            Auditor ESG
           </span>
         </div>
       </div>

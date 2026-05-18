@@ -9,7 +9,7 @@
 
 ## What it does
 
-EarthLink replaces manual Excel-based carbon accounting with a deterministic, fully auditable platform. Suppliers submit activity data (fuel consumption, electricity purchases) through a guided interface; a pure functional calculation engine converts raw inputs to tCO₂e using versioned emission factors; consultants audit the results and generate regulator-ready reports.
+EarthLink replaces manual Excel-based carbon accounting with a deterministic, fully auditable platform. Suppliers submit activity data (fuel consumption, electricity purchases) through a guided interface; a pure functional calculation engine converts raw inputs to tCO₂e using versioned emission factors; consultants audit the results and lock periods for regulatory reporting.
 
 Every tCO₂e reported traces back — immutably — to the raw submission, the emission factor version, the calculation engine version, and the user who submitted it.
 
@@ -18,7 +18,7 @@ Every tCO₂e reported traces back — immutably — to the raw submission, the 
 The system deliberately uses **two programming paradigms** in clearly separated modules:
 
 ```
-app/               Next.js 15 App Router (thin layer)
+src/app/           Next.js App Router (thin layer)
   │
 services/          OOP — orchestration services
   ├──→ repos/      OOP — abstract Repository<T> + Supabase concretes
@@ -38,30 +38,29 @@ domain/            OOP — EmissionSource hierarchy, value objects
 - Discriminated union `ActivityKind` covers all Scope 1 + 2 activity types
 - Pure pipeline: `validateActivity → normalizeUnit → resolveFactor → applyFactor → stampProvenance`
 - Determinism: `big.js` fixed-point arithmetic, single final rounding, `calcHash = sha256(canonical(inputs))`
-- Factor-set versioning: results store `factorSetVersion`; new factor sets produce new result rows linked via `superseded_by`
 - ESLint boundary rule enforces zero I/O imports in `calc/`
 
 ## Database — 15 tables
 
 | Group | Tables |
 |---|---|
-| Reference (5) | `organizations`, `suppliers`, `emission_factor_sets`, `emission_factors`, `unit_conversions` |
-| Auth/Access (3) | `user_profiles`, `memberships`, `supplier_assignments` |
-| Transactional (5) | `reporting_periods`, `activity_records`, `emission_results`*, `evaluations`, `anomaly_flags` |
+| Reference (5) | `fuel_types`, `refrigerants`, `grid_regions`, `emission_factors`, `unit_conversions` |
+| Auth/Access (3) | `organizations`, `suppliers`, `memberships` |
+| Transactional (5) | `reporting_periods`, `activity_entries`, `emission_results`*, `evidence_files`, `anomaly_flags` |
 | Audit (2) | `audit_log`*, `report_exports`* |
 
-\* Append-only — `UPDATE` / `DELETE` revoked at DB level. Audit log is trigger-populated.
+\* Append-only — `UPDATE` / `DELETE` blocked by DB triggers. Audit log is trigger-populated.
 
 ## Tech stack
 
 | Concern | Choice |
 |---|---|
-| Framework | Next.js 15 (App Router) + React 19 |
+| Framework | Next.js 16 (App Router) + React 19 |
 | Language | TypeScript 5 (strict + noUncheckedIndexedAccess) |
-| Database | Supabase (Postgres + Auth + Storage + RLS) |
-| Styling | Tailwind v4 + OKLCH design tokens |
-| Animation | Framer Motion |
-| Validation | Zod |
+| Database | Supabase (Postgres + Auth + RLS) |
+| Styling | CSS custom properties (OKLCH tokens) — no Tailwind classes for layout/color |
+| Animation | Framer Motion + canvas requestAnimationFrame |
+| Validation | Zod (in Server Actions) |
 | Arithmetic | big.js (fixed-point, 6 dp) |
 | Unit tests | Vitest + fast-check (property-based) |
 | E2E tests | Playwright (chromium + firefox + webkit) |
@@ -75,17 +74,29 @@ domain/            OOP — EmissionSource hierarchy, value objects
 
 pnpm install
 cp .env.local.example .env.local
-# Fill in NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY
+# Fill in NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
 
-pnpm dev        # http://localhost:3000
+pnpm dev        # http://localhost:3002 (3000 reserved for other project)
 pnpm test       # unit tests
 pnpm test:e2e   # playwright (starts dev server automatically)
 ```
 
+### Demo credentials
+
+```
+email:    admin@earthlink.test
+password: Earthlink2025!
+```
+
+Admin role in both seeded organizations (EcoGroup SAC + Andean Mining Corp).
+
 ### Supabase setup
 
 ```bash
-# Apply migrations + seed
+# Apply all migrations to remote project
+supabase db push
+
+# Or reset local stack
 supabase db reset
 ```
 
@@ -96,24 +107,27 @@ src/
 ├── calc/          Pure FP engine — zero I/O
 ├── domain/        OOP entities + value objects
 ├── repos/         OOP repositories (Supabase + InMemory)
-├── services/      Orchestration services
-├── components/    React components
-│   ├── ui/        Design system primitives
-│   ├── app/       Feature components
-│   └── charts/    visx-based charts
-├── lib/           Cross-cutting (auth, zod schemas, logger, csp)
-├── styles/        Tailwind v4 tokens, typography
-└── types/         Shared TypeScript types
-app/               Next.js App Router
+├── services/      Orchestration services (EvaluationService, AuditService, AnomalyService)
+├── actions/       Server Actions (auth, activity, audit)
+├── components/
+│   ├── shell/     Sidebar, TopBar
+│   ├── activity/  ActivityForm, ActivityList, CsvImportPanel, AnomalyBadge
+│   ├── audit/     PeriodActions
+│   └── ui/        Button, Card, Badge
+├── lib/           csv.ts, auth utils
+├── styles/        tokens.css, typography.css, globals.css
+└── types/         database.ts (Supabase generated)
+app/               Next.js App Router (src/app/)
 supabase/
-├── migrations/    Forward-only SQL (15 tables)
-└── seed/          Emission factors + demo data
+└── migrations/    Forward-only SQL — 10 migrations applied
 tests/
 ├── unit/          Vitest
 └── e2e/           Playwright
 docs/
+├── DESIGN.md      Living design system reference
 ├── adr/           Architecture Decision Records
 └── uml/           Class + sequence diagrams
+CLAUDE.md          AI agent context — read before any session
 ```
 
 ## GHG Protocol scope

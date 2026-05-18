@@ -12,7 +12,7 @@ export default async function ReportesPage() {
 
   return (
     <>
-      <TopBar title="Reportes" email={user?.email} />
+      <TopBar title="Reportes" email={user?.email} section="Exportaciones y certificados" />
       <main style={{ padding: 'var(--space-8)' }}>
         <p
           style={{
