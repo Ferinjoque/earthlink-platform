@@ -115,6 +115,13 @@ describe('exportCsv', () => {
     expect(result.error).toBeTruthy();
   });
 
+  it('returns error when period_ids contains non-UUID value', async () => {
+    mockClient();
+    const fd = makeFormData({ period_ids: 'not-a-valid-uuid' });
+    const result = await exportCsv(null, fd);
+    expect(result.error).toMatch(/inválido/i);
+  });
+
   it('returns error when user has no org memberships', async () => {
     mockClient({ memberships: [] });
     const fd = makeFormData({ period_ids: PERIOD_ID });
