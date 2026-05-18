@@ -7,6 +7,7 @@ import type { ActivityEntryStatus, AnomalySeverity, EmissionSourceType } from '@
 
 export interface ActivityEntryView {
   id: string;
+  period_id: string;
   period_label: string;
   source_type: string;
   raw_quantity: number;
@@ -23,8 +24,14 @@ export interface ActivityEntryView {
     | undefined;
 }
 
+interface PeriodoOption {
+  id: string;
+  label: string;
+}
+
 interface ActivityListProps {
   entries: ActivityEntryView[];
+  periodos: PeriodoOption[];
 }
 
 const ETIQUETAS_ESTADO: Record<ActivityEntryStatus, string> = {
@@ -71,16 +78,19 @@ const estiloSelect: React.CSSProperties = {
   paddingRight: 'var(--space-6)',
 };
 
-export function ActivityList({ entries }: ActivityListProps) {
+export function ActivityList({ entries, periodos }: ActivityListProps) {
   const [filtroEstado, setFiltroEstado] = useState<ActivityEntryStatus | 'todos'>('todos');
   const [filtroFuente, setFiltroFuente] = useState<EmissionSourceType | 'todos'>('todos');
+  const [filtroPeriodo, setFiltroPeriodo] = useState<string>('todos');
   const [expandida, setExpandida] = useState<string | null>(null);
 
-  const hayFiltro = filtroEstado !== 'todos' || filtroFuente !== 'todos';
+  const hayFiltro =
+    filtroEstado !== 'todos' || filtroFuente !== 'todos' || filtroPeriodo !== 'todos';
 
   const filtradas = entries.filter((e) => {
     if (filtroEstado !== 'todos' && e.status !== filtroEstado) return false;
     if (filtroFuente !== 'todos' && e.source_type !== filtroFuente) return false;
+    if (filtroPeriodo !== 'todos' && e.period_id !== filtroPeriodo) return false;
     return true;
   });
 
@@ -164,12 +174,42 @@ export function ActivityList({ entries }: ActivityListProps) {
           </span>
         </div>
 
+        {periodos.length > 1 && (
+          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+            <select
+              value={filtroPeriodo}
+              onChange={(e) => setFiltroPeriodo(e.target.value)}
+              style={estiloSelect}
+              aria-label="Filtrar por periodo"
+            >
+              <option value="todos">Todos los periodos</option>
+              {periodos.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+            <span
+              style={{
+                position: 'absolute',
+                right: 'var(--space-2)',
+                pointerEvents: 'none',
+                color: 'var(--color-ink-3)',
+                fontSize: '10px',
+              }}
+            >
+              ▾
+            </span>
+          </div>
+        )}
+
         {hayFiltro && (
           <button
             type="button"
             onClick={() => {
               setFiltroEstado('todos');
               setFiltroFuente('todos');
+              setFiltroPeriodo('todos');
             }}
             style={{
               fontSize: 'var(--text-xs)',
