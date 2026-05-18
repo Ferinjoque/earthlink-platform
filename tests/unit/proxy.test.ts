@@ -31,7 +31,7 @@ function makeRequest(pathname: string, searchParams: Record<string, string> = {}
       search: url.search,
     },
     cookies: {
-      getAll: vi.fn(() => []),
+      getAll: vi.fn((): Array<{ name: string; value: string }> => []),
       set: vi.fn(),
     },
   };
