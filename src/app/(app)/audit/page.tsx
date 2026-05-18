@@ -51,8 +51,8 @@ export default async function AuditoriaPage() {
     .eq('user_id', user?.id ?? '');
   const memberships = (rawMemberships ?? []) as MembershipRow[];
 
-  const orgIds = [...new Set(memberships.map((m) => m.organization_id).filter(Boolean))];
-  const memberSupplierIds = [...new Set(memberships.map((m) => m.supplier_id).filter(Boolean))];
+  const orgIds = [...new Set(memberships.map((m) => m.organization_id).filter((x): x is string => x !== null))];
+  const memberSupplierIds = [...new Set(memberships.map((m) => m.supplier_id).filter((x): x is string => x !== null))];
 
   const suppliersData: Pick<SupplierRow, 'id' | 'name'>[] = [];
   if (orgIds.length) {
