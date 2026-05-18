@@ -188,6 +188,17 @@ describe('createSupplier', () => {
 describe('archiveSupplier', () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it('returns error when not authenticated', async () => {
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null } }) },
+      from: vi.fn(),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(client as never);
+    const fd = makeFormData({ id: VALID_SUPPLIER_ID });
+    const result = await archiveSupplier(null, fd);
+    expect(result.error).toMatch(/autenticado/i);
+  });
+
   it('rejects when role is not admin', async () => {
     mockClient({ role: 'consultant' });
     const fd = makeFormData({ id: VALID_SUPPLIER_ID });
