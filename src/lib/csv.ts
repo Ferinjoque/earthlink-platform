@@ -108,6 +108,11 @@ function buildColMap(headerLine: string, sep: string): Map<string, number> | nul
 }
 
 function looksLikeHeader(line: string): boolean {
+  const firstCol = line.split(/[,;\t]/)[0]?.trim() ?? '';
+  // UUID in first column → definitely a data row, not a header
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(firstCol)) {
+    return false;
+  }
   const lower = line.toLowerCase();
   return (
     lower.includes('period') ||
