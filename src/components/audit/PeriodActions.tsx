@@ -114,7 +114,7 @@ export function PeriodActions({ periodId, status }: PeriodActionsProps) {
               opacity: lockPending ? 0.7 : 1,
             }}
           >
-            {lockPending ? 'Bloqueando…' : '🔒 Bloquear periodo'}
+            {lockPending ? 'Bloqueando…' : 'Bloquear periodo'}
           </button>
         </form>
         {lockState?.error && <MensajeError msg={lockState.error} />}

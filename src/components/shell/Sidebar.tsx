@@ -94,7 +94,7 @@ export function Sidebar() {
               textTransform: 'uppercase',
             }}
           >
-            ESG Auditor
+            Auditor ESG
           </span>
         </div>
       </div>

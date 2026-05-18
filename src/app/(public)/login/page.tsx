@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useRef, useEffect, useActionState } from 'react';
 import { motion } from 'framer-motion';
 import { Leaf, Shield, BarChart3, ArrowRight, CheckCircle } from 'lucide-react';
 import { signIn } from './actions';
@@ -15,6 +15,132 @@ const PILARES = [
   { icono: <CheckCircle size={14} />, texto: 'Motor de cálculo verificado' },
 ];
 
+/* ─── Canvas particle field ────────────────────────────────────────── */
+function ParticleField() {
+  const ref = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let raf = 0;
+    let W = 0;
+    let H = 0;
+    let tick = 0;
+
+    interface Pt {
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      r: number;
+      a: number;
+      phase: number;
+      bright: boolean;
+    }
+
+    let pts: Pt[] = [];
+    const LINK = 165;
+    const LINK2 = LINK * LINK;
+
+    const setup = () => {
+      const dpr = window.devicePixelRatio || 1;
+      W = canvas.offsetWidth;
+      H = canvas.offsetHeight;
+      canvas.width = W * dpr;
+      canvas.height = H * dpr;
+      ctx.scale(dpr, dpr);
+      const n = Math.min(Math.floor((W * H) / 10000), 90);
+      pts = Array.from({ length: n }, (_, i) => ({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        vx: (Math.random() - 0.5) * 0.28,
+        vy: (Math.random() - 0.5) * 0.28,
+        r: 1.4 + Math.random() * 2.6,
+        a: 0.3 + Math.random() * 0.5,
+        phase: Math.random() * Math.PI * 2,
+        bright: i % 7 === 0,
+      }));
+    };
+
+    const draw = () => {
+      tick++;
+      ctx.clearRect(0, 0, W, H);
+
+      for (const p of pts) {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < -12) p.x = W + 12;
+        else if (p.x > W + 12) p.x = -12;
+        if (p.y < -12) p.y = H + 12;
+        else if (p.y > H + 12) p.y = -12;
+      }
+
+      for (let i = 0; i < pts.length; i++) {
+        for (let j = i + 1; j < pts.length; j++) {
+          const pi = pts[i]!;
+          const pj = pts[j]!;
+          const dx = pi.x - pj.x;
+          const dy = pi.y - pj.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < LINK2) {
+            const t = 1 - d2 / LINK2;
+            ctx.beginPath();
+            ctx.moveTo(pi.x, pi.y);
+            ctx.lineTo(pj.x, pj.y);
+            ctx.strokeStyle = `rgba(55, 195, 130, ${t * 0.38})`;
+            ctx.lineWidth = t * 0.85;
+            ctx.stroke();
+          }
+        }
+      }
+
+      for (let i = 0; i < pts.length; i++) {
+        const p = pts[i]!;
+        const pulse = 0.82 + 0.18 * Math.sin(tick * 0.018 + p.phase);
+        const alpha = p.a * pulse;
+
+        if (p.r > 2.8 || p.bright) {
+          ctx.shadowBlur = p.bright ? 22 : 14;
+          ctx.shadowColor = p.bright
+            ? 'rgba(80, 230, 160, 0.85)'
+            : 'rgba(55, 210, 140, 0.65)';
+        }
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r * pulse, 0, Math.PI * 2);
+        ctx.fillStyle = p.bright
+          ? `rgba(120, 240, 180, ${alpha * 1.2})`
+          : `rgba(80, 220, 160, ${alpha})`;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+
+      raf = requestAnimationFrame(draw);
+    };
+
+    setup();
+    draw();
+
+    const onResize = () => setup();
+    window.addEventListener('resize', onResize);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', onResize);
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={ref}
+      aria-hidden="true"
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+    />
+  );
+}
+
+/* ─── Page ─────────────────────────────────────────────────────────── */
 export default function LoginPage() {
   const [state, action, isPending] = useActionState<State, FormData>(signIn, undefined);
 
@@ -28,6 +154,10 @@ export default function LoginPage() {
       }}
     >
       <style>{`
+        @keyframes ringSpin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
         @media (min-width: 900px) {
           .login-split { grid-template-columns: 58fr 42fr !important; }
           .login-hero  { display: flex !important; }
@@ -62,13 +192,11 @@ export default function LoginPage() {
           transform: translateY(-1px);
           box-shadow: 0 12px 32px oklch(22% 0.08 155 / 30%) !important;
         }
-        .submit-btn:active:not(:disabled) {
-          transform: translateY(0);
-        }
+        .submit-btn:active:not(:disabled) { transform: translateY(0); }
       `}</style>
 
       <div className="login-split" style={{ display: 'grid', minHeight: '100dvh' }}>
-        {/* ━━━━━ HERO — dark forest ━━━━━ */}
+        {/* ━━━━━ HERO ━━━━━ */}
         <div
           className="login-hero"
           style={{
@@ -77,183 +205,30 @@ export default function LoginPage() {
             justifyContent: 'flex-end',
             padding: 'clamp(2.5rem, 5vw, 5rem)',
             paddingTop: 'clamp(2rem, 4vw, 4rem)',
-            background:
-              'linear-gradient(155deg, oklch(11% 0.055 162) 0%, oklch(15% 0.065 160) 45%, oklch(9% 0.04 168) 100%)',
+            background: 'oklch(10% 0.048 162)',
             position: 'relative',
             overflow: 'hidden',
           }}
         >
-          {/* ── Orbes de profundidad — visibles sobre oscuro ── */}
+          <ParticleField />
+
           <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
             <div
               style={{
-                position: 'absolute',
-                top: '-20%',
-                right: '-12%',
-                width: '70%',
-                paddingBottom: '70%',
-                borderRadius: '50%',
-                background:
-                  'radial-gradient(circle, oklch(62% 0.20 164 / 24%) 0%, transparent 62%)',
-                animation: 'orbDrift 26s ease-in-out infinite',
+                position: 'absolute', top: '-30%', right: '-20%',
+                width: '75%', paddingBottom: '75%', borderRadius: '50%',
+                background: 'radial-gradient(circle, oklch(48% 0.18 162 / 14%) 0%, transparent 65%)',
               }}
             />
             <div
               style={{
-                position: 'absolute',
-                bottom: '8%',
-                left: '-8%',
-                width: '50%',
-                paddingBottom: '50%',
-                borderRadius: '50%',
-                background:
-                  'radial-gradient(circle, oklch(55% 0.17 164 / 18%) 0%, transparent 62%)',
-                animation: 'orbDrift 32s ease-in-out infinite reverse',
-                animationDelay: '-12s',
-              }}
-            />
-            <div
-              style={{
-                position: 'absolute',
-                top: '38%',
-                right: '18%',
-                width: '28%',
-                paddingBottom: '28%',
-                borderRadius: '50%',
-                background: 'radial-gradient(circle, oklch(70% 0.12 85 / 14%) 0%, transparent 65%)',
-                animation: 'orbDrift 20s ease-in-out infinite',
-                animationDelay: '-6s',
+                position: 'absolute', bottom: '-10%', left: '-15%',
+                width: '55%', paddingBottom: '55%', borderRadius: '50%',
+                background: 'radial-gradient(circle, oklch(62% 0.12 75 / 10%) 0%, transparent 65%)',
               }}
             />
           </div>
 
-          {/* ── Red de datos / constelación ── */}
-          <svg
-            aria-hidden="true"
-            style={{
-              position: 'absolute',
-              inset: 0,
-              width: '100%',
-              height: '100%',
-              pointerEvents: 'none',
-            }}
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            {/* Líneas */}
-            <line
-              x1="18%"
-              y1="14%"
-              x2="36%"
-              y2="7%"
-              stroke="oklch(68% 0.14 164)"
-              strokeWidth="0.7"
-              opacity="0.45"
-            />
-            <line
-              x1="36%"
-              y1="7%"
-              x2="54%"
-              y2="20%"
-              stroke="oklch(68% 0.14 164)"
-              strokeWidth="0.7"
-              opacity="0.45"
-            />
-            <line
-              x1="54%"
-              y1="20%"
-              x2="72%"
-              y2="11%"
-              stroke="oklch(68% 0.14 164)"
-              strokeWidth="0.5"
-              opacity="0.35"
-            />
-            <line
-              x1="54%"
-              y1="20%"
-              x2="46%"
-              y2="42%"
-              stroke="oklch(68% 0.14 164)"
-              strokeWidth="0.6"
-              opacity="0.40"
-            />
-            <line
-              x1="18%"
-              y1="14%"
-              x2="10%"
-              y2="34%"
-              stroke="oklch(68% 0.14 164)"
-              strokeWidth="0.6"
-              opacity="0.40"
-            />
-            <line
-              x1="10%"
-              y1="34%"
-              x2="24%"
-              y2="56%"
-              stroke="oklch(68% 0.14 164)"
-              strokeWidth="0.5"
-              opacity="0.35"
-            />
-            <line
-              x1="46%"
-              y1="42%"
-              x2="58%"
-              y2="60%"
-              stroke="oklch(68% 0.14 164)"
-              strokeWidth="0.5"
-              opacity="0.35"
-            />
-            <line
-              x1="58%"
-              y1="60%"
-              x2="76%"
-              y2="52%"
-              stroke="oklch(68% 0.14 164)"
-              strokeWidth="0.4"
-              opacity="0.28"
-            />
-            <line
-              x1="24%"
-              y1="56%"
-              x2="40%"
-              y2="68%"
-              stroke="oklch(68% 0.14 164)"
-              strokeWidth="0.4"
-              opacity="0.28"
-            />
-            {/* Nodos */}
-            <circle cx="18%" cy="14%" r="3.5" fill="oklch(72% 0.16 164)" opacity="0.70" />
-            <circle cx="36%" cy="7%" r="2.5" fill="oklch(70% 0.14 164)" opacity="0.60" />
-            <circle cx="54%" cy="20%" r="4.5" fill="oklch(75% 0.18 164)" opacity="0.80" />
-            <circle cx="72%" cy="11%" r="2" fill="oklch(68% 0.12 164)" opacity="0.50" />
-            <circle cx="10%" cy="34%" r="3" fill="oklch(70% 0.14 164)" opacity="0.60" />
-            <circle cx="46%" cy="42%" r="3.5" fill="oklch(72% 0.16 164)" opacity="0.65" />
-            <circle cx="24%" cy="56%" r="2.5" fill="oklch(68% 0.12 164)" opacity="0.55" />
-            <circle cx="58%" cy="60%" r="3" fill="oklch(70% 0.14 164)" opacity="0.60" />
-            <circle cx="76%" cy="52%" r="2" fill="oklch(66% 0.12 164)" opacity="0.45" />
-            <circle cx="40%" cy="68%" r="2" fill="oklch(66% 0.12 164)" opacity="0.40" />
-          </svg>
-
-          {/* ── Anillos concéntricos (esquina superior derecha) ── */}
-          <svg
-            aria-hidden="true"
-            style={{
-              position: 'absolute',
-              top: '4%',
-              right: '4%',
-              width: '48%',
-              height: '48%',
-              pointerEvents: 'none',
-              opacity: 0.07,
-            }}
-          >
-            <circle cx="50%" cy="50%" r="46%" fill="none" stroke="white" strokeWidth="1" />
-            <circle cx="50%" cy="50%" r="36%" fill="none" stroke="white" strokeWidth="0.8" />
-            <circle cx="50%" cy="50%" r="26%" fill="none" stroke="white" strokeWidth="0.6" />
-            <circle cx="50%" cy="50%" r="16%" fill="none" stroke="white" strokeWidth="0.5" />
-          </svg>
-
-          {/* ── Wordmark (esquina superior) ── */}
           <motion.div
             initial={{ opacity: 0, y: -14 }}
             animate={{ opacity: 1, y: 0 }}
@@ -262,22 +237,16 @@ export default function LoginPage() {
               position: 'absolute',
               top: 'clamp(1.75rem, 3.5vw, 3rem)',
               left: 'clamp(1.75rem, 3.5vw, 3rem)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
+              display: 'flex', alignItems: 'center', gap: '10px',
+              zIndex: 2,
             }}
           >
             <span
               style={{
-                width: '33px',
-                height: '33px',
-                borderRadius: '8px',
-                background: 'oklch(62% 0.20 164)',
-                display: 'grid',
-                placeItems: 'center',
-                flexShrink: 0,
-                boxShadow:
-                  '0 0 0 1px oklch(72% 0.16 164 / 40%), 0 8px 24px oklch(55% 0.18 164 / 45%)',
+                width: '33px', height: '33px', borderRadius: '8px',
+                background: 'oklch(55% 0.22 162)',
+                display: 'grid', placeItems: 'center', flexShrink: 0,
+                boxShadow: '0 0 0 1px oklch(68% 0.18 162 / 40%), 0 8px 24px oklch(48% 0.20 162 / 50%)',
               }}
             >
               <Leaf size={16} color="oklch(12% 0.05 160)" />
@@ -295,14 +264,13 @@ export default function LoginPage() {
             </span>
           </motion.div>
 
-          {/* ── Contenido principal ── */}
-          <div style={{ position: 'relative', zIndex: 1, maxWidth: '50ch' }}>
+          <div style={{ position: 'relative', zIndex: 2, maxWidth: '50ch' }}>
             <motion.p
               className="eyebrow"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease, delay: 0.18 }}
-              style={{ color: 'oklch(62% 0.16 164)', marginBottom: 'var(--space-5)' }}
+              style={{ color: 'oklch(60% 0.16 162)', marginBottom: 'var(--space-5)' }}
             >
               Auditoría ESG · Alcances 1 y 2
             </motion.p>
@@ -313,18 +281,18 @@ export default function LoginPage() {
               transition={{ duration: 0.85, ease, delay: 0.28 }}
               style={{
                 fontFamily: 'var(--font-serif)',
-                fontSize: 'clamp(2.6rem, 3vw + 1.4rem, 5rem)',
+                fontSize: 'clamp(2.8rem, 3.2vw + 1.5rem, 5.4rem)',
                 fontWeight: 400,
                 fontStyle: 'italic',
                 color: 'oklch(95% 0.012 80)',
-                margin: '0 0 var(--space-7)',
+                margin: '0 0 var(--space-8)',
                 letterSpacing: '-0.038em',
-                lineHeight: 1.06,
+                lineHeight: 1.04,
               }}
             >
               La huella de carbono
               <br />
-              <span style={{ color: 'oklch(66% 0.20 164)' }}>contada</span> con
+              <span style={{ color: 'oklch(64% 0.22 162)' }}>contada</span> con
               <br />
               precisión.
             </motion.h1>
@@ -336,13 +304,13 @@ export default function LoginPage() {
               style={{
                 fontSize: 'var(--text-base)',
                 lineHeight: 1.68,
-                color: 'oklch(70% 0.04 165)',
+                color: 'oklch(68% 0.04 165)',
                 maxWidth: '38ch',
-                margin: '0 0 var(--space-10)',
+                margin: '0 0 var(--space-8)',
               }}
             >
-              Rastrea, calcula y certifica las emisiones de tu cadena de suministro con trazabilidad
-              inmutable y motor verificado GHG Protocol.
+              Rastrea, calcula y certifica las emisiones de tu cadena de suministro con
+              trazabilidad inmutable y motor verificado GHG Protocol.
             </motion.p>
 
             <motion.ul
@@ -350,32 +318,26 @@ export default function LoginPage() {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5, ease, delay: 0.54 }}
               style={{
-                listStyle: 'none',
-                padding: 0,
-                margin: '0 0 var(--space-10)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 'var(--space-3)',
+                listStyle: 'none', padding: 0,
+                margin: '0 0 var(--space-8)',
+                display: 'flex', flexDirection: 'column', gap: 'var(--space-3)',
               }}
             >
               {PILARES.map(({ icono, texto }) => (
                 <li
                   key={texto}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 'var(--space-3)',
-                    color: 'oklch(74% 0.06 165)',
+                    display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
+                    color: 'oklch(72% 0.06 165)',
                     fontSize: 'var(--text-sm)',
                   }}
                 >
-                  <span style={{ color: 'oklch(65% 0.18 164)', flexShrink: 0 }}>{icono}</span>
+                  <span style={{ color: 'oklch(62% 0.20 162)', flexShrink: 0 }}>{icono}</span>
                   {texto}
                 </li>
               ))}
             </motion.ul>
 
-            {/* Badges cumplimiento */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -388,12 +350,12 @@ export default function LoginPage() {
                   style={{
                     padding: '4px 11px',
                     borderRadius: 'var(--radius-pill)',
-                    background: 'oklch(62% 0.18 164 / 14%)',
-                    border: '1px solid oklch(62% 0.18 164 / 32%)',
+                    background: 'oklch(55% 0.20 162 / 15%)',
+                    border: '1px solid oklch(58% 0.18 162 / 35%)',
                     fontSize: 'var(--text-xs)',
                     fontFamily: 'var(--font-mono)',
                     fontWeight: 600,
-                    color: 'oklch(72% 0.14 164)',
+                    color: 'oklch(70% 0.14 162)',
                     letterSpacing: '0.05em',
                   }}
                 >
@@ -404,7 +366,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* ━━━━━ FORMULARIO — luz limpia ━━━━━ */}
+        {/* ━━━━━ FORMULARIO ━━━━━ */}
         <div
           className="login-form"
           style={{
@@ -422,25 +384,19 @@ export default function LoginPage() {
             transition={{ duration: 0.7, ease, delay: 0.15 }}
             style={{ width: '100%', maxWidth: '380px' }}
           >
-            {/* Wordmark — solo móvil */}
             <div
               className="logo-mobile"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 'var(--space-3)',
-                marginBottom: 'var(--space-10)',
+                display: 'flex', alignItems: 'center',
+                gap: 'var(--space-3)', marginBottom: 'var(--space-10)',
               }}
             >
               <span
                 style={{
-                  width: '30px',
-                  height: '30px',
+                  width: '30px', height: '30px',
                   borderRadius: 'var(--radius-md)',
                   background: 'var(--color-accent)',
-                  display: 'grid',
-                  placeItems: 'center',
-                  flexShrink: 0,
+                  display: 'grid', placeItems: 'center', flexShrink: 0,
                   boxShadow: 'var(--shadow-glow)',
                 }}
               >
@@ -459,7 +415,6 @@ export default function LoginPage() {
               </span>
             </div>
 
-            {/* Encabezado del formulario */}
             <div style={{ marginBottom: 'var(--space-8)' }}>
               <h2
                 style={{
@@ -575,8 +530,7 @@ export default function LoginPage() {
                   <>
                     <span
                       style={{
-                        width: '14px',
-                        height: '14px',
+                        width: '14px', height: '14px',
                         border: '2px solid rgba(255,255,255,0.3)',
                         borderTopColor: 'white',
                         borderRadius: '50%',
