@@ -398,13 +398,6 @@ export default async function DetallePeriodoPage({
             >
               {flagsData.map((f, idx) => {
                 const entrada = entryMap.get(f.activity_entry_id);
-                const FUENTE_CORTA: Record<string, string> = {
-                  stationary_combustion: 'Combustión estacionaria',
-                  mobile_combustion: 'Combustión móvil',
-                  purchased_electricity: 'Electricidad',
-                  purchased_steam: 'Vapor',
-                  fugitive: 'Emisiones fugitivas',
-                };
                 return (
                   <div
                     key={f.id}
@@ -451,7 +444,7 @@ export default async function DetallePeriodoPage({
                           flexShrink: 0,
                         }}
                       >
-                        {FUENTE_CORTA[entrada.source_type] ?? entrada.source_type}
+                        {FUENTE_LABELS[entrada.source_type] ?? entrada.source_type}
                       </span>
                     )}
                     <span
