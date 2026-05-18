@@ -41,7 +41,7 @@ export async function exportCsv(
     .select('organization_id')
     .eq('user_id', user.id);
   const memberships = (rawMemberships ?? []) as Pick<MembershipRow, 'organization_id'>[];
-  const orgIds = memberships.map((m) => m.organization_id).filter(Boolean);
+  const orgIds = memberships.map((m) => m.organization_id).filter((id): id is string => id !== null);
   if (orgIds.length === 0) return { error: 'Sin organizaciones asociadas' };
 
   // Fetch period + supplier info

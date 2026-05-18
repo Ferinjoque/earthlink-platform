@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useActionState } from 'react';
+import { Fragment, useState, useActionState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { PeriodActions } from '@/components/audit/PeriodActions';
 import { resolveAnomaly, createPeriod, type ResolveAnomalyState, type CreatePeriodState } from '@/actions/audit';
@@ -805,9 +805,8 @@ export function AuditTable({ periodos, suppliers }: AuditTableProps) {
                 const anomaliasAbiertas = expandidoAnomalias === p.id;
 
                 return (
-                  <>
+                  <Fragment key={p.id}>
                     <tr
-                      key={p.id}
                       className="audit-row"
                       style={{
                         borderBottom:
@@ -1012,7 +1011,7 @@ export function AuditTable({ periodos, suppliers }: AuditTableProps) {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 );
               })}
             </tbody>
