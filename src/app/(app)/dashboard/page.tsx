@@ -5,6 +5,7 @@ import { createServerClient } from '@/services/supabase/server';
 import { TopBar } from '@/components/shell/TopBar';
 import { Badge } from '@/components/ui/Badge';
 import { AnomalyBadge } from '@/components/activity/AnomalyBadge';
+import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import { ArrowRight, ShieldAlert } from 'lucide-react';
 import type { MembershipRow, ReportingPeriodRow, AnomalySeverity } from '@/types/database';
 
@@ -281,6 +282,8 @@ export default async function PanelPage() {
     <>
       <TopBar title="Panel" email={user?.email} section="Visión general" />
 
+      <div style={{ position: 'relative' }}>
+        <AmbientBackground />
       <main
         style={{
           padding: 'var(--space-8)',
@@ -288,6 +291,8 @@ export default async function PanelPage() {
           flexDirection: 'column',
           gap: 'var(--space-8)',
           maxWidth: 'var(--max-w-content)',
+          position: 'relative',
+          zIndex: 1,
         }}
       >
         {/* ── Titular editorial ── */}
@@ -810,6 +815,7 @@ export default async function PanelPage() {
           </section>
         )}
       </main>
+      </div>
     </>
   );
 }
