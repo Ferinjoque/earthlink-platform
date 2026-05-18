@@ -25,6 +25,7 @@ const eslintConfig = defineConfig([
         { type: 'domain', pattern: 'src/domain/**' },
         { type: 'repos', pattern: 'src/repos/**' },
         { type: 'services', pattern: 'src/services/**' },
+        { type: 'actions', pattern: 'src/actions/**' },
         { type: 'lib', pattern: 'src/lib/**' },
         { type: 'components', pattern: 'src/components/**' },
         { type: 'app', pattern: 'app/**' },
