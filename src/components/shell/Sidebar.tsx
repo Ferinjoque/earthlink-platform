@@ -126,11 +126,10 @@ export function Sidebar() {
                 fontSize: 'var(--text-sm)',
                 fontWeight: isActive ? 'var(--fw-semibold)' : 'var(--fw-normal)',
                 color: isActive ? 'var(--color-accent)' : 'var(--color-ink-2)',
-                background: isActive ? 'oklch(58% 0.16 155 / 14%)' : 'transparent',
+                background: isActive ? 'oklch(58% 0.16 155 / 16%)' : 'transparent',
                 textDecoration: 'none',
                 transition: `background var(--duration-fast) var(--ease-out-expo), color var(--duration-fast) var(--ease-out-expo)`,
                 position: 'relative',
-                borderLeft: isActive ? '2px solid var(--color-accent)' : '2px solid transparent',
               }}
               onMouseEnter={(e) => {
                 if (!isActive) {
