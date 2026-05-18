@@ -15,7 +15,7 @@ vi.mock('../../../src/services/supabase/server', () => ({
 vi.mock('next/navigation', () => ({ redirect: vi.fn() }));
 
 import { createServerClient } from '../../../src/services/supabase/server';
-import { createSupplier, archiveSupplier } from '../../../src/actions/suppliers';
+import { createSupplier, updateSupplier, archiveSupplier } from '../../../src/actions/suppliers';
 
 const VALID_USER_ID = '00000000-0000-4000-8000-000000000001';
 const VALID_ORG_ID = '00000000-0000-4000-8000-000000000002';
@@ -30,23 +30,31 @@ function makeFormData(fields: Record<string, string>): FormData {
 function mockClient({
   role = 'admin',
   supplierOrgId = VALID_ORG_ID,
+  supplierFound = true,
+  membershipFound = true,
   insertError = null as null | { message: string },
   updateError = null as null | { message: string },
 }: {
   role?: string;
   supplierOrgId?: string;
+  supplierFound?: boolean;
+  membershipFound?: boolean;
   insertError?: null | { message: string };
   updateError?: null | { message: string };
 } = {}) {
   const singleMock = vi.fn().mockImplementation((table: string) => {
     if (table === 'suppliers') {
-      return Promise.resolve({ data: { organization_id: supplierOrgId }, error: null });
+      const data = supplierFound ? { organization_id: supplierOrgId } : null;
+      return Promise.resolve({ data, error: null });
     }
     if (table === 'memberships') {
-      return Promise.resolve({ data: { role }, error: null });
+      const data = membershipFound ? { role } : null;
+      return Promise.resolve({ data, error: null });
     }
     return Promise.resolve({ data: null, error: null });
   });
+
+  const updateResult = { eq: vi.fn().mockResolvedValue({ error: updateError }) };
 
   const chainBuilder = (table: string) => {
     const currentTable = table;
@@ -58,7 +66,7 @@ function mockClient({
     chain['in'] = () => chain;
     chain['order'] = () => chain;
     chain['insert'] = vi.fn().mockResolvedValue({ error: insertError });
-    chain['update'] = vi.fn().mockResolvedValue({ error: updateError });
+    chain['update'] = vi.fn().mockReturnValue(updateResult);
     chain['single'] = () => singleMock(currentTable);
     chain['maybeSingle'] = () => singleMock(currentTable);
     return chain;
@@ -131,6 +139,50 @@ describe('createSupplier', () => {
     const result = await createSupplier(null, fd);
     expect(result.error).toMatch(/autenticado/i);
   });
+
+  it('returns error when user lacks org permission (supplier role)', async () => {
+    mockClient({ role: 'supplier' });
+    const fd = makeFormData({
+      nombre: 'Proveedor A',
+      categoria: 'Manufactura',
+      organization_id: VALID_ORG_ID,
+    });
+    const result = await createSupplier(null, fd);
+    expect(result.error).toMatch(/permisos/i);
+  });
+
+  it('returns error when membership is null', async () => {
+    mockClient({ membershipFound: false });
+    const fd = makeFormData({
+      nombre: 'Proveedor A',
+      categoria: 'Manufactura',
+      organization_id: VALID_ORG_ID,
+    });
+    const result = await createSupplier(null, fd);
+    expect(result.error).toMatch(/permisos/i);
+  });
+
+  it('returns error when DB insert fails', async () => {
+    mockClient({ insertError: { message: 'duplicate key' } });
+    const fd = makeFormData({
+      nombre: 'Proveedor A',
+      categoria: 'Manufactura',
+      organization_id: VALID_ORG_ID,
+    });
+    const result = await createSupplier(null, fd);
+    expect(result.error).toMatch(/duplicate key/i);
+  });
+
+  it('returns success on valid create', async () => {
+    mockClient();
+    const fd = makeFormData({
+      nombre: 'Proveedor A',
+      categoria: 'Manufactura',
+      organization_id: VALID_ORG_ID,
+    });
+    const result = await createSupplier(null, fd);
+    expect(result.success).toBe(true);
+  });
 });
 
 describe('archiveSupplier', () => {
@@ -148,6 +200,98 @@ describe('archiveSupplier', () => {
     const fd = makeFormData({ id: '' });
     const result = await archiveSupplier(null, fd);
     expect(result.error).toMatch(/requerido/i);
+  });
+
+  it('returns error when supplier not found', async () => {
+    mockClient({ supplierFound: false });
+    const fd = makeFormData({ id: VALID_SUPPLIER_ID });
+    const result = await archiveSupplier(null, fd);
+    expect(result.error).toMatch(/encontrado/i);
+  });
+
+  it('returns error when DB update fails', async () => {
+    mockClient({ updateError: { message: 'row-level security' } });
+    const fd = makeFormData({ id: VALID_SUPPLIER_ID });
+    const result = await archiveSupplier(null, fd);
+    expect(result.error).toMatch(/row-level security/i);
+  });
+
+  it('returns success when admin archives supplier', async () => {
+    mockClient();
+    const fd = makeFormData({ id: VALID_SUPPLIER_ID });
+    const result = await archiveSupplier(null, fd);
+    expect(result.success).toBe(true);
+  });
+});
+
+describe('updateSupplier', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns error when not authenticated', async () => {
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null } }) },
+      from: vi.fn(),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(client as never);
+    const fd = makeFormData({ id: VALID_SUPPLIER_ID, nombre: 'Updated', categoria: 'Manufactura' });
+    const result = await updateSupplier(null, fd);
+    expect(result.error).toMatch(/autenticado/i);
+  });
+
+  it('returns error when id is not a valid UUID', async () => {
+    mockClient();
+    const fd = makeFormData({ id: 'not-a-uuid', nombre: 'Updated', categoria: 'Manufactura' });
+    const result = await updateSupplier(null, fd);
+    expect(result.error).toBeTruthy();
+  });
+
+  it('returns error when nombre is too short', async () => {
+    mockClient();
+    const fd = makeFormData({ id: VALID_SUPPLIER_ID, nombre: 'X', categoria: 'Manufactura' });
+    const result = await updateSupplier(null, fd);
+    expect(result.error).toMatch(/menos 2 caract/i);
+  });
+
+  it('returns error when categoria is invalid', async () => {
+    mockClient();
+    const fd = makeFormData({ id: VALID_SUPPLIER_ID, nombre: 'Updated', categoria: 'InvalidCat' });
+    const result = await updateSupplier(null, fd);
+    expect(result.error).toMatch(/categoría válida/i);
+  });
+
+  it('returns error when supplier not found', async () => {
+    mockClient({ supplierFound: false });
+    const fd = makeFormData({ id: VALID_SUPPLIER_ID, nombre: 'Updated', categoria: 'Manufactura' });
+    const result = await updateSupplier(null, fd);
+    expect(result.error).toMatch(/encontrado/i);
+  });
+
+  it('returns error when user lacks permission', async () => {
+    mockClient({ membershipFound: false });
+    const fd = makeFormData({ id: VALID_SUPPLIER_ID, nombre: 'Updated', categoria: 'Manufactura' });
+    const result = await updateSupplier(null, fd);
+    expect(result.error).toMatch(/permisos/i);
+  });
+
+  it('returns error when DB update fails', async () => {
+    mockClient({ updateError: { message: 'unique constraint' } });
+    const fd = makeFormData({ id: VALID_SUPPLIER_ID, nombre: 'Updated', categoria: 'Manufactura' });
+    const result = await updateSupplier(null, fd);
+    expect(result.error).toMatch(/unique constraint/i);
+  });
+
+  it('returns success with valid input as admin', async () => {
+    mockClient();
+    const fd = makeFormData({ id: VALID_SUPPLIER_ID, nombre: 'Updated Name', categoria: 'Manufactura' });
+    const result = await updateSupplier(null, fd);
+    expect(result.success).toBe(true);
+  });
+
+  it('returns success with consultant role', async () => {
+    mockClient({ role: 'consultant' });
+    const fd = makeFormData({ id: VALID_SUPPLIER_ID, nombre: 'Updated Name', categoria: 'Manufactura' });
+    const result = await updateSupplier(null, fd);
+    expect(result.success).toBe(true);
   });
 });
 
