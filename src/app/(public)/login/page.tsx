@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useActionState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Leaf, Shield, BarChart3, ArrowRight, CheckCircle } from 'lucide-react';
 import { signIn } from './actions';
@@ -143,6 +144,8 @@ function ParticleField() {
 /* ─── Page ─────────────────────────────────────────────────────────── */
 export default function LoginPage() {
   const [state, action, isPending] = useActionState<State, FormData>(signIn, undefined);
+  const searchParams = useSearchParams();
+  const nextPath = searchParams.get('next') ?? '';
 
   return (
     <div
@@ -436,6 +439,7 @@ export default function LoginPage() {
               action={action}
               style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}
             >
+              {nextPath && <input type="hidden" name="next" value={nextPath} />}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
                 <label
                   htmlFor="email"

@@ -25,7 +25,12 @@ export async function signIn(
     return { error: error.message };
   }
 
-  redirect('/dashboard');
+  const next = formData.get('next');
+  const destination =
+    typeof next === 'string' && next.startsWith('/') && !next.startsWith('//')
+      ? next
+      : '/dashboard';
+  redirect(destination);
 }
 
 export async function signOut(): Promise<void> {
