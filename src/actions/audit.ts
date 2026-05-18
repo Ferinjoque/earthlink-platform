@@ -48,6 +48,25 @@ export async function calculatePeriod(
 
   const period = await periodRepo.findById(periodId);
   if (!period) return { error: 'Periodo de reporte no encontrado' };
+
+  // Verify caller belongs to the org that owns this period
+  type SupplierOrg = { organization_id: string };
+  const { data: supplierRaw } = await supabase
+    .from('suppliers')
+    .select('organization_id')
+    .eq('id', period.supplierId)
+    .maybeSingle();
+  const supplierOrg = supplierRaw as SupplierOrg | null;
+  if (!supplierOrg) return { error: 'Proveedor del periodo no encontrado' };
+  const { data: memRaw } = await supabase
+    .from('memberships')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('organization_id', supplierOrg.organization_id)
+    .in('role', ['admin', 'consultant'])
+    .maybeSingle();
+  if (!memRaw) return { error: 'Sin permisos para gestionar este periodo' };
+
   if (period.status !== 'open') {
     return {
       error: `El periodo está en estado "${period.status}" — solo los periodos abiertos pueden calcularse`,
@@ -119,6 +138,25 @@ export async function lockPeriod(
 
   const period = await periodRepo.findById(periodId);
   if (!period) return { error: 'Periodo de reporte no encontrado' };
+
+  // Verify caller belongs to the org that owns this period
+  type SupplierOrg = { organization_id: string };
+  const { data: supplierRaw } = await supabase
+    .from('suppliers')
+    .select('organization_id')
+    .eq('id', period.supplierId)
+    .maybeSingle();
+  const supplierOrg = supplierRaw as SupplierOrg | null;
+  if (!supplierOrg) return { error: 'Proveedor del periodo no encontrado' };
+  const { data: memRaw } = await supabase
+    .from('memberships')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('organization_id', supplierOrg.organization_id)
+    .in('role', ['admin', 'consultant'])
+    .maybeSingle();
+  if (!memRaw) return { error: 'Sin permisos para gestionar este periodo' };
+
   if (period.status !== 'under_review') {
     return {
       error: `El periodo está en estado "${period.status}" — solo los periodos en revisión pueden bloquearse`,
