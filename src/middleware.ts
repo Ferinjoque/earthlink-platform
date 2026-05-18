@@ -4,12 +4,25 @@ import { type NextRequest, NextResponse } from 'next/server';
 const PUBLIC_PATHS = ['/login', '/signup'];
 const STATIC_EXT = /\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|ttf|css|js)$/;
 
+function safeNextPath(raw: string): string | null {
+  if (raw.startsWith('/') && !raw.startsWith('//') && !raw.startsWith('/\\')) {
+    return raw;
+  }
+  return null;
+}
+
 export async function middleware(request: NextRequest) {
+  const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL'];
+  const supabaseAnonKey = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'];
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Missing required env vars: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
-    process.env['NEXT_PUBLIC_SUPABASE_URL']!,
-    process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY']!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {
@@ -37,7 +50,8 @@ export async function middleware(request: NextRequest) {
   if (!user && !isPublic) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = '/login';
-    loginUrl.searchParams.set('next', pathname);
+    const safePath = safeNextPath(pathname);
+    if (safePath) loginUrl.searchParams.set('next', safePath);
     return NextResponse.redirect(loginUrl);
   }
 
