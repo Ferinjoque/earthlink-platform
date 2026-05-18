@@ -1,6 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { ActivityFormState, CsvImportState } from '../../../src/actions/activity';
 
+// ── Hoisted mock refs ─────────────────────────────────────────────────────────
+
+const mocks = vi.hoisted(() => ({
+  save: vi.fn().mockResolvedValue(undefined),
+  findByPeriodId: vi.fn().mockResolvedValue([]),
+  anomalySave: vi.fn().mockResolvedValue(undefined),
+  detect: vi.fn().mockReturnValue([]),
+}));
+
 // ── Mock server-only modules ──────────────────────────────────────────────────
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
@@ -16,16 +25,21 @@ vi.mock('../../../src/services/supabase/server', () => ({
   createServerClient: vi.fn(),
 }));
 
-// Mock repositories using class expressions so `new Repo()` works
 vi.mock('../../../src/repos/ActivityEntryRepository', () => ({
   ActivityEntryRepository: class {
-    save = vi.fn().mockResolvedValue(undefined);
-    findByPeriodId = vi.fn().mockResolvedValue([]);
+    save = mocks.save;
+    findByPeriodId = mocks.findByPeriodId;
   },
 }));
 vi.mock('../../../src/repos/AnomalyFlagRepository', () => ({
   AnomalyFlagRepository: class {
-    save = vi.fn().mockResolvedValue(undefined);
+    save = mocks.anomalySave;
+  },
+}));
+vi.mock('../../../src/services/AnomalyService', () => ({
+  AnomalyService: class {
+    static Z_THRESHOLD_LOW = 2.0;
+    detect = mocks.detect;
   },
 }));
 
@@ -72,6 +86,35 @@ function mockUnauthenticatedClient() {
   const mockSupabase = {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null } }) },
     from: vi.fn(),
+  };
+  (createServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(mockSupabase);
+}
+
+function makeArrayChain(data: unknown[]) {
+  const p = Promise.resolve({ data });
+  const c: Record<string, unknown> = {};
+  c['select'] = () => c;
+  c['eq'] = () => c;
+  c['in'] = () => p;
+  return c;
+}
+
+function mockImportUnauthorizedClient() {
+  const mockSupabase = {
+    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+    from: vi.fn()
+      .mockReturnValueOnce(makeArrayChain([{ id: VALID_UUID, supplier_id: 'supplier-001' }]))
+      .mockReturnValueOnce(makeArrayChain([{ id: 'supplier-001', organization_id: 'other-org' }]))
+      .mockReturnValueOnce(makeArrayChain([])),
+  };
+  (createServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(mockSupabase);
+}
+
+function mockImportPeriodsNotFoundClient() {
+  const mockSupabase = {
+    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+    from: vi.fn()
+      .mockReturnValueOnce(makeArrayChain([])),
   };
   (createServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(mockSupabase);
 }
@@ -334,5 +377,121 @@ describe('createActivityEntry — mobile_combustion', () => {
     });
     const result = await createActivityEntry(null, fd);
     expect(result.error).toBeDefined();
+  });
+});
+
+// ── createActivityEntry — save error + history filter ────────────────────────
+
+describe('createActivityEntry — save + history', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns error when entryRepo.save throws', async () => {
+    mocks.save.mockRejectedValueOnce(new Error('unique constraint'));
+    mockAuthenticatedClient();
+    const fd = makeFormData({
+      reporting_period_id: VALID_UUID,
+      source_type: 'stationary_combustion',
+      secondary: 'diesel',
+      raw_quantity: '100',
+      raw_unit: 'L',
+    });
+    const result = await createActivityEntry(null, fd);
+    expect(result.error).toMatch(/guardar/i);
+  });
+
+  it('filters historical entries by id before anomaly detection', async () => {
+    const otherId = '00000000-0000-4000-8000-000000000099';
+    mocks.findByPeriodId.mockResolvedValueOnce([
+      { id: otherId, rawQuantity: 100, rawUnit: 'L', sourceType: 'stationary_combustion', activityKind: { kind: 'stationary_combustion', fuel: 'diesel' } },
+    ]);
+    mockAuthenticatedClient();
+    const fd = makeFormData({
+      reporting_period_id: VALID_UUID,
+      source_type: 'stationary_combustion',
+      secondary: 'diesel',
+      raw_quantity: '100',
+      raw_unit: 'L',
+    });
+    const result = await createActivityEntry(null, fd);
+    expect(result.success).toBe(true);
+  });
+});
+
+// ── createActivityEntry — anomaly detection ───────────────────────────────────
+
+describe('createActivityEntry — anomaly detection', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('saves anomaly flags when detector returns anomalies', async () => {
+    mocks.detect.mockReturnValueOnce([{
+      entryId: VALID_UUID,
+      severity: 'high',
+      zScore: 5.1,
+      message: 'Consumo inusualmente alto detectado',
+    }]);
+    mockAuthenticatedClient();
+    const fd = makeFormData({
+      reporting_period_id: VALID_UUID,
+      source_type: 'stationary_combustion',
+      secondary: 'natural_gas',
+      raw_quantity: '9999',
+      raw_unit: 'm3_ng',
+    });
+    const result = await createActivityEntry(null, fd);
+    expect(result.success).toBe(true);
+    expect(mocks.anomalySave).toHaveBeenCalledOnce();
+  });
+
+  it('still returns success when anomaly save throws (non-fatal)', async () => {
+    mocks.detect.mockReturnValueOnce([{
+      entryId: VALID_UUID,
+      severity: 'medium',
+      zScore: 3.0,
+      message: 'Anomalía detectada',
+    }]);
+    mocks.anomalySave.mockRejectedValueOnce(new Error('DB error'));
+    mockAuthenticatedClient();
+    const fd = makeFormData({
+      reporting_period_id: VALID_UUID,
+      source_type: 'stationary_combustion',
+      secondary: 'diesel',
+      raw_quantity: '500',
+      raw_unit: 'L',
+    });
+    const result = await createActivityEntry(null, fd);
+    expect(result.success).toBe(true);
+  });
+});
+
+// ── importActivityCsv — ownership check ──────────────────────────────────────
+
+describe('importActivityCsv — ownership check', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns error when reporting periods not found in DB', async () => {
+    mockImportPeriodsNotFoundClient();
+    const csv = `${VALID_UUID},stationary_combustion,diesel,100,L,`;
+    const fd = makeFormData({ csv_text: csv });
+    const result = await importActivityCsv(null, fd);
+    expect(result.error).toMatch(/periodo/i);
+  });
+
+  it('returns error when user lacks permission for period orgs', async () => {
+    mockImportUnauthorizedClient();
+    const csv = `${VALID_UUID},stationary_combustion,diesel,100,L,`;
+    const fd = makeFormData({ csv_text: csv });
+    const result = await importActivityCsv(null, fd);
+    expect(result.error).toMatch(/permisos/i);
+  });
+
+  it('counts row as skipped when entryRepo.save throws', async () => {
+    mocks.save.mockRejectedValueOnce(new Error('DB constraint'));
+    mockAuthenticatedClient();
+    const csv = `${VALID_UUID},stationary_combustion,diesel,100,L,`;
+    const fd = makeFormData({ csv_text: csv });
+    const result = await importActivityCsv(null, fd);
+    expect(result.success).toBe(true);
+    expect(result.imported).toBe(0);
+    expect(result.skipped).toBe(1);
   });
 });

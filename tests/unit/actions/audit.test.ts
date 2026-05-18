@@ -270,6 +270,38 @@ describe('lockPeriod', () => {
     const result = await lockPeriod(null, makeFormData({ period_id: VALID_UUID }));
     expect(result.error).toMatch(/bloquear/i);
   });
+
+  it('returns error when lock throws non-Error (generic fallback)', async () => {
+    mockAuth();
+    mocks.findById.mockResolvedValueOnce(makePeriod('under_review'));
+    mocks.lock.mockRejectedValueOnce('string error');
+    const result = await lockPeriod(null, makeFormData({ period_id: VALID_UUID }));
+    expect(result.error).toMatch(/error desconocido/i);
+  });
+
+  it('returns error when supplier not found (lockPeriod ownership)', async () => {
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: VALID_UUID } } }) },
+      from: vi.fn().mockReturnValueOnce(makeSelectChain(null)),
+    };
+    (createServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(client);
+    mocks.findById.mockResolvedValueOnce(makePeriod('under_review'));
+    const result = await lockPeriod(null, makeFormData({ period_id: VALID_UUID }));
+    expect(result.error).toMatch(/proveedor.*no encontrado/i);
+  });
+
+  it('returns error when membership denied (lockPeriod ownership)', async () => {
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: VALID_UUID } } }) },
+      from: vi.fn()
+        .mockReturnValueOnce(makeSelectChain({ organization_id: VALID_ORG_ID }))
+        .mockReturnValueOnce(makeSelectChain(null)),
+    };
+    (createServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(client);
+    mocks.findById.mockResolvedValueOnce(makePeriod('under_review'));
+    const result = await lockPeriod(null, makeFormData({ period_id: VALID_UUID }));
+    expect(result.error).toMatch(/permisos/i);
+  });
 });
 
 // ── calculatePeriod error paths ───────────────────────────────────────────────
@@ -303,6 +335,39 @@ describe('calculatePeriod — error paths', () => {
     mocks.evaluate.mockResolvedValueOnce(GOOD_EVAL_OUTCOME);
     const result = await calculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
     expect(result.error).toMatch(/revisión/i);
+  });
+
+  it('returns generic error when evaluate throws non-Error', async () => {
+    mockAuth();
+    mocks.findById.mockResolvedValueOnce(makePeriod('open'));
+    mocks.transitionStatus.mockResolvedValueOnce(makePeriod('calculating'));
+    mocks.evaluate.mockRejectedValueOnce('unexpected string');
+    const result = await calculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
+    expect(result.error).toMatch(/error desconocido/i);
+  });
+
+  it('returns error when supplier not found (calculatePeriod ownership)', async () => {
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: VALID_UUID } } }) },
+      from: vi.fn().mockReturnValueOnce(makeSelectChain(null)),
+    };
+    (createServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(client);
+    mocks.findById.mockResolvedValueOnce(makePeriod('open'));
+    const result = await calculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
+    expect(result.error).toMatch(/proveedor.*no encontrado/i);
+  });
+
+  it('returns error when membership denied (calculatePeriod ownership)', async () => {
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: VALID_UUID } } }) },
+      from: vi.fn()
+        .mockReturnValueOnce(makeSelectChain({ organization_id: VALID_ORG_ID }))
+        .mockReturnValueOnce(makeSelectChain(null)),
+    };
+    (createServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(client);
+    mocks.findById.mockResolvedValueOnce(makePeriod('open'));
+    const result = await calculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
+    expect(result.error).toMatch(/permisos/i);
   });
 });
 
