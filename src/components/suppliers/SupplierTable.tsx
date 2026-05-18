@@ -7,9 +7,9 @@ import {
   createSupplier,
   updateSupplier,
   archiveSupplier,
-  CATEGORIAS_VALIDAS,
   type SupplierActionState,
 } from '@/actions/suppliers';
+import { CATEGORIAS_VALIDAS } from '@/lib/supplier-constants';
 import type { SupplierRow } from '@/types/database';
 
 interface Props {

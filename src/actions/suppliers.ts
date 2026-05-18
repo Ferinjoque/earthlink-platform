@@ -3,21 +3,7 @@
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { createServerClient } from '@/services/supabase/server';
-
-const CATEGORIAS_VALIDAS = [
-  'Manufactura',
-  'Logística y transporte',
-  'Energía y utilities',
-  'Construcción e infraestructura',
-  'Agricultura y agroindustria',
-  'Tecnología y software',
-  'Servicios profesionales',
-  'Comercio y distribución',
-  'Minería y extracción',
-  'Química y materiales',
-  'Salud y farmacia',
-  'Otro',
-] as const;
+import { CATEGORIAS_VALIDAS } from '@/lib/supplier-constants';
 
 const rucSchema = z
   .string()
