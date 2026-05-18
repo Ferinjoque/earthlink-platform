@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Fragment, useState, useActionState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { PeriodActions } from '@/components/audit/PeriodActions';
@@ -832,7 +833,18 @@ export function AuditTable({ periodos, suppliers }: AuditTableProps) {
                           color: 'var(--color-ink-1)',
                         }}
                       >
-                        {p.label}
+                        <Link
+                          href={`/audit/${p.id}`}
+                          style={{
+                            color: 'var(--color-ink-1)',
+                            textDecoration: 'none',
+                            fontFamily: 'var(--font-mono)',
+                          }}
+                          onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = 'var(--color-accent)'; }}
+                          onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = 'var(--color-ink-1)'; }}
+                        >
+                          {p.label}
+                        </Link>
                       </td>
                       <td
                         style={{
