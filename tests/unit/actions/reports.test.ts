@@ -181,4 +181,124 @@ describe('exportCsv', () => {
     expect(result.sha256).toHaveLength(64);
     expect(result.filename).toMatch(/earthlink-export-.+\.csv/);
   });
+
+  it('returns error when periods do not belong to authorized suppliers', async () => {
+    // Periods exist but their supplier_id is not in the org's suppliers
+    const dataMap: Record<string, unknown[]> = {
+      memberships: [{ organization_id: ORG_ID }],
+      reporting_periods: [{ id: PERIOD_ID, label: 'Q1-2026', supplier_id: 'other-supplier-id' }],
+      suppliers: [{ id: SUPPLIER_ID, name: 'Test Corp', organization_id: ORG_ID }],
+      emission_results: [],
+      activity_entries: [],
+      report_exports: [],
+    };
+
+    function chain(table: string) {
+      const resolved = Promise.resolve({ data: dataMap[table] ?? [] });
+      const c: Record<string, unknown> = {
+        select: () => c,
+        eq: () => c,
+        in: () => c,
+        insert: vi.fn().mockResolvedValue({ error: null }),
+        order: () => resolved,
+        then: resolved.then.bind(resolved),
+        catch: resolved.catch.bind(resolved),
+      };
+      return c;
+    }
+
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: USER_ID } } }) },
+      from: vi.fn().mockImplementation((table: string) => chain(table)),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(client as never);
+
+    const fd = makeFormData({ period_ids: PERIOD_ID });
+    const result = await exportCsv(null, fd);
+    expect(result.error).toMatch(/acceso/i);
+  });
+
+  it('returns error when periods have no calculated results', async () => {
+    const dataMap: Record<string, unknown[]> = {
+      memberships: [{ organization_id: ORG_ID }],
+      reporting_periods: [{ id: PERIOD_ID, label: 'Q1-2026', supplier_id: SUPPLIER_ID }],
+      suppliers: [{ id: SUPPLIER_ID, name: 'Test Corp', organization_id: ORG_ID }],
+      emission_results: [],
+      activity_entries: [],
+      report_exports: [],
+    };
+
+    function chain(table: string) {
+      const resolved = Promise.resolve({ data: dataMap[table] ?? [] });
+      const c: Record<string, unknown> = {
+        select: () => c,
+        eq: () => c,
+        in: () => c,
+        insert: vi.fn().mockResolvedValue({ error: null }),
+        order: () => resolved,
+        then: resolved.then.bind(resolved),
+        catch: resolved.catch.bind(resolved),
+      };
+      return c;
+    }
+
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: USER_ID } } }) },
+      from: vi.fn().mockImplementation((table: string) => chain(table)),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(client as never);
+
+    const fd = makeFormData({ period_ids: PERIOD_ID });
+    const result = await exportCsv(null, fd);
+    expect(result.error).toMatch(/resultados calculados/i);
+  });
+
+  it('escapes commas and quotes in CSV fields', async () => {
+    const resultsData = [
+      {
+        id: RESULT_ID,
+        activity_entry_id: ENTRY_ID,
+        reporting_period_id: PERIOD_ID,
+        scope: 1,
+        co2e_kg: 10,
+        factor_used: 1,
+        factor_unit: 'kg CO2/unit',
+        calc_hash: 'abc',
+        calc_version: '1.0.0',
+        calculated_at: '2026-01-15T10:00:00Z',
+      },
+    ];
+    const dataMap: Record<string, unknown[]> = {
+      memberships: [{ organization_id: ORG_ID }],
+      reporting_periods: [{ id: PERIOD_ID, label: 'Q1-2026', supplier_id: SUPPLIER_ID }],
+      // Supplier name with comma → triggers csvEscape quoting
+      suppliers: [{ id: SUPPLIER_ID, name: 'Test, Corp "Inc"', organization_id: ORG_ID }],
+      emission_results: resultsData,
+      activity_entries: [{ id: ENTRY_ID, source_type: 'stationary_combustion', raw_quantity: 100, raw_unit: 'kWh' }],
+      report_exports: [],
+    };
+
+    function chain(table: string) {
+      const resolved = Promise.resolve({ data: dataMap[table] ?? [] });
+      const c: Record<string, unknown> = {
+        select: () => c, eq: () => c, in: () => c,
+        insert: vi.fn().mockResolvedValue({ error: null }),
+        order: () => resolved,
+        then: resolved.then.bind(resolved),
+        catch: resolved.catch.bind(resolved),
+      };
+      return c;
+    }
+
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: USER_ID } } }) },
+      from: vi.fn().mockImplementation((table: string) => chain(table)),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(client as never);
+
+    const fd = makeFormData({ period_ids: PERIOD_ID });
+    const result = await exportCsv(null, fd);
+    expect(result.success).toBe(true);
+    expect(result.csvContent).toContain('"Test, Corp ""Inc"""');
+  });
 });
