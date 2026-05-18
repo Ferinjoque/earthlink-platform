@@ -11,6 +11,7 @@ import {
   type CreatePeriodState,
 } from '@/actions/audit';
 import { traducirMensajeAnomalia } from '@/lib/anomaly';
+import { variantEstadoPeriodo, etiquetaEstadoPeriodo } from '@/lib/reporting-period';
 import type { PeriodStatus } from '@/domain/ReportingPeriod';
 import type { AnomalySeverity } from '@/types/database';
 
@@ -69,24 +70,6 @@ interface AuditTableProps {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function variantEstado(
-  status: PeriodStatus,
-): 'open' | 'calculating' | 'under_review' | 'locked' | 'neutral' {
-  if (status === 'open') return 'open';
-  if (status === 'calculating') return 'calculating';
-  if (status === 'under_review') return 'under_review';
-  if (status === 'locked') return 'locked';
-  return 'neutral';
-}
-
-function etiquetaEstado(status: PeriodStatus): string {
-  if (status === 'open') return 'Abierto';
-  if (status === 'calculating') return 'Calculando…';
-  if (status === 'under_review') return 'En revisión';
-  if (status === 'locked') return 'Bloqueado';
-  return status;
-}
 
 function formatearKg(kg: number): string {
   if (kg === 0) return '—';
@@ -860,7 +843,7 @@ export function AuditTable({ periodos, suppliers }: AuditTableProps) {
                         {inicioFmt} – {finFmt}
                       </td>
                       <td style={{ padding: 'var(--space-3) var(--space-4)' }}>
-                        <Badge variant={variantEstado(p.status)}>{etiquetaEstado(p.status)}</Badge>
+                        <Badge variant={variantEstadoPeriodo(p.status)}>{etiquetaEstadoPeriodo(p.status)}</Badge>
                       </td>
                       <td
                         style={{

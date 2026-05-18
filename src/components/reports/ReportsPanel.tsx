@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { exportCsv, type ExportCsvState } from '@/actions/reports';
 import { Badge } from '@/components/ui/Badge';
 import { PrintButton } from '@/components/ui/PrintButton';
+import { variantEstadoPeriodo, etiquetaEstadoPeriodo } from '@/lib/reporting-period';
 import type { PeriodStatus } from '@/domain/ReportingPeriod';
 
 export interface PeriodoExportable {
@@ -33,20 +34,6 @@ function formatearKg(kg: number): string {
   if (kg === 0) return '—';
   if (kg >= 1_000) return `${(kg / 1_000).toFixed(3)} tCO₂e`;
   return `${kg.toFixed(2)} kg`;
-}
-
-function variantEstado(
-  status: PeriodStatus,
-): 'open' | 'calculating' | 'under_review' | 'locked' | 'neutral' {
-  if (status === 'under_review') return 'under_review';
-  if (status === 'locked') return 'locked';
-  return 'neutral';
-}
-
-function etiquetaEstado(status: PeriodStatus): string {
-  if (status === 'under_review') return 'En revisión';
-  if (status === 'locked') return 'Bloqueado';
-  return status;
 }
 
 export function ReportsPanel({ periodos, historial }: ReportsPanelProps) {
@@ -242,7 +229,7 @@ export function ReportsPanel({ periodos, historial }: ReportsPanelProps) {
                         {p.label}
                       </td>
                       <td style={{ padding: 'var(--space-3) var(--space-4)' }}>
-                        <Badge variant={variantEstado(p.status)}>{etiquetaEstado(p.status)}</Badge>
+                        <Badge variant={variantEstadoPeriodo(p.status)}>{etiquetaEstadoPeriodo(p.status)}</Badge>
                       </td>
                       <td
                         style={{
