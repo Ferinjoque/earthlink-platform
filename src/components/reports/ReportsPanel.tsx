@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useActionState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { exportCsv, type ExportCsvState } from '@/actions/reports';
 import { Badge } from '@/components/ui/Badge';
 import type { PeriodStatus } from '@/domain/ReportingPeriod';
@@ -54,8 +55,9 @@ export function ReportsPanel({ periodos, historial }: ReportsPanelProps) {
     null,
   );
   const downloadRef = useRef<HTMLAnchorElement>(null);
+  const router = useRouter();
 
-  // Trigger download when CSV content is returned
+  // Trigger download when CSV content is returned + refresh history
   useEffect(() => {
     if (state?.success && state.csvContent && state.filename) {
       const blob = new Blob([state.csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -67,8 +69,9 @@ export function ReportsPanel({ periodos, historial }: ReportsPanelProps) {
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 10_000);
       }
+      router.refresh();
     }
-  }, [state]);
+  }, [state, router]);
 
   function toggleSeleccion(id: string) {
     setSeleccionados((prev) => {

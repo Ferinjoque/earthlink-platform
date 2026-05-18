@@ -36,6 +36,13 @@ export class AnomalyService {
       const stddev = AnomalyService.stddev(values, mean);
       const severity = AnomalyService.severityFor(z);
 
+      const SOURCE_LABELS: Partial<Record<EmissionSourceType, string>> = {
+        stationary_combustion: 'Combustión estacionaria',
+        mobile_combustion: 'Combustión móvil',
+        purchased_electricity: 'Electricidad',
+        purchased_steam: 'Vapor',
+        fugitive: 'Emisiones fugitivas',
+      };
       anomalies.push({
         entryId: entry.id,
         sourceType: entry.sourceType,
@@ -44,7 +51,7 @@ export class AnomalyService {
         historicalMean: mean,
         historicalStddev: stddev,
         severity,
-        message: `${entry.sourceType} quantity ${entry.rawQuantity.toFixed(2)} ${entry.rawUnit} is ${z.toFixed(2)}σ above historical mean of ${mean.toFixed(2)}`,
+        message: `${SOURCE_LABELS[entry.sourceType] ?? entry.sourceType}: ${entry.rawQuantity.toLocaleString('es', { maximumFractionDigits: 2 })} ${entry.rawUnit} es ${z.toFixed(2)}σ sobre la media histórica (${mean.toFixed(2)} ${entry.rawUnit}). Verificar datos.`,
       });
     }
 
