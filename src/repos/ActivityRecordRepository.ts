@@ -1,2 +1,2 @@
-// Kept for backward compatibility — use ActivityEntryRepository directly.
+// Backward-compatibility alias — use ActivityEntryRepository directly.
 export { ActivityEntryRepository as ActivityRecordRepository } from './ActivityEntryRepository';
