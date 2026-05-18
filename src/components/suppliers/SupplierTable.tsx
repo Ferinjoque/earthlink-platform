@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useActionState } from 'react';
+import { Fragment, useState, useEffect, useActionState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Pencil, Archive, X, Check, Search } from 'lucide-react';
 import {
@@ -9,6 +9,7 @@ import {
   archiveSupplier,
   type SupplierActionState,
 } from '@/actions/suppliers';
+import { CATEGORIAS_VALIDAS } from '@/lib/supplier-constants';
 import type { SupplierRow } from '@/types/database';
 
 interface Props {
@@ -26,7 +27,26 @@ const estiloInput = (error?: boolean): React.CSSProperties => ({
   color: 'var(--color-ink-1)',
   outline: 'none',
   boxSizing: 'border-box',
+  fontFamily: 'inherit',
 });
+
+const estiloSelect = (error?: boolean): React.CSSProperties => ({
+  ...estiloInput(error),
+  appearance: 'none',
+  WebkitAppearance: 'none',
+  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238B9591'/%3E%3C/svg%3E")`,
+  backgroundRepeat: 'no-repeat',
+  backgroundPosition: 'right 10px center',
+  paddingRight: 'var(--space-8)',
+  cursor: 'pointer',
+});
+
+const estiloError: React.CSSProperties = {
+  fontSize: 'var(--text-xs)',
+  color: 'var(--color-signal-hi)',
+  marginTop: '3px',
+  fontFamily: 'var(--font-mono)',
+};
 
 function FormProveedor({
   organizationId,
@@ -45,14 +65,23 @@ function FormProveedor({
     null,
   );
 
+  // Auto-close on success
+  useEffect(() => {
+    if (!state?.success) return;
+    const t = setTimeout(() => onCancel(), 300);
+    return () => clearTimeout(t);
+  }, [state?.success, onCancel]);
+
+  const fe = state?.fieldErrors ?? {};
+
   return (
     <form
       action={formAction}
       style={{
         display: 'grid',
         gridTemplateColumns: '1fr 1fr',
-        gap: 'var(--space-3)',
-        padding: 'var(--space-5)',
+        gap: 'var(--space-4)',
+        padding: 'var(--space-6)',
         background: 'var(--color-accent-soft)',
         borderBottom: '1px solid var(--color-border)',
       }}
@@ -60,10 +89,11 @@ function FormProveedor({
       {mode === 'edit' && <input type="hidden" name="id" value={initial?.id} />}
       <input type="hidden" name="organization_id" value={organizationId} />
 
+      {/* Nombre */}
       <div>
         <label
           htmlFor={`nombre-${mode}`}
-          style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)', display: 'block', marginBottom: 'var(--space-1)' }}
+          style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)', display: 'block', marginBottom: 'var(--space-1)', fontWeight: 500 }}
         >
           Nombre *
         </label>
@@ -73,31 +103,39 @@ function FormProveedor({
           required
           defaultValue={initial?.name}
           placeholder="Nombre del proveedor"
-          style={estiloInput()}
+          style={estiloInput(!!fe.nombre)}
         />
+        {fe.nombre && <p style={estiloError}>{fe.nombre}</p>}
       </div>
 
+      {/* Categoría — dropdown predefinido */}
       <div>
         <label
           htmlFor={`categoria-${mode}`}
-          style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)', display: 'block', marginBottom: 'var(--space-1)' }}
+          style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)', display: 'block', marginBottom: 'var(--space-1)', fontWeight: 500 }}
         >
           Categoría *
         </label>
-        <input
+        <select
           id={`categoria-${mode}`}
           name="categoria"
           required
-          defaultValue={initial?.category}
-          placeholder="Ej. Manufactura, Logística"
-          style={estiloInput()}
-        />
+          defaultValue={initial?.category ?? ''}
+          style={estiloSelect(!!fe.categoria)}
+        >
+          <option value="" disabled>Selecciona una categoría</option>
+          {CATEGORIAS_VALIDAS.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+        {fe.categoria && <p style={estiloError}>{fe.categoria}</p>}
       </div>
 
+      {/* Correo */}
       <div>
         <label
           htmlFor={`contacto-${mode}`}
-          style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)', display: 'block', marginBottom: 'var(--space-1)' }}
+          style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)', display: 'block', marginBottom: 'var(--space-1)', fontWeight: 500 }}
         >
           Correo de contacto
         </label>
@@ -107,27 +145,33 @@ function FormProveedor({
           type="email"
           defaultValue={initial?.contact_email ?? ''}
           placeholder="contacto@empresa.com"
-          style={estiloInput()}
+          style={estiloInput(!!fe.contacto)}
         />
+        {fe.contacto && <p style={estiloError}>{fe.contacto}</p>}
       </div>
 
+      {/* RUC */}
       <div>
         <label
           htmlFor={`ruc-${mode}`}
-          style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)', display: 'block', marginBottom: 'var(--space-1)' }}
+          style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)', display: 'block', marginBottom: 'var(--space-1)', fontWeight: 500 }}
         >
-          RUC
+          RUC <span style={{ color: 'var(--color-ink-3)', fontWeight: 400 }}>(11 dígitos)</span>
         </label>
         <input
           id={`ruc-${mode}`}
           name="ruc"
+          inputMode="numeric"
+          maxLength={11}
           defaultValue={initial?.ruc ?? ''}
           placeholder="20XXXXXXXXX"
-          style={estiloInput()}
+          style={estiloInput(!!fe.ruc)}
         />
+        {fe.ruc && <p style={estiloError}>{fe.ruc}</p>}
       </div>
 
-      {state?.error && (
+      {/* Error global (no es de campo específico) */}
+      {state?.error && !Object.keys(fe).length && (
         <div
           role="alert"
           style={{
@@ -143,12 +187,29 @@ function FormProveedor({
         </div>
       )}
 
+      {state?.success && (
+        <div
+          style={{
+            gridColumn: '1 / -1',
+            fontSize: 'var(--text-xs)',
+            color: 'var(--color-signal-ok)',
+            background: 'var(--color-signal-ok-bg)',
+            padding: 'var(--space-2) var(--space-3)',
+            borderRadius: 'var(--radius-md)',
+            fontFamily: 'var(--font-mono)',
+          }}
+        >
+          {mode === 'create' ? 'Proveedor creado correctamente.' : 'Cambios guardados.'}
+        </div>
+      )}
+
       <div
         style={{
           gridColumn: '1 / -1',
           display: 'flex',
           gap: 'var(--space-2)',
           justifyContent: 'flex-end',
+          paddingTop: 'var(--space-2)',
         }}
       >
         <button
@@ -414,9 +475,8 @@ export function SupplierTable({ suppliers, organizationId }: Props) {
             </thead>
             <tbody>
               {proveedoresFiltrados.map((s) => (
-                <>
+                <Fragment key={s.id}>
                   <tr
-                    key={s.id}
                     className="supplier-row"
                     style={{ borderBottom: '1px solid var(--color-border)', cursor: 'pointer' }}
                     onClick={() => router.push(`/suppliers/${s.id}`)}
@@ -490,7 +550,7 @@ export function SupplierTable({ suppliers, organizationId }: Props) {
                     </td>
                   </tr>
                   {editandoId === s.id && (
-                    <tr key={`edit-${s.id}`}>
+                    <tr>
                       <td colSpan={5} style={{ padding: 0 }}>
                         <FormProveedor
                           organizationId={s.organization_id}
@@ -502,7 +562,7 @@ export function SupplierTable({ suppliers, organizationId }: Props) {
                     </tr>
                   )}
                   {archivandoId === s.id && (
-                    <tr key={`archive-${s.id}`}>
+                    <tr>
                       <td colSpan={5} style={{ padding: 0 }}>
                         <ConfirmacionArchivo
                           supplier={s}
@@ -511,7 +571,7 @@ export function SupplierTable({ suppliers, organizationId }: Props) {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>
