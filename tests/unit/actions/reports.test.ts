@@ -310,4 +310,104 @@ describe('exportCsv', () => {
     expect(result.success).toBe(true);
     expect(result.csvContent).toContain('"Test, Corp ""Inc"""');
   });
+
+  it('escapes newline characters in CSV fields', async () => {
+    const resultsData = [
+      {
+        id: RESULT_ID,
+        activity_entry_id: ENTRY_ID,
+        reporting_period_id: PERIOD_ID,
+        scope: 2,
+        co2e_kg: 5,
+        factor_used: 0.5,
+        factor_unit: 'kg CO2/kWh',
+        calc_hash: 'def',
+        calc_version: '1.0.0',
+        calculated_at: '2026-02-01T08:00:00Z',
+      },
+    ];
+    const dataMap: Record<string, unknown[]> = {
+      memberships: [{ organization_id: ORG_ID }],
+      reporting_periods: [{ id: PERIOD_ID, label: 'Q1-2026', supplier_id: SUPPLIER_ID }],
+      suppliers: [{ id: SUPPLIER_ID, name: 'Test Corp', organization_id: ORG_ID }],
+      emission_results: resultsData,
+      activity_entries: [{ id: ENTRY_ID, source_type: 'purchased_electricity', raw_quantity: 10, raw_unit: 'kWh\nwith newline' }],
+      report_exports: [],
+    };
+
+    function chain(table: string) {
+      const resolved = Promise.resolve({ data: dataMap[table] ?? [] });
+      const c: Record<string, unknown> = {
+        select: () => c, eq: () => c, in: () => c,
+        insert: vi.fn().mockResolvedValue({ error: null }),
+        order: () => resolved,
+        then: resolved.then.bind(resolved),
+        catch: resolved.catch.bind(resolved),
+      };
+      return c;
+    }
+
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: USER_ID } } }) },
+      from: vi.fn().mockImplementation((table: string) => chain(table)),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
+
+    const fd = makeFormData({ period_ids: PERIOD_ID });
+    const result = await exportCsv(null, fd);
+    expect(result.success).toBe(true);
+    expect(result.csvContent).toContain('"kWh');
+  });
+
+  it('skips CSV rows where activity entry is not found in fetch results', async () => {
+    const MISSING_ENTRY_ID = 'aaaa0000-0000-0000-0000-000000000099';
+    const resultsData = [
+      {
+        id: RESULT_ID,
+        activity_entry_id: MISSING_ENTRY_ID,
+        reporting_period_id: PERIOD_ID,
+        scope: 1,
+        co2e_kg: 20,
+        factor_used: 2,
+        factor_unit: 'kg CO2/L',
+        calc_hash: 'ghi',
+        calc_version: '1.0.0',
+        calculated_at: '2026-03-01T00:00:00Z',
+      },
+    ];
+    const dataMap: Record<string, unknown[]> = {
+      memberships: [{ organization_id: ORG_ID }],
+      reporting_periods: [{ id: PERIOD_ID, label: 'Q1-2026', supplier_id: SUPPLIER_ID }],
+      suppliers: [{ id: SUPPLIER_ID, name: 'Test Corp', organization_id: ORG_ID }],
+      emission_results: resultsData,
+      activity_entries: [], // entry not found
+      report_exports: [],
+    };
+
+    function chain(table: string) {
+      const resolved = Promise.resolve({ data: dataMap[table] ?? [] });
+      const c: Record<string, unknown> = {
+        select: () => c, eq: () => c, in: () => c,
+        insert: vi.fn().mockResolvedValue({ error: null }),
+        order: () => resolved,
+        then: resolved.then.bind(resolved),
+        catch: resolved.catch.bind(resolved),
+      };
+      return c;
+    }
+
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: USER_ID } } }) },
+      from: vi.fn().mockImplementation((table: string) => chain(table)),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
+
+    const fd = makeFormData({ period_ids: PERIOD_ID });
+    const result = await exportCsv(null, fd);
+    expect(result.success).toBe(true);
+    // CSV has only header, no data rows
+    const lines = result.csvContent?.split('\n') ?? [];
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain('periodo');
+  });
 });
