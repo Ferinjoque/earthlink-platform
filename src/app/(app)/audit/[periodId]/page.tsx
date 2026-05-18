@@ -136,36 +136,34 @@ export default async function DetallePeriodoPage({
   const results = (resultsRaw.data ?? []) as FilaResultado[];
   const auditLog = (auditLogRaw.data ?? []) as FilaAuditLog[];
 
-  // Fetch entry details for results
+  // Parallel fetch: entry details + anomaly flags (both depend only on entryIds)
   const entryIds = [...new Set(results.map((r) => r.activity_entry_id))];
   type FilaEntrada = Pick<ActivityEntryRow, 'id' | 'source_type' | 'raw_quantity' | 'raw_unit'>;
-  const entryMap = new Map<string, FilaEntrada>();
-
-  if (entryIds.length) {
-    const { data: entriesRaw } = await supabase
-      .from('activity_entries')
-      .select('id, source_type, raw_quantity, raw_unit')
-      .in('id', entryIds);
-    for (const e of (entriesRaw ?? []) as FilaEntrada[]) {
-      entryMap.set(e.id, e);
-    }
-  }
-
-  // Fetch anomaly flags for this period's entries
   type FilaFlag = Pick<
     AnomalyFlagRow,
     'id' | 'activity_entry_id' | 'severity' | 'z_score' | 'message' | 'flagged_at'
   >;
-  const flagsData: FilaFlag[] = [];
-  if (entryIds.length) {
-    const { data: flagsRaw } = await supabase
-      .from('anomaly_flags')
-      .select('id, activity_entry_id, severity, z_score, message, flagged_at')
-      .in('activity_entry_id', entryIds)
-      .eq('is_resolved', false)
-      .order('flagged_at', { ascending: false });
-    if (flagsRaw) flagsData.push(...(flagsRaw as FilaFlag[]));
+
+  const [entriesRaw, flagsRaw] = entryIds.length
+    ? await Promise.all([
+        supabase
+          .from('activity_entries')
+          .select('id, source_type, raw_quantity, raw_unit')
+          .in('id', entryIds),
+        supabase
+          .from('anomaly_flags')
+          .select('id, activity_entry_id, severity, z_score, message, flagged_at')
+          .in('activity_entry_id', entryIds)
+          .eq('is_resolved', false)
+          .order('flagged_at', { ascending: false }),
+      ])
+    : [{ data: [] as FilaEntrada[] }, { data: [] as FilaFlag[] }];
+
+  const entryMap = new Map<string, FilaEntrada>();
+  for (const e of (entriesRaw.data ?? []) as FilaEntrada[]) {
+    entryMap.set(e.id, e);
   }
+  const flagsData = (flagsRaw.data ?? []) as FilaFlag[];
 
   // Aggregates
   let totalCo2e = 0;
