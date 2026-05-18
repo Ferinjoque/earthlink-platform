@@ -20,9 +20,9 @@ export default async function ReportesPage() {
 
   const { data: rawMemberships } = await supabase
     .from('memberships')
-    .select('*')
+    .select('organization_id')
     .eq('user_id', user?.id ?? '');
-  const memberships = (rawMemberships ?? []) as MembershipRow[];
+  const memberships = (rawMemberships ?? []) as Pick<MembershipRow, 'organization_id'>[];
 
   const orgIds = [...new Set(memberships.map((m) => m.organization_id).filter(Boolean))];
 
