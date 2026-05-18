@@ -12,7 +12,7 @@ export function Card({ children, style, className, variant = 'default' }: CardPr
     variant === 'elevated'
       ? { boxShadow: 'var(--shadow-md)' }
       : variant === 'accent'
-        ? { borderLeft: '3px solid var(--color-accent)', paddingLeft: 'calc(var(--space-6) - 3px)' }
+        ? { background: 'var(--color-accent-soft)', border: '1px solid oklch(42% 0.12 155 / 22%)' }
         : variant === 'surface'
           ? { background: 'var(--color-surface-2)', border: 'none' }
           : {};
@@ -50,7 +50,8 @@ export function StatCard({ label, value, unit, delta, accent }: StatCardProps) {
         display: 'flex',
         flexDirection: 'column',
         gap: 'var(--space-3)',
-        borderLeft: accent ? '3px solid var(--color-accent)' : undefined,
+        background: accent ? 'var(--color-accent-soft)' : undefined,
+      border: accent ? '1px solid oklch(42% 0.12 155 / 22%)' : undefined,
         transition: 'box-shadow var(--duration-fast) var(--ease-out-expo)',
       }}
     >
