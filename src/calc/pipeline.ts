@@ -223,9 +223,10 @@ export function score(totals: EvaluationTotals, history: readonly EvaluationTota
     }
   }
 
-  // Normalized score: 0 tCO2e → 0, ≥1000 tCO2e → 100 (quadratic-ish curve)
+  // Normalized score: 0 tCO2e → 0, ≥1083 tCO2e → 65 (cap before trend adj)
+  // With 'up' trend +10 → max 75 → 'critical'. Cap at 65 so critical is reachable.
   const tCo2e = totals.totalCo2eKg / 1000;
-  let rawScore = Math.round(Math.min(60, tCo2e * 0.6));
+  let rawScore = Math.round(Math.min(65, tCo2e * 0.6));
 
   // Trend adjustment
   if (trend === 'up') rawScore = Math.min(100, rawScore + 10);

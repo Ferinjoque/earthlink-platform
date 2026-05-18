@@ -382,9 +382,20 @@ describe('score', () => {
     expect(score(current, history).trend).toBe('stable');
   });
 
-  it('level is high for very large emissions (base score caps at 60)', () => {
+  it('level is high for very large emissions with stable trend (base score caps at 65)', () => {
     const s = score(makeTotals(2_000_000), []);
     expect(s.level).toBe('high');
+    expect(s.score).toBe(65);
+  });
+
+  it('level is critical for very large emissions with upward trend', () => {
+    // Base 65 + 10 (up trend) = 75 → critical
+    const prior = makeTotals(100_000);
+    const current = makeTotals(2_000_000);
+    const s = score(current, [prior]);
+    expect(s.trend).toBe('up');
+    expect(s.score).toBe(75);
+    expect(s.level).toBe('critical');
   });
 });
 
