@@ -1,8 +1,3 @@
-/**
- * Validated environment variables — fails fast at startup if any are missing.
- * Server-only vars must never be imported from client components.
- */
-
 function getEnv(key: string): string {
   const value = process.env[key];
   if (!value) throw new Error(`Missing required env var: ${key}`);
