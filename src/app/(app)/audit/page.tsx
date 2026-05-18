@@ -51,10 +51,17 @@ export default async function AuditoriaPage() {
     .from('memberships')
     .select('organization_id, supplier_id')
     .eq('user_id', user.id);
-  const memberships = (rawMemberships ?? []) as Pick<MembershipRow, 'organization_id' | 'supplier_id'>[];
+  const memberships = (rawMemberships ?? []) as Pick<
+    MembershipRow,
+    'organization_id' | 'supplier_id'
+  >[];
 
-  const orgIds = [...new Set(memberships.map((m) => m.organization_id).filter((x): x is string => x !== null))];
-  const memberSupplierIds = [...new Set(memberships.map((m) => m.supplier_id).filter((x): x is string => x !== null))];
+  const orgIds = [
+    ...new Set(memberships.map((m) => m.organization_id).filter((x): x is string => x !== null)),
+  ];
+  const memberSupplierIds = [
+    ...new Set(memberships.map((m) => m.supplier_id).filter((x): x is string => x !== null)),
+  ];
 
   const suppliersData: Pick<SupplierRow, 'id' | 'name'>[] = [];
   if (orgIds.length) {
@@ -104,7 +111,9 @@ export default async function AuditoriaPage() {
     nonOpenPeriodIds.length
       ? supabase
           .from('emission_results')
-          .select('id, activity_entry_id, reporting_period_id, scope, co2e_kg, factor_used, factor_unit, calculated_at')
+          .select(
+            'id, activity_entry_id, reporting_period_id, scope, co2e_kg, factor_used, factor_unit, calculated_at',
+          )
           .in('reporting_period_id', nonOpenPeriodIds)
       : Promise.resolve({ data: [] as FilaResultado[] }),
     allPeriodIds.length
@@ -270,7 +279,7 @@ export default async function AuditoriaPage() {
               ['under_review', 'En revisión'],
               ['locked', 'Bloqueado'],
             ] as [PeriodStatus, string][]
-          ).map(([s, etiqueta]) => (
+          ).map(([s]) => (
             <span key={s} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
               <Badge variant={variantEstado(s)}>{etiquetaEstado(s)}</Badge>
               <span

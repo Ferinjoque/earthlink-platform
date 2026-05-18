@@ -25,12 +25,37 @@ interface TopBarProps {
 }
 
 const NAV_ITEMS = [
-  { label: 'Panel', href: '/dashboard', icon: LayoutDashboard, description: 'Visión general · KPIs' },
-  { label: 'Proveedores', href: '/suppliers', icon: Building2, description: 'Registro de cadena de suministro' },
-  { label: 'Actividad', href: '/activity', icon: ClipboardList, description: 'Registros de consumo' },
+  {
+    label: 'Panel',
+    href: '/dashboard',
+    icon: LayoutDashboard,
+    description: 'Visión general · KPIs',
+  },
+  {
+    label: 'Proveedores',
+    href: '/suppliers',
+    icon: Building2,
+    description: 'Registro de cadena de suministro',
+  },
+  {
+    label: 'Actividad',
+    href: '/activity',
+    icon: ClipboardList,
+    description: 'Registros de consumo',
+  },
   { label: 'Auditoría', href: '/audit', icon: ShieldCheck, description: 'Periodos de reporte' },
-  { label: 'Reportes', href: '/reports', icon: FileText, description: 'Exportaciones y certificados' },
-  { label: 'Configuración', href: '/settings', icon: Settings, description: 'Cuenta y organización' },
+  {
+    label: 'Reportes',
+    href: '/reports',
+    icon: FileText,
+    description: 'Exportaciones y certificados',
+  },
+  {
+    label: 'Configuración',
+    href: '/settings',
+    icon: Settings,
+    description: 'Cuenta y organización',
+  },
 ] as const;
 
 export function TopBar({ title, email, section }: TopBarProps) {
@@ -45,12 +70,19 @@ export function TopBar({ title, email, section }: TopBarProps) {
   const router = useRouter();
   const inicial = email?.charAt(0).toUpperCase() ?? '?';
 
+  function openSearch() {
+    setQuery('');
+    setHighlightIdx(0);
+    setSearchOpen(true);
+    setTimeout(() => inputRef.current?.focus(), 40);
+  }
+
   // ⌘K / Ctrl+K shortcut
   useEffect(() => {
     function handler(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        setSearchOpen(true);
+        openSearch();
       }
       if (e.key === 'Escape') {
         setSearchOpen(false);
@@ -60,15 +92,6 @@ export function TopBar({ title, email, section }: TopBarProps) {
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, []);
-
-  // Focus input when search opens
-  useEffect(() => {
-    if (!searchOpen) return;
-    setQuery('');
-    setHighlightIdx(0);
-    const t = setTimeout(() => inputRef.current?.focus(), 40);
-    return () => clearTimeout(t);
-  }, [searchOpen]);
 
   // Close search on outside click
   useEffect(() => {
@@ -98,14 +121,12 @@ export function TopBar({ title, email, section }: TopBarProps) {
   const q = query.toLowerCase();
   const filteredPages = q
     ? NAV_ITEMS.filter(
-        (p) =>
-          p.label.toLowerCase().includes(q) || p.description.toLowerCase().includes(q),
+        (p) => p.label.toLowerCase().includes(q) || p.description.toLowerCase().includes(q),
       )
     : [...NAV_ITEMS];
   const filteredSuppliers = q
     ? suppliers.filter(
-        (s) =>
-          s.name.toLowerCase().includes(q) || s.category.toLowerCase().includes(q),
+        (s) => s.name.toLowerCase().includes(q) || s.category.toLowerCase().includes(q),
       )
     : [];
 
@@ -210,7 +231,6 @@ export function TopBar({ title, email, section }: TopBarProps) {
 
         {/* Derecha */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-
           {/* Búsqueda inline */}
           <div ref={searchWrapRef} style={{ position: 'relative' }}>
             {searchOpen ? (
@@ -270,7 +290,7 @@ export function TopBar({ title, email, section }: TopBarProps) {
               /* Pill inactivo */
               <button
                 type="button"
-                onClick={() => setSearchOpen(true)}
+                onClick={openSearch}
                 aria-label="Abrir búsqueda (⌘K)"
                 style={{
                   display: 'flex',
@@ -421,9 +441,7 @@ export function TopBar({ title, email, section }: TopBarProps) {
                               border: 'none',
                               cursor: 'pointer',
                               textAlign: 'left',
-                              background: highlighted
-                                ? 'var(--color-accent-soft)'
-                                : 'transparent',
+                              background: highlighted ? 'var(--color-accent-soft)' : 'transparent',
                               transition: 'background 80ms',
                             }}
                           >
@@ -546,8 +564,7 @@ export function TopBar({ title, email, section }: TopBarProps) {
                   placeItems: 'center',
                   border: 'none',
                   cursor: 'pointer',
-                  boxShadow:
-                    '0 0 0 2px var(--color-surface-0), 0 0 0 3px var(--color-accent-soft)',
+                  boxShadow: '0 0 0 2px var(--color-surface-0), 0 0 0 3px var(--color-accent-soft)',
                   flexShrink: 0,
                   transition: 'box-shadow 150ms',
                 }}
