@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { AnomalyBadge } from '@/components/activity/AnomalyBadge';
 import type { ActivityEntryStatus, AnomalySeverity, EmissionSourceType } from '@/types/database';
@@ -248,9 +248,8 @@ export function ActivityList({ entries }: ActivityListProps) {
             </thead>
             <tbody>
               {filtradas.map((entry) => (
-                <>
+                <Fragment key={entry.id}>
                   <tr
-                    key={entry.id}
                     style={{
                       borderBottom:
                         expandida === entry.id
@@ -331,7 +330,6 @@ export function ActivityList({ entries }: ActivityListProps) {
                   {/* ── Panel de anomalía expandible ── */}
                   {expandida === entry.id && entry.anomaly && (
                     <tr
-                      key={`${entry.id}-anomaly`}
                       style={{ borderBottom: '1px solid var(--color-border)' }}
                     >
                       <td
@@ -439,7 +437,7 @@ export function ActivityList({ entries }: ActivityListProps) {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>

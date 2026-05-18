@@ -8,11 +8,8 @@ import {
   ClipboardList,
   ShieldCheck,
   FileText,
-  LogOut,
   Leaf,
-  Settings,
 } from 'lucide-react';
-import { signOut } from '@/actions/auth';
 
 interface NavItem {
   href: string;
@@ -26,7 +23,6 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/activity', label: 'Actividad', icon: <ClipboardList size={18} /> },
   { href: '/audit', label: 'Auditoría', icon: <ShieldCheck size={18} /> },
   { href: '/reports', label: 'Reportes', icon: <FileText size={18} /> },
-  { href: '/settings', label: 'Configuración', icon: <Settings size={18} /> },
 ];
 
 export function Sidebar() {
@@ -162,44 +158,6 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Cerrar sesión */}
-      <div
-        style={{
-          padding: 'var(--space-3)',
-          borderTop: '1px solid var(--color-border)',
-        }}
-      >
-        <form action={signOut}>
-          <button
-            type="submit"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--space-3)',
-              padding: 'var(--space-2) var(--space-3)',
-              borderRadius: 'var(--radius-md)',
-              fontSize: 'var(--text-sm)',
-              color: 'var(--color-ink-3)',
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              width: '100%',
-              transition: `color var(--duration-fast) var(--ease-out-expo), background var(--duration-fast)`,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = 'var(--color-signal-hi)';
-              e.currentTarget.style.background = 'oklch(50% 0.16 20 / 8%)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = 'var(--color-ink-3)';
-              e.currentTarget.style.background = 'transparent';
-            }}
-          >
-            <LogOut size={17} />
-            Cerrar sesión
-          </button>
-        </form>
-      </div>
     </aside>
   );
 }
