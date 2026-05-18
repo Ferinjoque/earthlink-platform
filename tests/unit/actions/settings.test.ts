@@ -18,6 +18,8 @@ vi.mock('next/navigation', () => ({
 
 import { createServerClient } from '../../../src/services/supabase/server';
 
+type MockClient = Awaited<ReturnType<typeof createServerClient>>;
+
 const VALID_USER_ID = '00000000-0000-4000-8000-000000000001';
 const VALID_ORG_ID = '00000000-0000-4000-8000-000000000002';
 
@@ -62,7 +64,7 @@ function mockSupabaseClient({
     from: mockFrom,
   };
 
-  vi.mocked(createServerClient).mockResolvedValue(client as never);
+  vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
   return client;
 }
 

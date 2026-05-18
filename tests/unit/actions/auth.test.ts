@@ -19,6 +19,8 @@ import { createServerClient } from '../../../src/services/supabase/server';
 import { redirect } from 'next/navigation';
 import { signIn, signOut } from '../../../src/actions/auth';
 
+type MockClient = Awaited<ReturnType<typeof createServerClient>>;
+
 const mockRedirect = vi.mocked(redirect);
 
 function makeFormData(fields: Record<string, string>): FormData {
@@ -36,7 +38,7 @@ function mockClient({
       signOut: vi.fn().mockResolvedValue({ error: null }),
     },
   };
-  vi.mocked(createServerClient).mockResolvedValue(client as never);
+  vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
   return client;
 }
 
