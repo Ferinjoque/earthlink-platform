@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { createServerClient } from '@/services/supabase/server';
 import { TopBar } from '@/components/shell/TopBar';
 import { ActivityForm } from '@/components/activity/ActivityForm';
@@ -23,11 +24,12 @@ export default async function ActividadPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
 
   const { data: rawMemberships } = await supabase
     .from('memberships')
     .select('organization_id, supplier_id, role')
-    .eq('user_id', user?.id ?? '');
+    .eq('user_id', user.id);
   const memberships = (rawMemberships ?? []) as Pick<MembershipRow, 'organization_id' | 'supplier_id' | 'role'>[];
 
   // supplier role → direct supplier access

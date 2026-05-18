@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { createServerClient } from '@/services/supabase/server';
 import { TopBar } from '@/components/shell/TopBar';
 import { Badge } from '@/components/ui/Badge';
@@ -44,11 +45,12 @@ export default async function AuditoriaPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
 
   const { data: rawMemberships } = await supabase
     .from('memberships')
     .select('organization_id, supplier_id')
-    .eq('user_id', user?.id ?? '');
+    .eq('user_id', user.id);
   const memberships = (rawMemberships ?? []) as Pick<MembershipRow, 'organization_id' | 'supplier_id'>[];
 
   const orgIds = [...new Set(memberships.map((m) => m.organization_id).filter((x): x is string => x !== null))];

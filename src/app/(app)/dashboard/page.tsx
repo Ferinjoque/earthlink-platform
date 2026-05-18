@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { createServerClient } from '@/services/supabase/server';
 import { TopBar } from '@/components/shell/TopBar';
 import { Badge } from '@/components/ui/Badge';
@@ -68,11 +69,12 @@ function traducirMensajeAnomalia(msg: string): string {
 export default async function PanelPage() {
   const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
 
   const { data: rawMemberships } = await supabase
     .from('memberships')
     .select('organization_id, supplier_id, role')
-    .eq('user_id', user?.id ?? '');
+    .eq('user_id', user.id);
   const memberships = (rawMemberships ?? []) as Pick<MembershipRow, 'organization_id' | 'supplier_id' | 'role'>[];
 
   const orgIds = [
