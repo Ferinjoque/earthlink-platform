@@ -10,6 +10,7 @@ import {
   type ResolveAnomalyState,
   type CreatePeriodState,
 } from '@/actions/audit';
+import { traducirMensajeAnomalia } from '@/lib/anomaly';
 import type { PeriodStatus } from '@/domain/ReportingPeriod';
 import type { AnomalySeverity } from '@/types/database';
 
@@ -286,7 +287,7 @@ function AnomaliaItem({ anomalia }: { anomalia: AnomaliaDetalle }) {
           minWidth: '160px',
         }}
       >
-        {anomalia.message}
+        {traducirMensajeAnomalia(anomalia.message)}
       </span>
 
       <form action={formAction} style={{ flexShrink: 0 }}>
