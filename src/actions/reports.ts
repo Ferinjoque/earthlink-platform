@@ -159,17 +159,28 @@ export async function exportCsv(
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
   const filename = `earthlink-export-${timestamp}.csv`;
 
-  // Save to report_exports
-  const firstOrgId = orgIds[0] ?? '';
-  await supabase.from('report_exports').insert({
-    organization_id: firstOrgId,
-    reporting_period_ids: authorizedPeriodIds,
-    format: 'csv',
-    scope_filter: [1, 2],
-    file_url: `local://${filename}`,
-    file_sha256: sha256,
-    generated_by: user.id,
-  } as never);
+  // Save one export record per org covered by the authorized periods
+  const authorizedPeriods = periods.filter((p) => authorizedPeriodIds.includes(p.id));
+  const periodIdsByOrg = new Map<string, string[]>();
+  for (const p of authorizedPeriods) {
+    const supplier = suppliers.find((s) => s.id === p.supplier_id);
+    if (!supplier) continue;
+    const orgId = supplier.organization_id;
+    const existing = periodIdsByOrg.get(orgId) ?? [];
+    existing.push(p.id);
+    periodIdsByOrg.set(orgId, existing);
+  }
+  for (const [orgId, periodIdsForOrg] of periodIdsByOrg) {
+    await supabase.from('report_exports').insert({
+      organization_id: orgId,
+      reporting_period_ids: periodIdsForOrg,
+      format: 'csv',
+      scope_filter: [1, 2],
+      file_url: `local://${filename}`,
+      file_sha256: sha256,
+      generated_by: user.id,
+    } as never);
+  }
 
   return { success: true, csvContent, filename, sha256 };
 }
