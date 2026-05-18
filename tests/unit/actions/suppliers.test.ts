@@ -88,7 +88,7 @@ describe('createSupplier', () => {
       organization_id: VALID_ORG_ID,
     });
     const result = await createSupplier(null, fd);
-    expect(result.error).toMatch(/obligatorio/i);
+    expect(result.error).toMatch(/menos 2 caract/i);
     expect(result.success).toBeUndefined();
   });
 
@@ -100,14 +100,14 @@ describe('createSupplier', () => {
       organization_id: VALID_ORG_ID,
     });
     const result = await createSupplier(null, fd);
-    expect(result.error).toMatch(/obligatori/i);
+    expect(result.error).toMatch(/categoría válida/i);
   });
 
   it('rejects invalid organization_id UUID', async () => {
     mockClient();
     const fd = makeFormData({
       nombre: 'Proveedor A',
-      categoria: 'Logística',
+      categoria: 'Manufactura',
       organization_id: 'not-a-uuid',
     });
     const result = await createSupplier(null, fd);

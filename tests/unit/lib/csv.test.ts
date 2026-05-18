@@ -62,7 +62,7 @@ describe('parseCsvText', () => {
     const csv = `${VALID_UUID},stationary_combustion,diesel,-5,L,`;
     const rows = parseCsvText(csv);
     expect(rows[0]!.data).toBeNull();
-    expect(rows[0]!.errors.some((e) => /positive/i.test(e))).toBe(true);
+    expect(rows[0]!.errors.some((e) => /positiv/i.test(e))).toBe(true);
   });
 
   it('parses purchased_steam with empty secondary', () => {
