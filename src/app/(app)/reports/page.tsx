@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { createServerClient } from '@/services/supabase/server';
 import { TopBar } from '@/components/shell/TopBar';
 import { ReportsPanel } from '@/components/reports/ReportsPanel';
@@ -17,11 +18,12 @@ export default async function ReportesPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
 
   const { data: rawMemberships } = await supabase
     .from('memberships')
     .select('organization_id')
-    .eq('user_id', user?.id ?? '');
+    .eq('user_id', user.id);
   const memberships = (rawMemberships ?? []) as Pick<MembershipRow, 'organization_id'>[];
 
   const orgIds = [...new Set(memberships.map((m) => m.organization_id).filter((id): id is string => id !== null))];
