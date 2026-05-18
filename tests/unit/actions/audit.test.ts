@@ -144,20 +144,20 @@ describe('calculatePeriod', () => {
       null,
       makeFormData({ period_id: VALID_UUID }),
     );
-    expect(result.error).toMatch(/not authenticated/i);
+    expect(result.error).toMatch(/autenticado/i);
   });
 
   it('returns error when period_id is missing', async () => {
     mockAuth();
     const result = await calculatePeriod(null, makeFormData({}));
-    expect(result.error).toMatch(/missing period id/i);
+    expect(result.error).toMatch(/falta el id/i);
   });
 
   it('returns error when period is not found', async () => {
     mockAuth();
     mocks.findById.mockResolvedValueOnce(null);
     const result = await calculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
-    expect(result.error).toMatch(/not found/i);
+    expect(result.error).toMatch(/no encontrado/i);
   });
 
   it('returns error when period status is not open', async () => {
@@ -219,20 +219,20 @@ describe('lockPeriod', () => {
       null,
       makeFormData({ period_id: VALID_UUID }),
     );
-    expect(result.error).toMatch(/not authenticated/i);
+    expect(result.error).toMatch(/autenticado/i);
   });
 
   it('returns error when period_id is missing', async () => {
     mockAuth();
     const result = await lockPeriod(null, makeFormData({}));
-    expect(result.error).toMatch(/missing period id/i);
+    expect(result.error).toMatch(/falta el id/i);
   });
 
   it('returns error when period is not found', async () => {
     mockAuth();
     mocks.findById.mockResolvedValueOnce(null);
     const result = await lockPeriod(null, makeFormData({ period_id: VALID_UUID }));
-    expect(result.error).toMatch(/not found/i);
+    expect(result.error).toMatch(/no encontrado/i);
   });
 
   it('returns error when period is not under_review', async () => {

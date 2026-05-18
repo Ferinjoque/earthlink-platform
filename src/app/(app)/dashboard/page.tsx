@@ -3,76 +3,115 @@ import { createServerClient } from '@/services/supabase/server';
 import { TopBar } from '@/components/shell/TopBar';
 import { StatCard } from '@/components/ui/Card';
 import { TrendingDown, Activity, AlertTriangle, FileCheck } from 'lucide-react';
+import type { MembershipRow, ReportingPeriodRow } from '@/types/database';
 
-export const metadata: Metadata = { title: 'Dashboard' };
+export const metadata: Metadata = { title: 'Panel' };
 
-const PLACEHOLDER_STATS = [
-  {
-    label: 'Total CO₂e',
-    value: '—',
-    unit: 'kg',
-    accent: true,
-  },
-  {
-    label: 'Scope 1',
-    value: '—',
-    unit: 'kg',
-    accent: false,
-  },
-  {
-    label: 'Scope 2',
-    value: '—',
-    unit: 'kg',
-    accent: false,
-  },
-  {
-    label: 'Active Periods',
-    value: '—',
-    unit: '',
-    accent: false,
-  },
-];
-
-const FEATURE_TILES = [
+const MODULOS = [
   {
     icon: <Activity size={20} />,
-    title: 'Activity Entries',
-    description: 'Submit and review Scope 1 & 2 consumption data from suppliers.',
-    phase: 'Phase 5',
+    titulo: 'Registros de actividad',
+    descripcion: 'Envía y revisa datos de consumo de Alcance 1 y 2 de tus proveedores.',
+    fase: 'Fase 5',
     color: 'var(--color-signal-ok)',
   },
   {
     icon: <AlertTriangle size={20} />,
-    title: 'Anomaly Detection',
-    description: 'Z-score based detection flags unusual consumption patterns.',
-    phase: 'Phase 5',
+    titulo: 'Detección de anomalías',
+    descripcion: 'Detección por Z-score que señala patrones de consumo inusuales.',
+    fase: 'Fase 5',
     color: 'var(--color-signal-md)',
   },
   {
     icon: <TrendingDown size={20} />,
-    title: 'Audit Console',
-    description: 'Lock reporting periods and view the immutable audit trail.',
-    phase: 'Phase 6',
+    titulo: 'Consola de auditoría',
+    descripcion: 'Bloquea periodos de reporte y consulta el registro de auditoría inmutable.',
+    fase: 'Fase 6',
     color: 'var(--color-accent)',
   },
   {
     icon: <FileCheck size={20} />,
-    title: 'Reports',
-    description: 'Generate PDF and CSV exports with sha256 verification.',
-    phase: 'Phase 7',
+    titulo: 'Reportes',
+    descripcion: 'Genera exportaciones PDF y CSV con verificación sha256.',
+    fase: 'Fase 7',
     color: 'var(--color-ink-2)',
   },
 ];
 
-export default async function DashboardPage() {
+function formatearCo2e(kg: number): { valor: string; unidad: string } {
+  if (kg === 0) return { valor: '0', unidad: 'kg' };
+  if (kg >= 1_000_000) return { valor: (kg / 1_000_000).toFixed(2), unidad: 'MtCO₂e' };
+  if (kg >= 1_000) return { valor: (kg / 1_000).toFixed(3), unidad: 'tCO₂e' };
+  return { valor: kg.toFixed(1), unidad: 'kg CO₂e' };
+}
+
+export default async function PanelPage() {
   const supabase = await createServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const { data: rawMemberships } = await supabase
+    .from('memberships')
+    .select('*')
+    .eq('user_id', user?.id ?? '');
+  const memberships = (rawMemberships ?? []) as MembershipRow[];
+
+  const orgIds = [
+    ...new Set(memberships.map((m) => m.organization_id).filter((id): id is string => id !== null)),
+  ];
+  const memberSupplierIds = [
+    ...new Set(memberships.map((m) => m.supplier_id).filter((id): id is string => id !== null)),
+  ];
+
+  const allSupplierIds: string[] = [...memberSupplierIds];
+  if (orgIds.length) {
+    const { data } = await supabase.from('suppliers').select('id').in('organization_id', orgIds);
+    if (data) {
+      for (const s of data as Array<{ id: string }>) {
+        if (!allSupplierIds.includes(s.id)) allSupplierIds.push(s.id);
+      }
+    }
+  }
+
+  type FilaPeriodo = Pick<ReportingPeriodRow, 'id' | 'status'>;
+  const periodsData: FilaPeriodo[] = [];
+  if (allSupplierIds.length) {
+    const { data } = await supabase
+      .from('reporting_periods')
+      .select('id, status')
+      .in('supplier_id', allSupplierIds);
+    if (data) periodsData.push(...(data as FilaPeriodo[]));
+  }
+
+  const periodosAbiertos = periodsData.filter((p) => p.status === 'open').length;
+  const periodIds = periodsData.map((p) => p.id);
+
+  let totalCo2eKg = 0;
+  let scope1Co2eKg = 0;
+  let scope2Co2eKg = 0;
+  if (periodIds.length) {
+    const { data } = await supabase
+      .from('emission_results')
+      .select('co2e_kg, scope')
+      .in('reporting_period_id', periodIds);
+    if (data) {
+      for (const r of data as Array<{ co2e_kg: number; scope: number }>) {
+        totalCo2eKg += r.co2e_kg;
+        if (r.scope === 1) scope1Co2eKg += r.co2e_kg;
+        else scope2Co2eKg += r.co2e_kg;
+      }
+    }
+  }
+
+  const tieneDatos = totalCo2eKg > 0;
+  const total = formatearCo2e(totalCo2eKg);
+  const s1 = formatearCo2e(scope1Co2eKg);
+  const s2 = formatearCo2e(scope2Co2eKg);
+
   return (
     <>
-      <TopBar title="Dashboard" email={user?.email} />
+      <TopBar title="Panel" email={user?.email} />
 
       <main
         style={{
@@ -82,66 +121,148 @@ export default async function DashboardPage() {
           gap: 'var(--space-8)',
         }}
       >
-        {/* Welcome */}
+        {/* Hero editorial */}
         <section>
+          <p className="eyebrow" style={{ marginBottom: 'var(--space-3)' }}>
+            Protocolo GHG · Alcances 1 y 2
+          </p>
           <h2
             style={{
               fontFamily: 'var(--font-serif)',
               fontSize: 'var(--text-3xl)',
-              fontWeight: 'var(--fw-semibold)',
+              fontWeight: 400,
+              fontStyle: 'italic',
               color: 'var(--color-ink-1)',
               margin: '0 0 var(--space-2)',
-              letterSpacing: 'var(--tracking-tight)',
+              letterSpacing: 'var(--tracking-tightest)',
+              lineHeight: 'var(--leading-tight)',
             }}
           >
-            Carbon Footprint Overview
+            Huella de carbono de la cadena de suministro
           </h2>
           <p
             style={{
               fontSize: 'var(--text-sm)',
               color: 'var(--color-ink-2)',
               margin: 0,
+              maxWidth: '52ch',
             }}
           >
-            GHG Protocol Scope 1 &amp; 2 · Data populates once suppliers submit activity entries.
+            {tieneDatos
+              ? 'Acumulado en todos los periodos calculados.'
+              : 'Los datos se poblarán cuando los proveedores envíen sus registros de actividad.'}
           </p>
         </section>
 
-        {/* KPI stats */}
+        {/* KPIs */}
         <section
-          aria-label="Key performance indicators"
+          aria-label="Indicadores clave"
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: 'var(--space-4)',
           }}
         >
-          {PLACEHOLDER_STATS.map((stat) => (
-            <StatCard
-              key={stat.label}
-              label={stat.label}
-              value={stat.value}
-              unit={stat.unit}
-              accent={stat.accent}
-            />
-          ))}
+          <StatCard
+            label="Total CO₂e"
+            value={tieneDatos ? total.valor : '—'}
+            unit={tieneDatos ? total.unidad : ''}
+            accent
+          />
+          <StatCard
+            label="Alcance 1"
+            value={tieneDatos ? s1.valor : '—'}
+            unit={tieneDatos ? s1.unidad : ''}
+          />
+          <StatCard
+            label="Alcance 2"
+            value={tieneDatos ? s2.valor : '—'}
+            unit={tieneDatos ? s2.unidad : ''}
+          />
+          <StatCard
+            label="Periodos abiertos"
+            value={periodosAbiertos > 0 ? periodosAbiertos : '—'}
+            unit=""
+          />
         </section>
 
-        {/* Feature tiles */}
-        <section>
-          <h3
+        {/* Barra de alcances */}
+        {tieneDatos && (
+          <section
             style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: 'var(--text-xs)',
-              fontWeight: 'var(--fw-semibold)',
-              color: 'var(--color-ink-3)',
-              textTransform: 'uppercase',
-              letterSpacing: 'var(--tracking-widest)',
-              margin: '0 0 var(--space-4)',
+              background: 'var(--color-surface-1)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-lg)',
+              padding: 'var(--space-6)',
             }}
           >
-            Platform Modules
-          </h3>
+            <p className="eyebrow" style={{ marginBottom: 'var(--space-4)' }}>
+              Distribución por alcance
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+              {[
+                {
+                  etiqueta: 'Alcance 1 — Directas',
+                  valor: scope1Co2eKg,
+                  color: 'var(--color-accent)',
+                },
+                { etiqueta: 'Alcance 2 — Indirectas', valor: scope2Co2eKg, color: '#8b5cf6' },
+              ].map(({ etiqueta, valor, color }) => {
+                const pct = totalCo2eKg > 0 ? (valor / totalCo2eKg) * 100 : 0;
+                const fmt = formatearCo2e(valor);
+                return (
+                  <div key={etiqueta}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'baseline',
+                        marginBottom: 'var(--space-1)',
+                      }}
+                    >
+                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)' }}>
+                        {etiqueta}
+                      </span>
+                      <span
+                        style={{
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: 'var(--text-xs)',
+                          color: 'var(--color-ink-1)',
+                        }}
+                      >
+                        {fmt.valor} {fmt.unidad} ({pct.toFixed(1)}%)
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        height: '6px',
+                        background: 'var(--color-border)',
+                        borderRadius: '9999px',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <div
+                        style={{
+                          height: '100%',
+                          width: `${pct}%`,
+                          background: color,
+                          borderRadius: '9999px',
+                          transition: 'width 600ms cubic-bezier(0.16, 1, 0.3, 1)',
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Módulos */}
+        <section>
+          <p className="eyebrow" style={{ marginBottom: 'var(--space-5)' }}>
+            Módulos de la plataforma
+          </p>
           <div
             style={{
               display: 'grid',
@@ -149,9 +270,9 @@ export default async function DashboardPage() {
               gap: 'var(--space-4)',
             }}
           >
-            {FEATURE_TILES.map(({ icon, title, description, phase, color }) => (
+            {MODULOS.map(({ icon, titulo, descripcion, fase, color }) => (
               <div
-                key={title}
+                key={titulo}
                 style={{
                   background: 'var(--color-surface-1)',
                   border: '1px solid var(--color-border)',
@@ -178,7 +299,7 @@ export default async function DashboardPage() {
                       fontFamily: 'var(--font-mono)',
                     }}
                   >
-                    {phase}
+                    {fase}
                   </span>
                 </div>
                 <div>
@@ -190,7 +311,7 @@ export default async function DashboardPage() {
                       margin: '0 0 var(--space-1)',
                     }}
                   >
-                    {title}
+                    {titulo}
                   </p>
                   <p
                     style={{
@@ -200,7 +321,7 @@ export default async function DashboardPage() {
                       margin: 0,
                     }}
                   >
-                    {description}
+                    {descripcion}
                   </p>
                 </div>
               </div>
@@ -208,7 +329,7 @@ export default async function DashboardPage() {
           </div>
         </section>
 
-        {/* Stack note */}
+        {/* Arquitectura */}
         <section
           style={{
             background: 'var(--color-surface-1)',
@@ -217,35 +338,26 @@ export default async function DashboardPage() {
             padding: 'var(--space-6)',
           }}
         >
-          <h3
-            style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: 'var(--text-xs)',
-              fontWeight: 'var(--fw-semibold)',
-              color: 'var(--color-ink-3)',
-              textTransform: 'uppercase',
-              letterSpacing: 'var(--tracking-widest)',
-              margin: '0 0 var(--space-4)',
-            }}
-          >
-            Architecture
-          </h3>
-          <div
+          <p className="eyebrow" style={{ marginBottom: 'var(--space-5)' }}>
+            Arquitectura
+          </p>
+          <dl
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-              gap: 'var(--space-3)',
+              gap: 'var(--space-4)',
+              margin: 0,
             }}
           >
             {[
-              ['Paradigm', 'OOP + FP hybrid'],
-              ['Language', 'TypeScript'],
-              ['Database', 'Supabase / PostgreSQL'],
-              ['Auth', 'Supabase Auth + RLS'],
-              ['Calc Engine', 'Pure FP · big.js · sha256'],
-              ['Testing', '122 unit tests · Vitest'],
-            ].map(([key, val]) => (
-              <div key={key}>
+              ['Paradigma', 'OOP + FP híbrido'],
+              ['Lenguaje', 'TypeScript'],
+              ['Base de datos', 'Supabase / PostgreSQL'],
+              ['Autenticación', 'Supabase Auth + RLS'],
+              ['Motor de cálculo', 'FP puro · big.js · sha256'],
+              ['Pruebas', '160 pruebas unitarias · Vitest'],
+            ].map(([clave, valor]) => (
+              <div key={clave}>
                 <dt
                   style={{
                     fontSize: 'var(--text-xs)',
@@ -255,7 +367,7 @@ export default async function DashboardPage() {
                     marginBottom: 'var(--space-1)',
                   }}
                 >
-                  {key}
+                  {clave}
                 </dt>
                 <dd
                   style={{
@@ -265,11 +377,11 @@ export default async function DashboardPage() {
                     margin: 0,
                   }}
                 >
-                  {val}
+                  {valor}
                 </dd>
               </div>
             ))}
-          </div>
+          </dl>
         </section>
       </main>
     </>

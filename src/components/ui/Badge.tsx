@@ -43,6 +43,7 @@ const VARIANT_STYLES: Record<BadgeVariant, CSSProperties> = {
   validated: {
     background: 'color-mix(in oklch, var(--color-accent) 15%, transparent)',
     color: 'var(--color-accent)',
+    boxShadow: '0 0 0 1px oklch(58% 0.16 155 / 20%)',
   },
   rejected: {
     background: 'var(--color-signal-hi-bg)',
@@ -78,7 +79,7 @@ export function Badge({ variant, children }: BadgeProps) {
         display: 'inline-flex',
         alignItems: 'center',
         padding: '2px 8px',
-        borderRadius: '9999px',
+        borderRadius: 'var(--radius-pill)',
         fontSize: 'var(--text-xs)',
         fontFamily: 'var(--font-mono)',
         fontWeight: 600,
