@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Fragment, useState, useActionState } from 'react';
+import { Fragment, useState, useActionState, useEffect } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { PeriodActions } from '@/components/audit/PeriodActions';
 import {
@@ -12,6 +12,7 @@ import {
 } from '@/actions/audit';
 import { traducirMensajeAnomalia } from '@/lib/anomaly';
 import { variantEstadoPeriodo, etiquetaEstadoPeriodo } from '@/lib/reporting-period';
+import { useToast } from '@/components/ui/Toast';
 import type { PeriodStatus } from '@/domain/ReportingPeriod';
 import type { AnomalySeverity } from '@/types/database';
 
@@ -192,27 +193,19 @@ function ResultadosPanel({ results }: { results: ResultadoDetalle[] }) {
 }
 
 function AnomaliaItem({ anomalia }: { anomalia: AnomaliaDetalle }) {
+  const { toast } = useToast();
   const [state, formAction, isPending] = useActionState<ResolveAnomalyState | null, FormData>(
     resolveAnomaly,
     null,
   );
 
-  if (state?.success) {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 'var(--space-2)',
-          fontSize: 'var(--text-xs)',
-          color: 'var(--color-signal-ok)',
-          fontFamily: 'var(--font-mono)',
-        }}
-      >
-        Marcado como revisado
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (state?.success) {
+      toast('Anomalía marcada como revisada', 'success');
+    }
+  }, [state?.success, toast]);
+
+  if (state?.success) return null;
 
   return (
     <div
@@ -315,42 +308,18 @@ function NuevoPeriodoForm({
   suppliers: SupplierOption[];
   onClose: () => void;
 }) {
+  const { toast } = useToast();
   const [state, formAction, isPending] = useActionState<CreatePeriodState | null, FormData>(
     createPeriod,
     null,
   );
 
-  if (state?.success) {
-    return (
-      <div
-        style={{
-          padding: 'var(--space-4)',
-          background: 'var(--color-surface-1)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-lg)',
-          fontSize: 'var(--text-sm)',
-          color: 'var(--color-signal-ok)',
-          fontFamily: 'var(--font-mono)',
-        }}
-      >
-        Periodo creado correctamente.{' '}
-        <button
-          type="button"
-          onClick={onClose}
-          style={{
-            fontSize: 'var(--text-xs)',
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            color: 'var(--color-ink-3)',
-            textDecoration: 'underline',
-          }}
-        >
-          Cerrar
-        </button>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (state?.success) {
+      toast('Periodo creado correctamente', 'success');
+      onClose();
+    }
+  }, [state?.success, toast, onClose]);
 
   return (
     <div

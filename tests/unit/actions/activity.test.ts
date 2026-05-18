@@ -101,6 +101,15 @@ function makeArrayChain(data: unknown[]) {
   return c;
 }
 
+function makeNullDataChain() {
+  const p = Promise.resolve({ data: null });
+  const c: Record<string, unknown> = {};
+  c['select'] = () => c;
+  c['eq'] = () => c;
+  c['in'] = () => p;
+  return c;
+}
+
 function mockImportUnauthorizedClient() {
   const mockSupabase = {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
@@ -125,6 +134,14 @@ function makeFormData(fields: Record<string, string>): FormData {
   const fd = new FormData();
   for (const [k, v] of Object.entries(fields)) fd.append(k, v);
   return fd;
+}
+
+function makeSingleChain(data: unknown) {
+  const c: Record<string, unknown> = {};
+  c['select'] = () => c;
+  c['eq'] = () => c;
+  c['maybeSingle'] = () => Promise.resolve({ data });
+  return c;
 }
 
 // ── createActivityEntry ───────────────────────────────────────────────────────
@@ -232,6 +249,62 @@ describe('createActivityEntry', () => {
     });
     const result = await createActivityEntry(null, fd);
     expect(result.success).toBe(true);
+  });
+
+  it('returns error when reporting period not found in DB', async () => {
+    const mockSupabase = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+      from: vi.fn().mockReturnValueOnce(makeSingleChain(null)),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
+    const fd = makeFormData({
+      reporting_period_id: VALID_UUID,
+      source_type: 'stationary_combustion',
+      secondary: 'diesel',
+      raw_quantity: '100',
+      raw_unit: 'L',
+    });
+    const result = await createActivityEntry(null, fd);
+    expect(result.error).toMatch(/periodo.*no encontrado/i);
+  });
+
+  it('returns error when supplier for period not found in DB', async () => {
+    const mockSupabase = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+      from: vi.fn()
+        .mockReturnValueOnce(makeSingleChain({ supplier_id: 'supplier-001' }))
+        .mockReturnValueOnce(makeSingleChain(null)),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
+    const fd = makeFormData({
+      reporting_period_id: VALID_UUID,
+      source_type: 'stationary_combustion',
+      secondary: 'diesel',
+      raw_quantity: '100',
+      raw_unit: 'L',
+    });
+    const result = await createActivityEntry(null, fd);
+    expect(result.error).toMatch(/proveedor.*no encontrado/i);
+  });
+
+  it('returns error when user has no membership for supplier org', async () => {
+    const mockSupabase = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+      from: vi.fn()
+        .mockReturnValueOnce(makeSingleChain({ supplier_id: 'supplier-001' }))
+        .mockReturnValueOnce(makeSingleChain({ organization_id: 'org-001' }))
+        .mockReturnValueOnce(makeSingleChain(null)),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
+    const fd = makeFormData({
+      reporting_period_id: VALID_UUID,
+      source_type: 'stationary_combustion',
+      secondary: 'diesel',
+      raw_quantity: '100',
+      raw_unit: 'L',
+    });
+    const result = await createActivityEntry(null, fd);
+    expect(result.error).toMatch(/permisos/i);
   });
 });
 
@@ -478,6 +551,18 @@ describe('importActivityCsv — ownership check', () => {
     expect(result.error).toMatch(/periodo/i);
   });
 
+  it('returns error when periods query returns null (defensive ?? [])', async () => {
+    const mockSupabase = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+      from: vi.fn().mockReturnValueOnce(makeNullDataChain()),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
+    const csv = `${VALID_UUID},stationary_combustion,diesel,100,L,`;
+    const fd = makeFormData({ csv_text: csv });
+    const result = await importActivityCsv(null, fd);
+    expect(result.error).toMatch(/periodo/i);
+  });
+
   it('returns error when user lacks permission for period orgs', async () => {
     mockImportUnauthorizedClient();
     const csv = `${VALID_UUID},stationary_combustion,diesel,100,L,`;
@@ -495,5 +580,22 @@ describe('importActivityCsv — ownership check', () => {
     expect(result.success).toBe(true);
     expect(result.imported).toBe(0);
     expect(result.skipped).toBe(1);
+  });
+
+  it('handles null suppliers and memberships from Supabase (defensive ?? [])', async () => {
+    const mockSupabase = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+      from: vi.fn()
+        .mockReturnValueOnce(makeArrayChain([{ id: VALID_UUID, supplier_id: 'supplier-001' }]))
+        .mockReturnValueOnce(makeNullDataChain())
+        .mockReturnValueOnce(makeNullDataChain()),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
+
+    const csv = `${VALID_UUID},stationary_combustion,diesel,100,L,`;
+    const fd = makeFormData({ csv_text: csv });
+    const result = await importActivityCsv(null, fd);
+    expect(result.success).toBe(true);
+    expect(result.imported).toBe(1);
   });
 });
