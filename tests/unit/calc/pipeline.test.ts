@@ -375,6 +375,17 @@ describe('score', () => {
     const s = score(makeTotals(0), []);
     expect(s.level).toBe('low');
   });
+
+  it('stable trend when prior totalCo2eKg is 0 (avoid division by zero)', () => {
+    const current = makeTotals(5000);
+    const history = [makeTotals(0)];
+    expect(score(current, history).trend).toBe('stable');
+  });
+
+  it('level is high for very large emissions (base score caps at 60)', () => {
+    const s = score(makeTotals(2_000_000), []);
+    expect(s.level).toBe('high');
+  });
 });
 
 // ── Property-based tests ──────────────────────────────────────────────────────
