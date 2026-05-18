@@ -5,26 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { createServerClient } from '@/services/supabase/server';
 import { CATEGORIAS_VALIDAS } from '@/lib/supplier-constants';
 
-const rucSchema = z
-  .string()
-  .regex(/^\d{11}$/, 'El RUC debe tener exactamente 11 dígitos numéricos')
-  .or(z.literal(''))
-  .optional();
-
-const CATEGORIAS_VALIDAS = [
-  'Manufactura',
-  'Logística y transporte',
-  'Energía y utilities',
-  'Construcción e infraestructura',
-  'Agricultura y agroindustria',
-  'Tecnología y software',
-  'Servicios profesionales',
-  'Comercio y distribución',
-  'Minería y extracción',
-  'Química y materiales',
-  'Salud y farmacia',
-  'Otro',
-] as const;
+export { CATEGORIAS_VALIDAS };
 
 const rucSchema = z
   .string()
@@ -55,8 +36,6 @@ export interface SupplierActionState {
   fieldErrors?: Partial<Record<FieldName, string>>;
   success?: boolean;
 }
-
-export { CATEGORIAS_VALIDAS };
 
 type MembershipData = { role: string };
 type SupplierData = { organization_id: string };
