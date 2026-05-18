@@ -9,7 +9,10 @@ import {
   ShieldCheck,
   FileText,
   Leaf,
+  Settings,
+  LogOut,
 } from 'lucide-react';
+import { signOut } from '@/actions/auth';
 
 interface NavItem {
   href: string;
@@ -33,6 +36,7 @@ export function Sidebar({ anomaliaCount = 0 }: SidebarProps) {
       ? [{ href: '/audit', label: 'Auditoría', icon: <ShieldCheck size={18} />, badge: anomaliaCount }]
       : [{ href: '/audit', label: 'Auditoría', icon: <ShieldCheck size={18} /> }]),
     { href: '/reports', label: 'Reportes', icon: <FileText size={18} /> },
+    { href: '/settings', label: 'Configuración', icon: <Settings size={18} /> },
   ];
 
   return (
@@ -183,6 +187,48 @@ export function Sidebar({ anomaliaCount = 0 }: SidebarProps) {
           );
         })}
       </nav>
+
+      {/* Sign out */}
+      <div
+        style={{
+          padding: 'var(--space-3) var(--space-3)',
+          borderTop: '1px solid var(--color-border)',
+        }}
+      >
+        <form action={signOut}>
+          <button
+            type="submit"
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-3)',
+              padding: 'var(--space-2) var(--space-3)',
+              borderRadius: 'var(--radius-md)',
+              fontSize: 'var(--text-sm)',
+              color: 'var(--color-ink-3)',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: `color var(--duration-fast) var(--ease-out-expo)`,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = 'var(--color-signal-hi)';
+              e.currentTarget.style.background = 'var(--color-signal-hi-bg)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'var(--color-ink-3)';
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            <span style={{ opacity: 0.55, display: 'flex', alignItems: 'center' }}>
+              <LogOut size={18} />
+            </span>
+            Cerrar sesión
+          </button>
+        </form>
+      </div>
 
     </aside>
   );
