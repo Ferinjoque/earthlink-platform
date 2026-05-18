@@ -21,6 +21,8 @@ export interface PeriodActionState {
   success?: boolean;
 }
 
+export type { PeriodActionState as CreatePeriodState };
+
 type SupplierData = { organization_id: string };
 type MembershipData = { role: string };
 
@@ -75,6 +77,7 @@ export async function createPeriod(
   if (error) return { error: error.message };
 
   revalidatePath(`/suppliers/${supplier_id}`);
+  revalidatePath('/suppliers');
   revalidatePath('/audit');
   return { success: true };
 }

@@ -67,6 +67,17 @@ export default async function DetalleProveedorPage({
     'id' | 'name' | 'category' | 'contact_email' | 'ruc' | 'organization_id' | 'created_at'
   >;
 
+  // Authorization: caller must belong to the supplier's org
+  if (user) {
+    const { data: mem } = await supabase
+      .from('memberships')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('organization_id', supplier.organization_id)
+      .maybeSingle();
+    if (!mem) notFound();
+  }
+
   const { data: rawPeriods } = await supabase
     .from('reporting_periods')
     .select('id, label, start_date, end_date, status, created_at')
