@@ -87,7 +87,7 @@ export async function createSupplier(
     category: categoria,
     contact_email: contacto || null,
     ruc: ruc || null,
-  } as never);
+  });
 
   if (error) return { error: error.message };
 
@@ -151,7 +151,7 @@ export async function updateSupplier(
       category: categoria,
       contact_email: contacto || null,
       ruc: ruc || null,
-    } as never)
+    })
     .eq('id', id);
 
   if (error) return { error: error.message };
@@ -193,7 +193,7 @@ export async function archiveSupplier(
 
   const { error } = await supabase
     .from('suppliers')
-    .update({ archived_at: new Date().toISOString() } as never)
+    .update({ archived_at: new Date().toISOString() })
     .eq('id', id);
 
   if (error) return { error: error.message };

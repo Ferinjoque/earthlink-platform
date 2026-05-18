@@ -179,7 +179,7 @@ export async function exportCsv(
       file_url: `local://${filename}`,
       file_sha256: sha256,
       generated_by: user.id,
-    } as never);
+    });
   }
 
   return { success: true, csvContent, filename, sha256 };

@@ -70,7 +70,7 @@ export async function createPeriod(
     start_date: fecha_inicio,
     end_date: fecha_fin,
     status: 'open' as const,
-  } as never);
+  });
 
   if (error) return { error: error.message };
 
