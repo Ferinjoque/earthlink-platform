@@ -13,8 +13,21 @@ import type {
   ActivityEntryRow,
   AuditLogRow,
   MembershipRow,
+  AnomalyFlagRow,
 } from '@/types/database';
 import type { PeriodStatus } from '@/domain/ReportingPeriod';
+
+const COLOR_SEVERIDAD: Record<string, string> = {
+  low: 'var(--color-signal-ok)',
+  medium: 'var(--color-signal-md)',
+  high: 'var(--color-signal-hi)',
+};
+
+const ETIQUETA_SEVERIDAD: Record<string, string> = {
+  low: 'Baja',
+  medium: 'Media',
+  high: 'Alta',
+};
 
 export const metadata: Metadata = { title: 'Detalle de periodo' };
 
@@ -154,6 +167,22 @@ export default async function DetallePeriodoPage({
     for (const e of (entriesRaw ?? []) as FilaEntrada[]) {
       entryMap.set(e.id, e);
     }
+  }
+
+  // Fetch anomaly flags for this period's entries
+  type FilaFlag = Pick<
+    AnomalyFlagRow,
+    'id' | 'activity_entry_id' | 'severity' | 'z_score' | 'message' | 'flagged_at'
+  >;
+  const flagsData: FilaFlag[] = [];
+  if (entryIds.length) {
+    const { data: flagsRaw } = await supabase
+      .from('anomaly_flags')
+      .select('id, activity_entry_id, severity, z_score, message, flagged_at')
+      .in('activity_entry_id', entryIds)
+      .eq('is_resolved', false)
+      .order('flagged_at', { ascending: false });
+    if (flagsRaw) flagsData.push(...(flagsRaw as FilaFlag[]));
   }
 
   // Aggregates
@@ -338,6 +367,112 @@ export default async function DetallePeriodoPage({
                 </span>
               </div>
             ))}
+          </section>
+        )}
+
+        {/* ── Anomalías activas ── */}
+        {flagsData.length > 0 && (
+          <section>
+            <div style={{ marginBottom: 'var(--space-4)' }}>
+              <h3
+                style={{
+                  fontWeight: 600,
+                  color: 'var(--color-signal-md)',
+                  margin: 0,
+                  fontFamily: 'var(--font-mono)',
+                  textTransform: 'uppercase',
+                  letterSpacing: 'var(--tracking-wide)',
+                  fontSize: 'var(--text-xs)',
+                }}
+              >
+                Anomalías activas ({flagsData.length})
+              </h3>
+            </div>
+            <div
+              style={{
+                background: 'var(--color-surface-1)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-lg)',
+                overflow: 'hidden',
+              }}
+            >
+              {flagsData.map((f, idx) => {
+                const entrada = entryMap.get(f.activity_entry_id);
+                const FUENTE_CORTA: Record<string, string> = {
+                  stationary_combustion: 'Combustión estacionaria',
+                  mobile_combustion: 'Combustión móvil',
+                  purchased_electricity: 'Electricidad',
+                  purchased_steam: 'Vapor',
+                  fugitive: 'Emisiones fugitivas',
+                };
+                return (
+                  <div
+                    key={f.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 'var(--space-4)',
+                      padding: 'var(--space-4) var(--space-5)',
+                      borderBottom:
+                        idx < flagsData.length - 1 ? '1px solid var(--color-border)' : 'none',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 'var(--text-xs)',
+                        fontWeight: 700,
+                        color: COLOR_SEVERIDAD[f.severity] ?? 'var(--color-ink-2)',
+                        fontFamily: 'var(--font-mono)',
+                        minWidth: '40px',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {ETIQUETA_SEVERIDAD[f.severity] ?? f.severity}
+                    </span>
+                    {f.z_score !== null && (
+                      <span
+                        style={{
+                          fontSize: 'var(--text-xs)',
+                          fontFamily: 'var(--font-mono)',
+                          color: 'var(--color-ink-2)',
+                          flexShrink: 0,
+                        }}
+                      >
+                        z={f.z_score.toFixed(2)}
+                      </span>
+                    )}
+                    {entrada && (
+                      <span
+                        style={{
+                          fontSize: 'var(--text-xs)',
+                          fontFamily: 'var(--font-mono)',
+                          color: 'var(--color-ink-3)',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {FUENTE_CORTA[entrada.source_type] ?? entrada.source_type}
+                      </span>
+                    )}
+                    <span
+                      style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)', flex: 1 }}
+                    >
+                      {f.message}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '10px',
+                        color: 'var(--color-ink-3)',
+                        fontFamily: 'var(--font-mono)',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {new Date(f.flagged_at).toLocaleDateString('es')}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </section>
         )}
 
