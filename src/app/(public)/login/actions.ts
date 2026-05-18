@@ -11,11 +11,11 @@ export async function signIn(
   const password = formData.get('password');
 
   if (typeof email !== 'string' || typeof password !== 'string') {
-    return { error: 'Invalid form data.' };
+    return { error: 'Datos de formulario inválidos.' };
   }
 
   if (!email.trim() || !password) {
-    return { error: 'Email and password are required.' };
+    return { error: 'El correo y la contraseña son obligatorios.' };
   }
 
   const supabase = await createServerClient();

@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 import { TopBar } from '@/components/shell/TopBar';
 import { createServerClient } from '@/services/supabase/server';
 
-export const metadata: Metadata = { title: 'Reports' };
+export const metadata: Metadata = { title: 'Reportes' };
 
-export default async function ReportsPage() {
+export default async function ReportesPage() {
   const supabase = await createServerClient();
   const {
     data: { user },
@@ -12,7 +12,7 @@ export default async function ReportsPage() {
 
   return (
     <>
-      <TopBar title="Reports" email={user?.email} />
+      <TopBar title="Reportes" email={user?.email} />
       <main style={{ padding: 'var(--space-8)' }}>
         <p
           style={{
@@ -21,7 +21,7 @@ export default async function ReportsPage() {
             fontSize: 'var(--text-sm)',
           }}
         >
-          Phase 7 — PDF and CSV export with sha256 verification coming soon.
+          Fase 7 — exportación PDF y CSV con verificación sha256 próximamente.
         </p>
       </main>
     </>

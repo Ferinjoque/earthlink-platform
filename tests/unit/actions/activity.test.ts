@@ -74,7 +74,7 @@ describe('createActivityEntry', () => {
       raw_unit: 'L',
     });
     const result: ActivityFormState = await createActivityEntry(null, fd);
-    expect(result.error).toMatch(/not authenticated/i);
+    expect(result.error).toMatch(/autenticado/i);
   });
 
   it('returns fieldErrors for missing required fields', async () => {
@@ -176,7 +176,7 @@ describe('importActivityCsv', () => {
     mockUnauthenticatedClient();
     const fd = makeFormData({ csv_text: `${VALID_UUID},stationary_combustion,diesel,100,L,` });
     const result: CsvImportState = await importActivityCsv(null, fd);
-    expect(result.error).toMatch(/not authenticated/i);
+    expect(result.error).toMatch(/autenticado/i);
   });
 
   it('returns error for empty CSV', async () => {

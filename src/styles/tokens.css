@@ -1,63 +1,78 @@
 /* ============================================================
    EarthLink Design Tokens
-   Direction: Editorial Dashboard — Field Journal × Bloomberg
+   Dirección: Editorial Climate Tech — Persefoni × Perplexity Hub
    ============================================================ */
 
 :root {
-  /* ── Palette (OKLCH) ── */
-  --color-surface-0: oklch(98.5% 0.005 95);   /* paper white */
-  --color-surface-1: oklch(94% 0.008 95);     /* card / panel */
-  --color-surface-2: oklch(88% 0.012 95);     /* sunken / input bg */
-  --color-border:    oklch(82% 0.010 95);     /* dividers */
+  /* ── Paleta base — claro cálido editorial ── */
+  --color-surface-0: #FAF7F0;        /* papel crema */
+  --color-surface-1: #FFFFFF;        /* tarjeta elevada */
+  --color-surface-2: #F2EDE2;        /* hundido / input */
+  --color-surface-3: #E9E2D2;        /* panel acento */
+  --color-border:    #E5DFD3;        /* divisores */
+  --color-border-strong: #CFC6B0;    /* divisores prominentes */
 
-  --color-ink-1:     oklch(22% 0.02 260);     /* primary text */
-  --color-ink-2:     oklch(48% 0.015 260);    /* secondary text / labels */
-  --color-ink-3:     oklch(64% 0.010 260);    /* placeholder / disabled */
+  --color-ink-1:     #0F1F1B;        /* texto primario forest */
+  --color-ink-2:     #4A5854;        /* texto secundario */
+  --color-ink-3:     #8B9591;        /* placeholder / deshabilitado */
+  --color-ink-inverse: #FAF7F0;      /* texto sobre fondos oscuros */
 
-  --color-accent:    oklch(58% 0.16 155);     /* EarthLink green — use sparingly */
-  --color-accent-dim:oklch(72% 0.10 155);     /* accent on surface-1 */
+  /* ── Acentos ── */
+  --color-accent:        #1F5C45;    /* verde musgo profundo — primario */
+  --color-accent-2:      #2E7D5B;    /* verde medio */
+  --color-accent-soft:   #E3EBE5;    /* fondo acento sutil */
+  --color-accent-dim:    #4A8A6F;    /* hover/inactivo */
 
-  --color-signal-hi: oklch(64% 0.20 35);      /* anomaly / high risk */
-  --color-signal-md: oklch(78% 0.13 85);      /* caution / medium */
-  --color-signal-ok: oklch(70% 0.14 155);     /* validated / low */
-  --color-signal-hi-bg: oklch(96% 0.04 35);
-  --color-signal-md-bg: oklch(97% 0.03 85);
-  --color-signal-ok-bg: oklch(96% 0.04 155);
+  --color-warm:          #D97757;    /* terracota — pop cálido */
+  --color-warm-soft:     #F8E8DD;    /* fondo terracota sutil */
 
-  /* ── Dark mode overrides ── */
-  --color-overlay: oklch(0% 0 0 / 40%);
+  --color-gold:          #C9A14A;    /* mostaza editorial — destacar */
+  --color-gold-soft:     #F5EBD3;
 
-  /* ── Typography ── */
-  --font-sans:   'Inter Tight', system-ui, sans-serif;
-  --font-serif:  'Fraunces', Georgia, serif;
-  --font-mono:   'JetBrains Mono', 'Fira Code', monospace;
+  /* ── Señales ── */
+  --color-signal-hi:     #C0392B;    /* anomalía / alto riesgo */
+  --color-signal-md:     #C9A14A;    /* precaución / medio */
+  --color-signal-ok:     #1F5C45;    /* validado / bajo */
+  --color-signal-hi-bg:  #F8E5E1;
+  --color-signal-md-bg:  #F5EBD3;
+  --color-signal-ok-bg:  #E3EBE5;
 
-  --text-xs:   clamp(0.70rem, 0.67rem + 0.15vw, 0.75rem);
-  --text-sm:   clamp(0.80rem, 0.77rem + 0.15vw, 0.875rem);
-  --text-base: clamp(0.95rem, 0.90rem + 0.25vw, 1rem);
-  --text-lg:   clamp(1.05rem, 1.00rem + 0.25vw, 1.125rem);
-  --text-xl:   clamp(1.15rem, 1.05rem + 0.50vw, 1.25rem);
-  --text-2xl:  clamp(1.35rem, 1.15rem + 1.00vw, 1.5rem);
-  --text-3xl:  clamp(1.65rem, 1.35rem + 1.50vw, 2rem);
-  --text-4xl:  clamp(2.00rem, 1.50rem + 2.50vw, 3rem);
-  --text-hero: clamp(3.00rem, 1.50rem + 7.50vw, 6rem);
+  --color-overlay: rgba(15, 31, 27, 0.6);
 
-  --leading-tight:  1.2;
-  --leading-snug:   1.35;
-  --leading-normal: 1.5;
-  --leading-relaxed:1.65;
+  /* ── Tipografía ── */
+  --font-sans:    var(--font-inter), 'Inter', system-ui, -apple-system, sans-serif;
+  --font-serif:   var(--font-instrument), 'Instrument Serif', 'Cormorant Garamond', Georgia, serif;
+  --font-mono:    var(--font-mono-stack), 'JetBrains Mono', 'IBM Plex Mono', 'Courier New', monospace;
 
-  --tracking-tight:  -0.025em;
-  --tracking-normal:  0em;
-  --tracking-wide:    0.04em;
-  --tracking-widest:  0.12em;
+  --text-xs:   clamp(0.72rem, 0.69rem + 0.15vw, 0.78rem);
+  --text-sm:   clamp(0.82rem, 0.78rem + 0.18vw, 0.9rem);
+  --text-base: clamp(0.95rem, 0.92rem + 0.20vw, 1.02rem);
+  --text-lg:   clamp(1.08rem, 1.02rem + 0.30vw, 1.18rem);
+  --text-xl:   clamp(1.22rem, 1.10rem + 0.55vw, 1.4rem);
+  --text-2xl:  clamp(1.50rem, 1.30rem + 1.00vw, 1.85rem);
+  --text-3xl:  clamp(1.95rem, 1.55rem + 1.80vw, 2.6rem);
+  --text-4xl:  clamp(2.50rem, 1.90rem + 2.80vw, 3.6rem);
+  --text-display: clamp(3.20rem, 2.00rem + 5.50vw, 5.5rem);
+  --text-hero: clamp(3.80rem, 2.20rem + 7.50vw, 7.5rem);
 
-  --fw-normal:  400;
-  --fw-medium:  500;
-  --fw-semibold:600;
-  --fw-bold:    700;
+  --leading-tight:   1.08;
+  --leading-snug:    1.22;
+  --leading-normal:  1.5;
+  --leading-relaxed: 1.65;
 
-  /* ── Spacing ── */
+  --tracking-tightest: -0.04em;
+  --tracking-tight:    -0.022em;
+  --tracking-normal:   0em;
+  --tracking-wide:     0.04em;
+  --tracking-widest:   0.14em;
+
+  --fw-light:    300;
+  --fw-normal:   400;
+  --fw-medium:   500;
+  --fw-semibold: 600;
+  --fw-bold:     700;
+
+  /* ── Espaciado ── */
   --space-1:  0.25rem;
   --space-2:  0.5rem;
   --space-3:  0.75rem;
@@ -70,42 +85,46 @@
   --space-16: 4rem;
   --space-20: 5rem;
   --space-24: 6rem;
-  --space-section: clamp(4rem, 3rem + 5vw, 8rem);
+  --space-32: 8rem;
+  --space-section: clamp(4rem, 3rem + 5vw, 9rem);
 
-  /* ── Border radius ── */
-  --radius-sm:   0.25rem;
+  /* ── Radio ── */
+  --radius-xs:   0.1875rem;
+  --radius-sm:   0.3125rem;
   --radius-md:   0.5rem;
-  --radius-lg:   0.75rem;
-  --radius-xl:   1rem;
+  --radius-lg:   0.875rem;
+  --radius-xl:   1.25rem;
+  --radius-2xl:  1.75rem;
   --radius-pill: 9999px;
 
-  /* ── Shadows ── */
-  --shadow-sm:  0 1px 2px oklch(22% 0.02 260 / 6%);
-  --shadow-md:  0 4px 12px oklch(22% 0.02 260 / 8%),
-                0 1px 3px  oklch(22% 0.02 260 / 5%);
-  --shadow-lg:  0 12px 32px oklch(22% 0.02 260 / 10%),
-                0 2px  6px  oklch(22% 0.02 260 / 5%);
-  --shadow-xl:  0 24px 64px oklch(22% 0.02 260 / 12%),
-                0 4px 12px  oklch(22% 0.02 260 / 6%);
+  /* ── Sombras (cálidas, no negras) ── */
+  --shadow-xs: 0 1px 2px rgba(15, 31, 27, 0.04);
+  --shadow-sm: 0 1px 3px rgba(15, 31, 27, 0.06), 0 1px 2px rgba(15, 31, 27, 0.04);
+  --shadow-md: 0 4px 16px rgba(15, 31, 27, 0.06), 0 2px 4px rgba(15, 31, 27, 0.04);
+  --shadow-lg: 0 16px 40px rgba(15, 31, 27, 0.08), 0 4px 12px rgba(15, 31, 27, 0.05);
+  --shadow-xl: 0 32px 80px rgba(15, 31, 27, 0.12), 0 8px 20px rgba(15, 31, 27, 0.06);
+  --shadow-glow: 0 0 0 1px rgba(31, 92, 69, 0.12), 0 16px 48px rgba(31, 92, 69, 0.18);
 
-  /* ── Motion ── */
-  --ease-out-expo:  cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in-quad:   cubic-bezier(0.40, 0, 1, 1);
-  --ease-in-out:    cubic-bezier(0.45, 0, 0.55, 1);
+  /* ── Movimiento ── */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-quad:  cubic-bezier(0.40, 0, 1, 1);
+  --ease-in-out:   cubic-bezier(0.45, 0, 0.55, 1);
+  --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  --duration-micro:     80ms;
-  --duration-fast:     150ms;
-  --duration-normal:   240ms;
-  --duration-editorial:420ms;
+  --duration-micro:     90ms;
+  --duration-fast:      180ms;
+  --duration-normal:    280ms;
+  --duration-editorial: 520ms;
+  --duration-slow:      900ms;
 
   /* ── Layout ── */
   --max-w-prose:   68ch;
-  --max-w-content: 1200px;
-  --max-w-wide:    1440px;
+  --max-w-content: 1240px;
+  --max-w-wide:    1480px;
   --sidebar-w:     260px;
-  --topbar-h:      56px;
+  --topbar-h:      64px;
 
-  /* ── Z-index scale ── */
+  /* ── Z ── */
   --z-base:    0;
   --z-raised:  10;
   --z-sticky:  100;
@@ -114,27 +133,42 @@
   --z-toast:   400;
 }
 
-/* ── Dark mode ── */
+/* ── Modo oscuro — Persefoni dusk ── */
 [data-theme='dark'] {
-  --color-surface-0: oklch(14% 0.01 260);
-  --color-surface-1: oklch(18% 0.012 260);
-  --color-surface-2: oklch(22% 0.015 260);
-  --color-border:    oklch(28% 0.015 260);
+  --color-surface-0: #0E1916;
+  --color-surface-1: #15211D;
+  --color-surface-2: #1B2825;
+  --color-surface-3: #233330;
+  --color-border:    #233330;
+  --color-border-strong: #34453F;
 
-  --color-ink-1:     oklch(96% 0.005 95);
-  --color-ink-2:     oklch(72% 0.010 95);
-  --color-ink-3:     oklch(52% 0.008 95);
+  --color-ink-1:     #F4F1EA;
+  --color-ink-2:     #B8B0A0;
+  --color-ink-3:     #7D7669;
+  --color-ink-inverse: #0E1916;
 
-  --color-accent:    oklch(64% 0.12 155);   /* desaturated in dark */
-  --color-accent-dim:oklch(48% 0.09 155);
+  --color-accent:      #4DD0A8;
+  --color-accent-2:    #76E0BD;
+  --color-accent-soft: #1B3A2F;
+  --color-accent-dim:  #2E7D5B;
 
-  --shadow-sm:  0 1px 2px oklch(0% 0 0 / 20%);
-  --shadow-md:  0 4px 12px oklch(0% 0 0 / 30%), 0 1px 3px oklch(0% 0 0 / 20%);
-  --shadow-lg:  0 12px 32px oklch(0% 0 0 / 40%), 0 2px 6px oklch(0% 0 0 / 25%);
-  --shadow-xl:  0 24px 64px oklch(0% 0 0 / 50%), 0 4px 12px oklch(0% 0 0 / 30%);
+  --color-warm:      #E89570;
+  --color-warm-soft: #3A2419;
+  --color-gold-soft: #2F2719;
+  --color-signal-ok: #4DD0A8;
+  --color-signal-ok-bg: #1B3A2F;
+  --color-signal-hi-bg: #3A1F1B;
+  --color-signal-md-bg: #2F2719;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-xl: 0 32px 80px rgba(0, 0, 0, 0.65), 0 8px 20px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 0 1px rgba(77, 208, 168, 0.2), 0 16px 48px rgba(77, 208, 168, 0.25);
 }
 
-/* ── Reduced motion ── */
+/* ── Movimiento reducido ── */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -37,18 +37,20 @@ export async function calculatePeriod(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: 'Not authenticated' };
+  if (!user) return { error: 'No autenticado' };
 
   const periodId = formData.get('period_id');
-  if (typeof periodId !== 'string' || !periodId) return { error: 'Missing period ID' };
+  if (typeof periodId !== 'string' || !periodId) return { error: 'Falta el ID del periodo' };
 
   const periodRepo = new ReportingPeriodRepository(supabase);
   const auditLogRepo = new AuditLogRepository(supabase);
 
   const period = await periodRepo.findById(periodId);
-  if (!period) return { error: 'Reporting period not found' };
+  if (!period) return { error: 'Periodo de reporte no encontrado' };
   if (period.status !== 'open') {
-    return { error: `Period is "${period.status}" — only open periods can be calculated` };
+    return {
+      error: `El periodo está en estado "${period.status}" — solo los periodos abiertos pueden calcularse`,
+    };
   }
 
   const auditSvc = new AuditService(periodRepo, auditLogRepo);
@@ -56,7 +58,7 @@ export async function calculatePeriod(
   try {
     await auditSvc.transitionStatus(periodId, 'calculating', user.id);
   } catch {
-    return { error: 'Failed to transition period to calculating' };
+    return { error: 'Error al iniciar el cálculo del periodo' };
   }
 
   const evalSvc = new EvaluationService(
@@ -71,13 +73,15 @@ export async function calculatePeriod(
   try {
     outcome = await evalSvc.evaluate(periodId);
   } catch (err) {
-    return { error: `Evaluation failed: ${err instanceof Error ? err.message : 'unknown error'}` };
+    return {
+      error: `Error en la evaluación: ${err instanceof Error ? err.message : 'error desconocido'}`,
+    };
   }
 
   try {
     await auditSvc.transitionStatus(periodId, 'under_review', user.id);
   } catch {
-    return { error: 'Evaluation complete but failed to transition period to under_review' };
+    return { error: 'Evaluación completada pero error al transicionar el periodo a revisión' };
   }
 
   revalidatePath('/audit');
@@ -104,19 +108,19 @@ export async function lockPeriod(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: 'Not authenticated' };
+  if (!user) return { error: 'No autenticado' };
 
   const periodId = formData.get('period_id');
-  if (typeof periodId !== 'string' || !periodId) return { error: 'Missing period ID' };
+  if (typeof periodId !== 'string' || !periodId) return { error: 'Falta el ID del periodo' };
 
   const periodRepo = new ReportingPeriodRepository(supabase);
   const auditLogRepo = new AuditLogRepository(supabase);
 
   const period = await periodRepo.findById(periodId);
-  if (!period) return { error: 'Reporting period not found' };
+  if (!period) return { error: 'Periodo de reporte no encontrado' };
   if (period.status !== 'under_review') {
     return {
-      error: `Period is "${period.status}" — only periods under review can be locked`,
+      error: `El periodo está en estado "${period.status}" — solo los periodos en revisión pueden bloquearse`,
     };
   }
 
@@ -126,7 +130,7 @@ export async function lockPeriod(
     await auditSvc.lock(periodId, user.id);
   } catch (err) {
     return {
-      error: `Failed to lock period: ${err instanceof Error ? err.message : 'unknown error'}`,
+      error: `Error al bloquear el periodo: ${err instanceof Error ? err.message : 'error desconocido'}`,
     };
   }
 
