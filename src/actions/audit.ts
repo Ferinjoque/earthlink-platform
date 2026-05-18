@@ -160,6 +160,26 @@ export async function resolveAnomaly(
   const flagId = formData.get('flag_id');
   if (typeof flagId !== 'string' || !flagId) return { error: 'Falta el ID de la anomalía' };
 
+  // Verify caller belongs to same org as the anomaly flag
+  type FlagOrg = { activity_entries: { reporting_periods: { suppliers: { organization_id: string } } } };
+  const { data: flagRaw } = await supabase
+    .from('anomaly_flags')
+    .select('activity_entries(reporting_periods(suppliers(organization_id)))')
+    .eq('id', flagId)
+    .maybeSingle();
+  const flagData = flagRaw as FlagOrg | null;
+  const flagOrgId = flagData?.activity_entries?.reporting_periods?.suppliers?.organization_id;
+  if (!flagOrgId) return { error: 'Anomalía no encontrada' };
+
+  const { data: memRaw } = await supabase
+    .from('memberships')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('organization_id', flagOrgId)
+    .in('role', ['admin', 'consultant'])
+    .maybeSingle();
+  if (!memRaw) return { error: 'Sin permiso para resolver esta anomalía' };
+
   const { error } = await supabase
     .from('anomaly_flags')
     .update({
@@ -210,15 +230,24 @@ export async function createPeriod(
   }
   const { supplier_id, label, fecha_inicio, fecha_fin } = parsed.data;
 
+  // Resolve supplier → org, then verify caller is admin/consultant in that org
+  const { data: supplierRaw } = await supabase
+    .from('suppliers')
+    .select('organization_id')
+    .eq('id', supplier_id)
+    .maybeSingle();
+  const supplierData = supplierRaw as { organization_id: string } | null;
+  if (!supplierData) return { error: 'Proveedor no encontrado' };
+
   const { data: mem } = await supabase
     .from('memberships')
     .select('role')
     .eq('user_id', user.id)
+    .eq('organization_id', supplierData.organization_id)
     .in('role', ['admin', 'consultant'])
-    .limit(1)
     .maybeSingle();
   const membership = mem as { role: string } | null;
-  if (!membership) return { error: 'No tienes permiso para crear periodos' };
+  if (!membership) return { error: 'No tienes permiso para crear periodos en esta organización' };
 
   const { error } = await supabase.from('reporting_periods').insert({
     supplier_id,

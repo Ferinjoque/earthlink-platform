@@ -177,6 +177,9 @@ export async function importActivityCsv(
   if (typeof csvText !== 'string' || !csvText.trim()) {
     return { error: 'No se proporcionaron datos CSV' };
   }
+  if (csvText.length > 512_000) {
+    return { error: 'El archivo CSV supera el límite de 512 KB' };
+  }
 
   const rows = parseCsvText(csvText);
   const validRows = rows.filter((r) => r.errors.length === 0 && r.data !== null);
