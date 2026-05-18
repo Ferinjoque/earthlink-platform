@@ -20,9 +20,14 @@ export async function createServerClient() {
           return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options);
-          });
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
+          } catch {
+            // Called from a Server Component — cookies are read-only here.
+            // Middleware handles session refresh writes.
+          }
         },
       },
     },
@@ -40,9 +45,13 @@ export async function createAdminClient() {
           return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options);
-          });
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
+          } catch {
+            // Called from a Server Component — cookies are read-only here.
+          }
         },
       },
       auth: {
