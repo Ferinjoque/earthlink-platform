@@ -4,9 +4,19 @@ interface CardProps {
   children: ReactNode;
   style?: CSSProperties;
   className?: string;
+  variant?: 'default' | 'elevated' | 'accent' | 'surface';
 }
 
-export function Card({ children, style, className }: CardProps) {
+export function Card({ children, style, className, variant = 'default' }: CardProps) {
+  const variantStyles: CSSProperties =
+    variant === 'elevated'
+      ? { boxShadow: 'var(--shadow-md)' }
+      : variant === 'accent'
+        ? { borderLeft: '3px solid var(--color-accent)', paddingLeft: 'calc(var(--space-6) - 3px)' }
+        : variant === 'surface'
+          ? { background: 'var(--color-surface-2)', border: 'none' }
+          : {};
+
   return (
     <div
       className={className}
@@ -15,6 +25,7 @@ export function Card({ children, style, className }: CardProps) {
         border: '1px solid var(--color-border)',
         borderRadius: 'var(--radius-lg)',
         boxShadow: 'var(--shadow-sm)',
+        ...variantStyles,
         ...style,
       }}
     >
@@ -40,27 +51,19 @@ export function StatCard({ label, value, unit, delta, accent }: StatCardProps) {
         flexDirection: 'column',
         gap: 'var(--space-3)',
         borderLeft: accent ? '3px solid var(--color-accent)' : undefined,
+        transition: 'box-shadow var(--duration-fast) var(--ease-out-expo)',
       }}
     >
-      <span
-        style={{
-          fontSize: 'var(--text-xs)',
-          fontWeight: 'var(--fw-medium)',
-          color: 'var(--color-ink-2)',
-          textTransform: 'uppercase',
-          letterSpacing: 'var(--tracking-widest)',
-        }}
-      >
-        {label}
-      </span>
+      <span className="eyebrow">{label}</span>
 
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--space-2)' }}>
         <span
+          className="numeric-tabular"
           style={{
             fontFamily: 'var(--font-mono)',
             fontSize: 'var(--text-3xl)',
             fontWeight: 'var(--fw-bold)',
-            color: 'var(--color-ink-1)',
+            color: accent ? 'var(--color-accent)' : 'var(--color-ink-1)',
             lineHeight: 'var(--leading-tight)',
             letterSpacing: 'var(--tracking-tight)',
           }}
@@ -71,7 +74,8 @@ export function StatCard({ label, value, unit, delta, accent }: StatCardProps) {
           <span
             style={{
               fontSize: 'var(--text-sm)',
-              color: 'var(--color-ink-2)',
+              color: 'var(--color-ink-3)',
+              fontFamily: 'var(--font-mono)',
             }}
           >
             {unit}
@@ -84,7 +88,11 @@ export function StatCard({ label, value, unit, delta, accent }: StatCardProps) {
           style={{
             fontSize: 'var(--text-xs)',
             color: delta.positive ? 'var(--color-signal-ok)' : 'var(--color-signal-hi)',
-            fontWeight: 'var(--fw-medium)',
+            fontWeight: 'var(--fw-semibold)',
+            fontFamily: 'var(--font-mono)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '3px',
           }}
         >
           {delta.positive ? '↑' : '↓'} {delta.value}

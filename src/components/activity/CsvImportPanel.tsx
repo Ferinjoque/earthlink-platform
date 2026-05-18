@@ -13,7 +13,15 @@ const PLANTILLA_CSV = `reporting_period_id,source_type,secondary,raw_quantity,ra
 <uuid-periodo>,fugitive,R410A,5,kg,Mantenimiento HVAC
 <uuid-periodo>,purchased_steam,,100,GJ,`;
 
-const CABECERAS_PREVIEW = ['Fila', 'ID Periodo', 'Fuente', 'Secundario', 'Cant.', 'Unidad', 'Estado'];
+const CABECERAS_PREVIEW = [
+  'Fila',
+  'ID Periodo',
+  'Fuente',
+  'Secundario',
+  'Cant.',
+  'Unidad',
+  'Estado',
+];
 
 export function CsvImportPanel() {
   const [state, formAction, isPending] = useActionState<CsvImportState | null, FormData>(
@@ -132,7 +140,9 @@ export function CsvImportPanel() {
                 {preview.map((row) => (
                   <tr key={row.rowIndex}>
                     <td style={estiloCeldaPreview}>{row.rowIndex}</td>
-                    <td style={estiloCeldaPreview}>{row.data?.reporting_period_id.slice(0, 8) ?? '—'}…</td>
+                    <td style={estiloCeldaPreview}>
+                      {row.data?.reporting_period_id.slice(0, 8) ?? '—'}…
+                    </td>
                     <td style={estiloCeldaPreview}>{row.data?.source_type ?? '?'}</td>
                     <td style={estiloCeldaPreview}>{row.data?.secondary || '—'}</td>
                     <td style={estiloCeldaPreview}>{row.data?.raw_quantity ?? '?'}</td>

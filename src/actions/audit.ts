@@ -48,7 +48,9 @@ export async function calculatePeriod(
   const period = await periodRepo.findById(periodId);
   if (!period) return { error: 'Periodo de reporte no encontrado' };
   if (period.status !== 'open') {
-    return { error: `El periodo está en estado "${period.status}" — solo los periodos abiertos pueden calcularse` };
+    return {
+      error: `El periodo está en estado "${period.status}" — solo los periodos abiertos pueden calcularse`,
+    };
   }
 
   const auditSvc = new AuditService(periodRepo, auditLogRepo);
@@ -71,7 +73,9 @@ export async function calculatePeriod(
   try {
     outcome = await evalSvc.evaluate(periodId);
   } catch (err) {
-    return { error: `Error en la evaluación: ${err instanceof Error ? err.message : 'error desconocido'}` };
+    return {
+      error: `Error en la evaluación: ${err instanceof Error ? err.message : 'error desconocido'}`,
+    };
   }
 
   try {

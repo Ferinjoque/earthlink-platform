@@ -14,7 +14,9 @@ const ETIQUETAS_FUENTE: Record<EmissionSourceType, string> = {
   fugitive: 'Emisiones fugitivas (Alcance 1)',
 };
 
-const OPCIONES_SECUNDARIAS: Partial<Record<EmissionSourceType, { value: string; label: string }[]>> = {
+const OPCIONES_SECUNDARIAS: Partial<
+  Record<EmissionSourceType, { value: string; label: string }[]>
+> = {
   stationary_combustion: [
     { value: 'natural_gas', label: 'Gas natural' },
     { value: 'diesel', label: 'Diésel' },
