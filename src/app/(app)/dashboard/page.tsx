@@ -114,7 +114,7 @@ export default async function PanelPage() {
 
   return (
     <>
-      <TopBar title="Panel" email={user?.email} />
+      <TopBar title="Panel" email={user?.email} section="Visión general" />
 
       <main
         style={{
@@ -269,7 +269,7 @@ export default async function PanelPage() {
                     fontFamily: 'var(--font-mono)',
                     fontSize: 'var(--text-2xl)',
                     fontWeight: 700,
-                    color: '#8b5cf6',
+                    color: 'var(--color-scope2)',
                     letterSpacing: '-0.025em',
                     lineHeight: 1,
                   }}
@@ -346,7 +346,7 @@ export default async function PanelPage() {
                 {
                   etiqueta: 'Alcance 2 — Indirectas',
                   valor: scope2Co2eKg,
-                  color: '#8b5cf6',
+                  color: 'var(--color-scope2)',
                 },
               ].map(({ etiqueta, valor, color }) => {
                 const pct = totalCo2eKg > 0 ? (valor / totalCo2eKg) * 100 : 0;

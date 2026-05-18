@@ -208,6 +208,8 @@ export default async function AuditoriaPage() {
             </p>
           </div>
 
+          <style>{`.audit-row:hover { background: var(--color-surface-2) !important; }`}</style>
+
           {periodsData.length === 0 ? (
             <p
               style={{
@@ -258,15 +260,8 @@ export default async function AuditoriaPage() {
                     return (
                       <tr
                         key={p.id}
+                        className="audit-row"
                         style={{ borderBottom: '1px solid var(--color-border)' }}
-                        onMouseEnter={(e) =>
-                          ((e.currentTarget as HTMLTableRowElement).style.background =
-                            'var(--color-surface-2)')
-                        }
-                        onMouseLeave={(e) =>
-                          ((e.currentTarget as HTMLTableRowElement).style.background =
-                            'transparent')
-                        }
                       >
                         <td
                           style={{
@@ -371,9 +366,8 @@ export default async function AuditoriaPage() {
                   <div
                     key={p.id}
                     style={{
-                      background: 'var(--color-surface-1)',
-                      border: '1px solid var(--color-border)',
-                      borderLeft: '3px solid var(--color-ink-3)',
+                      background: 'var(--color-accent-soft)',
+                      border: '1px solid oklch(42% 0.12 155 / 22%)',
                       borderRadius: 'var(--radius-lg)',
                       padding: 'var(--space-5)',
                       display: 'flex',

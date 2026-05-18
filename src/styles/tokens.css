@@ -29,6 +29,9 @@
   --color-gold:          #C9A14A;    /* mostaza editorial — destacar */
   --color-gold-soft:     #F5EBD3;
 
+  --color-scope2:        oklch(56% 0.19 295);   /* violeta editorial — Alcance 2 */
+  --color-scope2-soft:   oklch(95% 0.04 295);   /* fondo Alcance 2 sutil */
+
   /* ── Señales ── */
   --color-signal-hi:     #C0392B;    /* anomalía / alto riesgo */
   --color-signal-md:     #C9A14A;    /* precaución / medio */
@@ -155,6 +158,9 @@
   --color-warm:      #E89570;
   --color-warm-soft: #3A2419;
   --color-gold-soft: #2F2719;
+  --color-scope2:        oklch(68% 0.17 295);   /* violeta claro en oscuro */
+  --color-scope2-soft:   oklch(20% 0.06 295);   /* fondo Alcance 2 en oscuro */
+
   --color-signal-ok: #4DD0A8;
   --color-signal-ok-bg: #1B3A2F;
   --color-signal-hi-bg: #3A1F1B;
