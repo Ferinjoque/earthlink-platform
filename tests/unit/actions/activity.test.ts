@@ -36,9 +36,33 @@ import { createActivityEntry, importActivityCsv } from '../../../src/actions/act
 
 const VALID_UUID = '00000000-0000-4000-8000-000000000001';
 
+function makeOwnershipChain(singleData: unknown, arrayData: unknown[]) {
+  const singleResult = Promise.resolve({ data: singleData });
+  const arrayResult = Promise.resolve({ data: arrayData });
+  const c: Record<string, unknown> = {};
+  c['select'] = () => c;
+  c['eq'] = () => c;
+  c['in'] = () => arrayResult;
+  c['maybeSingle'] = () => singleResult;
+  return c;
+}
+
 function mockAuthenticatedClient(userId = 'user-abc') {
   const mockSupabase = {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: userId } } }) },
+    from: vi.fn()
+      .mockReturnValueOnce(makeOwnershipChain(
+        { supplier_id: 'supplier-001' },
+        [{ id: VALID_UUID, supplier_id: 'supplier-001' }],
+      ))
+      .mockReturnValueOnce(makeOwnershipChain(
+        { organization_id: 'org-001' },
+        [{ id: 'supplier-001', organization_id: 'org-001' }],
+      ))
+      .mockReturnValueOnce(makeOwnershipChain(
+        { role: 'admin' },
+        [{ organization_id: 'org-001' }],
+      )),
   };
   (createServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(mockSupabase);
   return mockSupabase;
@@ -47,6 +71,7 @@ function mockAuthenticatedClient(userId = 'user-abc') {
 function mockUnauthenticatedClient() {
   const mockSupabase = {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null } }) },
+    from: vi.fn(),
   };
   (createServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(mockSupabase);
 }

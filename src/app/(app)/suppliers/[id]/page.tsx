@@ -55,6 +55,8 @@ export default async function DetalleProveedorPage({
     data: { user },
   } = await supabase.auth.getUser();
 
+  if (!user) notFound();
+
   const { data: rawSupplier } = await supabase
     .from('suppliers')
     .select('id, name, category, contact_email, ruc, organization_id, created_at')
@@ -66,6 +68,15 @@ export default async function DetalleProveedorPage({
     SupplierRow,
     'id' | 'name' | 'category' | 'contact_email' | 'ruc' | 'organization_id' | 'created_at'
   >;
+
+  // Defense-in-depth: verify caller belongs to this supplier's org
+  const { data: memCheck } = await supabase
+    .from('memberships')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('organization_id', supplier.organization_id)
+    .maybeSingle();
+  if (!memCheck) notFound();
 
   const { data: rawPeriods } = await supabase
     .from('reporting_periods')

@@ -104,13 +104,16 @@ function makePeriod(status: 'open' | 'calculating' | 'under_review' | 'locked') 
 function mockAuth(userId = 'user-abc') {
   const client = {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: userId } } }) },
+    from: vi.fn().mockReturnValue(makeSelectChain({ organization_id: 'org-001', role: 'admin' })),
   };
   (createServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(client);
+  return client;
 }
 
 function mockNoAuth() {
   const client = {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null } }) },
+    from: vi.fn(),
   };
   (createServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(client);
 }

@@ -97,6 +97,33 @@ export async function createActivityEntry(
 
   const { reporting_period_id, source_type, secondary, raw_quantity, raw_unit } = parsed.data;
 
+  // Verify user belongs to the org that owns this period
+  type PeriodOwner = { supplier_id: string };
+  type SupplierOrg = { organization_id: string };
+  const { data: periodRaw } = await supabase
+    .from('reporting_periods')
+    .select('supplier_id')
+    .eq('id', reporting_period_id)
+    .maybeSingle();
+  const periodOwner = periodRaw as PeriodOwner | null;
+  if (!periodOwner) return { error: 'Periodo de reporte no encontrado' };
+
+  const { data: supplierRaw } = await supabase
+    .from('suppliers')
+    .select('organization_id')
+    .eq('id', periodOwner.supplier_id)
+    .maybeSingle();
+  const supplierOrg = supplierRaw as SupplierOrg | null;
+  if (!supplierOrg) return { error: 'Proveedor del periodo no encontrado' };
+
+  const { data: memRaw } = await supabase
+    .from('memberships')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('organization_id', supplierOrg.organization_id)
+    .maybeSingle();
+  if (!memRaw) return { error: 'Sin permisos para registrar actividad en este periodo' };
+
   const activityKind = buildActivityKind(source_type, secondary);
   if (!activityKind) {
     return {
@@ -190,6 +217,40 @@ export async function importActivityCsv(
       error: `No se encontraron filas válidas. ${skipped} fila(s) con errores de validación.`,
       skipped,
     };
+  }
+
+  // Batch ownership check — verify user belongs to all orgs referenced in the CSV
+  const uniquePeriodIds = [...new Set(validRows.map((r) => r.data!.reporting_period_id))];
+
+  type PeriodBatchRow = { id: string; supplier_id: string };
+  type SupplierBatchRow = { id: string; organization_id: string };
+  type MembershipBatchRow = { organization_id: string };
+
+  const { data: periodsRaw } = await supabase
+    .from('reporting_periods')
+    .select('id, supplier_id')
+    .in('id', uniquePeriodIds);
+  const periods = (periodsRaw ?? []) as PeriodBatchRow[];
+  if (periods.length === 0) return { error: 'Periodos de reporte no encontrados', skipped };
+
+  const supplierIds = [...new Set(periods.map((p) => p.supplier_id))];
+  const { data: suppliersRaw } = await supabase
+    .from('suppliers')
+    .select('id, organization_id')
+    .in('id', supplierIds);
+  const suppliers = (suppliersRaw ?? []) as SupplierBatchRow[];
+
+  const orgIds = [...new Set(suppliers.map((s) => s.organization_id))];
+  const { data: membershipsRaw } = await supabase
+    .from('memberships')
+    .select('organization_id')
+    .eq('user_id', user.id)
+    .in('organization_id', orgIds);
+  const memberships = (membershipsRaw ?? []) as MembershipBatchRow[];
+  const authorizedOrgIds = new Set(memberships.map((m) => m.organization_id));
+
+  if (orgIds.some((id) => !authorizedOrgIds.has(id))) {
+    return { error: 'Sin permisos para importar actividad en estos periodos' };
   }
 
   const entryRepo = new ActivityEntryRepository(supabase);

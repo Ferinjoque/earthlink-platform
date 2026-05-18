@@ -22,7 +22,7 @@ export async function signIn(
   const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
 
   if (error) {
-    return { error: error.message };
+    return { error: 'Correo o contraseña incorrectos.' };
   }
 
   const next = formData.get('next');

@@ -35,6 +35,11 @@ export async function exportCsv(
   const periodIds = parsed.data.period_ids.split(',').filter(Boolean);
   if (periodIds.length === 0) return { error: 'Selecciona al menos un periodo' };
 
+  const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (periodIds.some((id) => !uuidRe.test(id))) {
+    return { error: 'ID de periodo inválido' };
+  }
+
   // Verify membership
   const { data: rawMemberships } = await supabase
     .from('memberships')

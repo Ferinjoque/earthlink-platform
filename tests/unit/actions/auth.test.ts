@@ -71,11 +71,11 @@ describe('signIn', () => {
     expect(result.error).toBeTruthy();
   });
 
-  it('returns supabase error message on failed login', async () => {
+  it('returns fixed error message on failed login (no leakage)', async () => {
     mockClient({ signInError: { message: 'Invalid login credentials' } });
     const fd = makeFormData({ email: 'bad@example.com', password: 'wrong' });
     const result = await signIn(undefined, fd);
-    expect(result.error).toBe('Invalid login credentials');
+    expect(result.error).toMatch(/incorrectos/i);
   });
 
   it('redirects to /dashboard on success', async () => {
