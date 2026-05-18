@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import { createServerClient } from '@/services/supabase/server';
 import { TopBar } from '@/components/shell/TopBar';
-import { Badge } from '@/components/ui/Badge';
-import type { MembershipRow, SupplierRow, ReportingPeriodRow } from '@/types/database';
+import { SupplierTable } from '@/components/suppliers/SupplierTable';
+import type { MembershipRow, SupplierRow } from '@/types/database';
+import { Building2 } from 'lucide-react';
 
 export const metadata: Metadata = { title: 'Proveedores' };
 
@@ -14,38 +15,24 @@ export default async function ProveedoresPage() {
 
   const { data: rawMemberships } = await supabase
     .from('memberships')
-    .select('*')
+    .select('organization_id, role')
     .eq('user_id', user?.id ?? '');
-  const memberships = (rawMemberships ?? []) as MembershipRow[];
+  const memberships = (rawMemberships ?? []) as Pick<MembershipRow, 'organization_id' | 'role'>[];
 
-  const orgIds = [...new Set(memberships.map((m) => m.organization_id).filter(Boolean))];
+  const orgIds = [
+    ...new Set(memberships.map((m) => m.organization_id).filter((id): id is string => !!id)),
+  ];
+  const primaryOrgId = orgIds[0] ?? '';
 
   const suppliersData: SupplierRow[] = [];
   if (orgIds.length) {
     const { data } = await supabase
       .from('suppliers')
-      .select('id, name, category, contact_email, ruc, organization_id, created_at, updated_at')
+      .select('id, name, category, contact_email, ruc, organization_id, created_at, updated_at, archived_at')
       .in('organization_id', orgIds)
+      .is('archived_at', null)
       .order('name', { ascending: true });
-    if (data) suppliersData.push(...data);
-  }
-
-  const supplierIds = suppliersData.map((s) => s.id);
-
-  const periodsData: Pick<ReportingPeriodRow, 'supplier_id' | 'status'>[] = [];
-  if (supplierIds.length) {
-    const { data } = await supabase
-      .from('reporting_periods')
-      .select('supplier_id, status')
-      .in('supplier_id', supplierIds);
-    if (data) periodsData.push(...data);
-  }
-
-  const conteoAbiertos = new Map<string, number>();
-  for (const p of periodsData) {
-    if (p.status === 'open') {
-      conteoAbiertos.set(p.supplier_id, (conteoAbiertos.get(p.supplier_id) ?? 0) + 1);
-    }
+    if (data) suppliersData.push(...(data as SupplierRow[]));
   }
 
   const nProveedores = suppliersData.length;
@@ -53,137 +40,88 @@ export default async function ProveedoresPage() {
   return (
     <>
       <TopBar title="Proveedores" email={user?.email} section="Registro de cadena" />
-      <main style={{ padding: 'var(--space-8)' }}>
-        <div style={{ marginBottom: 'var(--space-6)' }}>
+
+      <main
+        style={{
+          padding: 'var(--space-8)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'var(--space-8)',
+          maxWidth: 'var(--max-w-content)',
+        }}
+      >
+        {/* Titular */}
+        <section>
+          <p className="eyebrow" style={{ marginBottom: 'var(--space-3)' }}>
+            Cadena de suministro
+          </p>
           <h2
             style={{
-              fontSize: 'var(--text-base)',
-              fontWeight: 600,
+              fontFamily: 'var(--font-serif)',
+              fontSize: 'var(--text-3xl)',
+              fontWeight: 400,
+              fontStyle: 'italic',
               color: 'var(--color-ink-1)',
-              margin: 0,
+              margin: '0 0 var(--space-2)',
+              letterSpacing: '-0.032em',
+              lineHeight: 1.1,
             }}
           >
             Registro de proveedores
           </h2>
-          <p
-            style={{
-              fontSize: 'var(--text-sm)',
-              color: 'var(--color-ink-3)',
-              margin: 'var(--space-1) 0 0',
-            }}
-          >
-            {nProveedores} {nProveedores !== 1 ? 'proveedores' : 'proveedor'} en tu
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-2)', margin: 0 }}>
+            {nProveedores}{' '}
+            {nProveedores !== 1 ? 'proveedores activos' : 'proveedor activo'} en tu
             {orgIds.length > 1 ? 's organizaciones' : ' organización'}.
           </p>
-        </div>
+        </section>
 
-        <style>{`.supplier-row:hover { background: var(--color-surface-2) !important; }`}</style>
-
-        {suppliersData.length === 0 ? (
-          <p
-            style={{
-              color: 'var(--color-ink-3)',
-              fontSize: 'var(--text-sm)',
-              fontFamily: 'var(--font-mono)',
-              padding: 'var(--space-8) 0',
-              textAlign: 'center',
-            }}
-          >
-            No se encontraron proveedores para tu cuenta.
-          </p>
-        ) : (
+        {/* Estado vacío global */}
+        {orgIds.length === 0 ? (
           <div
             style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 'var(--space-4)',
+              padding: 'var(--space-12) var(--space-8)',
               background: 'var(--color-surface-1)',
               border: '1px solid var(--color-border)',
               borderRadius: 'var(--radius-lg)',
-              overflowX: 'auto',
+              textAlign: 'center',
             }}
           >
-            <table
-              style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}
+            <span
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: 'var(--radius-lg)',
+                background: 'var(--color-surface-2)',
+                display: 'grid',
+                placeItems: 'center',
+                color: 'var(--color-ink-3)',
+              }}
             >
-              <thead>
-                <tr>
-                  {['Nombre', 'Categoría', 'RUC', 'Contacto', 'Periodos abiertos'].map((h) => (
-                    <th
-                      key={h}
-                      style={{
-                        textAlign: 'left',
-                        padding: 'var(--space-3) var(--space-4)',
-                        color: 'var(--color-ink-3)',
-                        fontWeight: 600,
-                        fontSize: 'var(--text-xs)',
-                        fontFamily: 'var(--font-mono)',
-                        borderBottom: '1px solid var(--color-border)',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {suppliersData.map((s) => {
-                  const abiertos = conteoAbiertos.get(s.id) ?? 0;
-                  return (
-                    <tr
-                      key={s.id}
-                      className="supplier-row"
-                      style={{ borderBottom: '1px solid var(--color-border)' }}
-                    >
-                      <td
-                        style={{
-                          padding: 'var(--space-3) var(--space-4)',
-                          color: 'var(--color-ink-1)',
-                          fontWeight: 500,
-                        }}
-                      >
-                        {s.name}
-                      </td>
-                      <td
-                        style={{
-                          padding: 'var(--space-3) var(--space-4)',
-                          color: 'var(--color-ink-2)',
-                        }}
-                      >
-                        {s.category}
-                      </td>
-                      <td
-                        style={{
-                          padding: 'var(--space-3) var(--space-4)',
-                          color: 'var(--color-ink-3)',
-                          fontFamily: 'var(--font-mono)',
-                          fontSize: 'var(--text-xs)',
-                        }}
-                      >
-                        {s.ruc ?? '—'}
-                      </td>
-                      <td
-                        style={{
-                          padding: 'var(--space-3) var(--space-4)',
-                          color: 'var(--color-ink-2)',
-                          fontSize: 'var(--text-xs)',
-                        }}
-                      >
-                        {s.contact_email ?? '—'}
-                      </td>
-                      <td style={{ padding: 'var(--space-3) var(--space-4)' }}>
-                        {abiertos > 0 ? (
-                          <Badge variant="open">
-                            {abiertos} {abiertos === 1 ? 'abierto' : 'abiertos'}
-                          </Badge>
-                        ) : (
-                          <Badge variant="neutral">ninguno</Badge>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+              <Building2 size={22} />
+            </span>
+            <div>
+              <p
+                style={{
+                  fontWeight: 'var(--fw-semibold)',
+                  fontSize: 'var(--text-base)',
+                  color: 'var(--color-ink-1)',
+                  margin: '0 0 var(--space-2)',
+                }}
+              >
+                Sin organización asociada
+              </p>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-3)', margin: 0, maxWidth: '40ch' }}>
+                Tu cuenta no está asociada a ninguna organización. Contacta al administrador.
+              </p>
+            </div>
           </div>
+        ) : (
+          <SupplierTable suppliers={suppliersData} organizationId={primaryOrgId} />
         )}
       </main>
     </>
