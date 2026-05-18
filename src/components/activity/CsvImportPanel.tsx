@@ -6,12 +6,14 @@ import type { CsvImportState } from '@/actions/activity';
 import { parseCsvText } from '@/lib/csv';
 import type { ParsedCsvRow } from '@/lib/csv';
 
-const CSV_TEMPLATE = `reporting_period_id,source_type,secondary,raw_quantity,raw_unit,notes
-<period-uuid>,stationary_combustion,natural_gas,1000,m3_ng,Boiler A
-<period-uuid>,purchased_electricity,SEIN_PERU,5000,kWh,Office floor 2
-<period-uuid>,mobile_combustion,diesel,200,L,Fleet vehicles
-<period-uuid>,fugitive,R410A,5,kg,HVAC maintenance
-<period-uuid>,purchased_steam,,100,GJ,`;
+const PLANTILLA_CSV = `reporting_period_id,source_type,secondary,raw_quantity,raw_unit,notes
+<uuid-periodo>,stationary_combustion,natural_gas,1000,m3_ng,Caldera A
+<uuid-periodo>,purchased_electricity,SEIN_PERU,5000,kWh,Piso 2 oficinas
+<uuid-periodo>,mobile_combustion,diesel,200,L,Flota de vehículos
+<uuid-periodo>,fugitive,R410A,5,kg,Mantenimiento HVAC
+<uuid-periodo>,purchased_steam,,100,GJ,`;
+
+const CABECERAS_PREVIEW = ['Fila', 'ID Periodo', 'Fuente', 'Secundario', 'Cant.', 'Unidad', 'Estado'];
 
 export function CsvImportPanel() {
   const [state, formAction, isPending] = useActionState<CsvImportState | null, FormData>(
@@ -38,15 +40,15 @@ export function CsvImportPanel() {
     reader.readAsText(file);
   }
 
-  const validCount = preview.filter((r) => r.errors.length === 0).length;
-  const errorCount = preview.filter((r) => r.errors.length > 0).length;
+  const filaValidas = preview.filter((r) => r.errors.length === 0).length;
+  const filasConError = preview.filter((r) => r.errors.length > 0).length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-      {/* File upload */}
+      {/* Carga de archivo */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
         <label style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-2)', fontWeight: 500 }}>
-          Upload CSV file
+          Cargar archivo CSV
         </label>
         <input
           type="file"
@@ -56,20 +58,20 @@ export function CsvImportPanel() {
         />
       </div>
 
-      {/* Or paste text */}
+      {/* O pegar CSV */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
         <label
           htmlFor="csv-text-area"
           style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-2)', fontWeight: 500 }}
         >
-          Or paste CSV
+          O pega el CSV
         </label>
         <textarea
           id="csv-text-area"
           rows={6}
           value={csvText}
           onChange={(e) => handleTextChange(e.target.value)}
-          placeholder={CSV_TEMPLATE}
+          placeholder={PLANTILLA_CSV}
           style={{
             padding: 'var(--space-2) var(--space-3)',
             background: 'var(--color-surface-2)',
@@ -83,16 +85,17 @@ export function CsvImportPanel() {
         />
       </div>
 
-      {/* Preview */}
+      {/* Vista previa */}
       {preview.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-2)' }}>
-            Preview: <strong style={{ color: 'var(--color-accent)' }}>{validCount} valid</strong>
-            {errorCount > 0 && (
+            Vista previa:{' '}
+            <strong style={{ color: 'var(--color-accent)' }}>{filaValidas} válidas</strong>
+            {filasConError > 0 && (
               <>
                 {', '}
                 <strong style={{ color: 'var(--color-signal-hi)' }}>
-                  {errorCount} with errors
+                  {filasConError} con errores
                 </strong>
               </>
             )}
@@ -108,7 +111,7 @@ export function CsvImportPanel() {
             >
               <thead>
                 <tr>
-                  {['Row', 'Period ID', 'Source', 'Secondary', 'Qty', 'Unit', 'Status'].map((h) => (
+                  {CABECERAS_PREVIEW.map((h) => (
                     <th
                       key={h}
                       style={{
@@ -128,13 +131,13 @@ export function CsvImportPanel() {
               <tbody>
                 {preview.map((row) => (
                   <tr key={row.rowIndex}>
-                    <td style={previewCell}>{row.rowIndex}</td>
-                    <td style={previewCell}>{row.data?.reporting_period_id.slice(0, 8) ?? '—'}…</td>
-                    <td style={previewCell}>{row.data?.source_type ?? '?'}</td>
-                    <td style={previewCell}>{row.data?.secondary || '—'}</td>
-                    <td style={previewCell}>{row.data?.raw_quantity ?? '?'}</td>
-                    <td style={previewCell}>{row.data?.raw_unit ?? '?'}</td>
-                    <td style={previewCell}>
+                    <td style={estiloCeldaPreview}>{row.rowIndex}</td>
+                    <td style={estiloCeldaPreview}>{row.data?.reporting_period_id.slice(0, 8) ?? '—'}…</td>
+                    <td style={estiloCeldaPreview}>{row.data?.source_type ?? '?'}</td>
+                    <td style={estiloCeldaPreview}>{row.data?.secondary || '—'}</td>
+                    <td style={estiloCeldaPreview}>{row.data?.raw_quantity ?? '?'}</td>
+                    <td style={estiloCeldaPreview}>{row.data?.raw_unit ?? '?'}</td>
+                    <td style={estiloCeldaPreview}>
                       {row.errors.length === 0 ? (
                         <span style={{ color: 'var(--color-accent)' }}>✓</span>
                       ) : (
@@ -154,7 +157,7 @@ export function CsvImportPanel() {
         </div>
       )}
 
-      {/* Result feedback */}
+      {/* Resultado */}
       {state?.success && (
         <div
           style={{
@@ -165,8 +168,8 @@ export function CsvImportPanel() {
             fontSize: 'var(--text-sm)',
           }}
         >
-          Imported {state.imported} entries
-          {(state.skipped ?? 0) > 0 && `, ${state.skipped} skipped`}.
+          {state.imported} registros importados
+          {(state.skipped ?? 0) > 0 && `, ${state.skipped} omitidos`}.
         </div>
       )}
       {state?.error && (
@@ -183,33 +186,33 @@ export function CsvImportPanel() {
         </div>
       )}
 
-      {/* Submit */}
+      {/* Enviar */}
       <form action={formAction}>
         <input type="hidden" name="csv_text" value={csvText} />
         <button
           type="submit"
-          disabled={isPending || validCount === 0}
+          disabled={isPending || filaValidas === 0}
           style={{
             padding: 'var(--space-2) var(--space-4)',
             background:
-              isPending || validCount === 0 ? 'var(--color-ink-3)' : 'var(--color-accent)',
+              isPending || filaValidas === 0 ? 'var(--color-ink-3)' : 'var(--color-accent)',
             color: '#fff',
             border: 'none',
             borderRadius: 'var(--radius-md)',
             fontSize: 'var(--text-sm)',
             fontWeight: 600,
-            cursor: isPending || validCount === 0 ? 'not-allowed' : 'pointer',
+            cursor: isPending || filaValidas === 0 ? 'not-allowed' : 'pointer',
             transition: 'opacity 150ms',
           }}
         >
-          {isPending ? 'Importing…' : `Import ${validCount} rows`}
+          {isPending ? 'Importando…' : `Importar ${filaValidas} filas`}
         </button>
       </form>
     </div>
   );
 }
 
-const previewCell: React.CSSProperties = {
+const estiloCeldaPreview: React.CSSProperties = {
   padding: '4px 8px',
   color: 'var(--color-ink-1)',
   borderBottom: '1px solid var(--color-border)',

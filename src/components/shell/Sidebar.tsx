@@ -22,27 +22,27 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   {
     href: '/dashboard',
-    label: 'Dashboard',
+    label: 'Panel',
     icon: <LayoutDashboard size={18} />,
   },
   {
     href: '/suppliers',
-    label: 'Suppliers',
+    label: 'Proveedores',
     icon: <Building2 size={18} />,
   },
   {
     href: '/activity',
-    label: 'Activity',
+    label: 'Actividad',
     icon: <ClipboardList size={18} />,
   },
   {
     href: '/audit',
-    label: 'Audit',
+    label: 'Auditoría',
     icon: <ShieldCheck size={18} />,
   },
   {
     href: '/reports',
-    label: 'Reports',
+    label: 'Reportes',
     icon: <FileText size={18} />,
   },
 ];
@@ -105,7 +105,7 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav
-        aria-label="Main navigation"
+        aria-label="Navegación principal"
         style={{
           flex: 1,
           padding: 'var(--space-4) var(--space-3)',
@@ -143,7 +143,7 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Sign out */}
+      {/* Cerrar sesión */}
       <div
         style={{
           padding: 'var(--space-4) var(--space-3)',
@@ -171,7 +171,7 @@ export function Sidebar() {
             onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-ink-3)')}
           >
             <LogOut size={18} />
-            Sign out
+            Cerrar sesión
           </button>
         </form>
       </div>

@@ -6,14 +6,14 @@ interface AnomalyBadgeProps {
   zScore?: number | undefined;
 }
 
-const LABELS: Record<AnomalySeverity, string> = {
-  low: 'Anomaly: low',
-  medium: 'Anomaly: medium',
-  high: 'Anomaly: HIGH',
+const ETIQUETAS: Record<AnomalySeverity, string> = {
+  low: 'Anomalía: baja',
+  medium: 'Anomalía: media',
+  high: 'Anomalía: ALTA',
 };
 
 export function AnomalyBadge({ severity, zScore }: AnomalyBadgeProps) {
   const label =
-    zScore !== undefined ? `${LABELS[severity]} (${zScore.toFixed(1)}σ)` : LABELS[severity];
+    zScore !== undefined ? `${ETIQUETAS[severity]} (${zScore.toFixed(1)}σ)` : ETIQUETAS[severity];
   return <Badge variant={severity}>{label}</Badge>;
 }

@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 import { TopBar } from '@/components/shell/TopBar';
 import { createServerClient } from '@/services/supabase/server';
 
-export const metadata: Metadata = { title: 'Activity' };
+export const metadata: Metadata = { title: 'Actividad' };
 
-export default async function ActivityPage() {
+export default async function ActividadPage() {
   const supabase = await createServerClient();
   const {
     data: { user },
@@ -12,7 +12,7 @@ export default async function ActivityPage() {
 
   return (
     <>
-      <TopBar title="Activity Entries" email={user?.email} />
+      <TopBar title="Registros de actividad" email={user?.email} />
       <main style={{ padding: 'var(--space-8)' }}>
         <p
           style={{
@@ -21,7 +21,7 @@ export default async function ActivityPage() {
             fontSize: 'var(--text-sm)',
           }}
         >
-          Phase 5 — activity entry submission form coming soon.
+          Fase 5 — formulario de envío de actividad próximamente.
         </p>
       </main>
     </>

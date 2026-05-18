@@ -26,20 +26,22 @@ interface ActivityListProps {
   entries: ActivityEntryView[];
 }
 
-const STATUS_LABELS: Record<ActivityEntryStatus, string> = {
-  draft: 'Draft',
-  submitted: 'Submitted',
-  validated: 'Validated',
-  rejected: 'Rejected',
+const ETIQUETAS_ESTADO: Record<ActivityEntryStatus, string> = {
+  draft: 'Borrador',
+  submitted: 'Enviado',
+  validated: 'Validado',
+  rejected: 'Rechazado',
 };
 
-const SOURCE_SHORT: Record<string, string> = {
-  stationary_combustion: 'Stationary',
-  mobile_combustion: 'Mobile',
-  purchased_electricity: 'Electricity',
-  purchased_steam: 'Steam',
-  fugitive: 'Fugitive',
+const FUENTE_CORTA: Record<string, string> = {
+  stationary_combustion: 'Estacionaria',
+  mobile_combustion: 'Móvil',
+  purchased_electricity: 'Electricidad',
+  purchased_steam: 'Vapor',
+  fugitive: 'Fugitiva',
 };
+
+const CABECERAS = ['Periodo', 'Fuente', 'Cantidad', 'Estado', 'Anomalía', 'Enviado'];
 
 export function ActivityList({ entries }: ActivityListProps) {
   if (entries.length === 0) {
@@ -53,7 +55,7 @@ export function ActivityList({ entries }: ActivityListProps) {
           textAlign: 'center',
         }}
       >
-        No activity entries yet. Submit one using the form above.
+        Sin registros aún. Envía uno usando el formulario de arriba.
       </p>
     );
   }
@@ -69,7 +71,7 @@ export function ActivityList({ entries }: ActivityListProps) {
       >
         <thead>
           <tr>
-            {['Period', 'Source', 'Quantity', 'Status', 'Anomaly', 'Submitted'].map((h) => (
+            {CABECERAS.map((h) => (
               <th
                 key={h}
                 style={{
@@ -104,21 +106,21 @@ export function ActivityList({ entries }: ActivityListProps) {
                 ((e.currentTarget as HTMLTableRowElement).style.background = 'transparent')
               }
             >
-              <td style={cellStyle}>{entry.period_label}</td>
-              <td style={cellStyle}>{SOURCE_SHORT[entry.source_type] ?? entry.source_type}</td>
+              <td style={estiloCelda}>{entry.period_label}</td>
+              <td style={estiloCelda}>{FUENTE_CORTA[entry.source_type] ?? entry.source_type}</td>
               <td
                 style={{
-                  ...cellStyle,
+                  ...estiloCelda,
                   fontFamily: 'var(--font-mono)',
                   whiteSpace: 'nowrap',
                 }}
               >
-                {entry.raw_quantity.toLocaleString()} {entry.raw_unit}
+                {entry.raw_quantity.toLocaleString('es')} {entry.raw_unit}
               </td>
-              <td style={cellStyle}>
-                <Badge variant={entry.status}>{STATUS_LABELS[entry.status]}</Badge>
+              <td style={estiloCelda}>
+                <Badge variant={entry.status}>{ETIQUETAS_ESTADO[entry.status]}</Badge>
               </td>
-              <td style={cellStyle}>
+              <td style={estiloCelda}>
                 {entry.anomaly ? (
                   <AnomalyBadge
                     severity={entry.anomaly.severity}
@@ -130,14 +132,16 @@ export function ActivityList({ entries }: ActivityListProps) {
               </td>
               <td
                 style={{
-                  ...cellStyle,
+                  ...estiloCelda,
                   color: 'var(--color-ink-3)',
                   fontFamily: 'var(--font-mono)',
                   fontSize: 'var(--text-xs)',
                   whiteSpace: 'nowrap',
                 }}
               >
-                {entry.submitted_at ? new Date(entry.submitted_at).toLocaleDateString() : '—'}
+                {entry.submitted_at
+                  ? new Date(entry.submitted_at).toLocaleDateString('es')
+                  : '—'}
               </td>
             </tr>
           ))}
@@ -147,7 +151,7 @@ export function ActivityList({ entries }: ActivityListProps) {
   );
 }
 
-const cellStyle: React.CSSProperties = {
+const estiloCelda: React.CSSProperties = {
   padding: 'var(--space-2) var(--space-3)',
   color: 'var(--color-ink-1)',
 };

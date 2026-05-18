@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 import { TopBar } from '@/components/shell/TopBar';
 import { createServerClient } from '@/services/supabase/server';
 
-export const metadata: Metadata = { title: 'Suppliers' };
+export const metadata: Metadata = { title: 'Proveedores' };
 
-export default async function SuppliersPage() {
+export default async function ProveedoresPage() {
   const supabase = await createServerClient();
   const {
     data: { user },
@@ -12,7 +12,7 @@ export default async function SuppliersPage() {
 
   return (
     <>
-      <TopBar title="Suppliers" email={user?.email} />
+      <TopBar title="Proveedores" email={user?.email} />
       <main style={{ padding: 'var(--space-8)' }}>
         <p
           style={{
@@ -21,7 +21,7 @@ export default async function SuppliersPage() {
             fontSize: 'var(--text-sm)',
           }}
         >
-          Phase 5 — supplier management coming soon.
+          Fase 5 — gestión de proveedores próximamente.
         </p>
       </main>
     </>
