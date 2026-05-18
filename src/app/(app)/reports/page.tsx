@@ -24,7 +24,7 @@ export default async function ReportesPage() {
     .eq('user_id', user?.id ?? '');
   const memberships = (rawMemberships ?? []) as Pick<MembershipRow, 'organization_id'>[];
 
-  const orgIds = [...new Set(memberships.map((m) => m.organization_id).filter(Boolean))];
+  const orgIds = [...new Set(memberships.map((m) => m.organization_id).filter((id): id is string => id !== null))];
 
   const suppliersData: Pick<SupplierRow, 'id' | 'name'>[] = [];
   if (orgIds.length) {
