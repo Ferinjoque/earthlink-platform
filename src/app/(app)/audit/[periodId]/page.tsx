@@ -5,6 +5,7 @@ import { ArrowLeft, Lock } from 'lucide-react';
 import { createServerClient } from '@/services/supabase/server';
 import { TopBar } from '@/components/shell/TopBar';
 import { Badge } from '@/components/ui/Badge';
+import { PrintButton } from '@/components/ui/PrintButton';
 import type {
   ReportingPeriodRow,
   SupplierRow,
@@ -179,6 +180,16 @@ export default async function DetallePeriodoPage({
 
   return (
     <>
+      <style>{`
+        @media print {
+          aside, header { display: none !important; }
+          [data-no-print] { display: none !important; }
+          main { padding: 12mm 0 0 !important; max-width: 100% !important; }
+          @page { margin: 15mm 20mm; size: A4 landscape; }
+          table { page-break-inside: auto; }
+          tr { page-break-inside: avoid; }
+        }
+      `}</style>
       <TopBar
         title={`Periodo ${period.label}`}
         email={user?.email}
@@ -193,21 +204,40 @@ export default async function DetallePeriodoPage({
           maxWidth: 'var(--max-w-content)',
         }}
       >
-        {/* ── Back link ── */}
-        <Link
-          href="/audit"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 'var(--space-2)',
-            fontSize: 'var(--text-sm)',
-            color: 'var(--color-ink-3)',
-            textDecoration: 'none',
-          }}
+        {/* ── Back link + print ── */}
+        <div
+          data-no-print
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
         >
-          <ArrowLeft size={14} />
-          Volver a auditoría
-        </Link>
+          <Link
+            href="/audit"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 'var(--space-2)',
+              fontSize: 'var(--text-sm)',
+              color: 'var(--color-ink-3)',
+              textDecoration: 'none',
+            }}
+          >
+            <ArrowLeft size={14} />
+            Volver a auditoría
+          </Link>
+          <PrintButton
+            style={{
+              fontSize: 'var(--text-xs)',
+              fontFamily: 'var(--font-mono)',
+              color: 'var(--color-ink-2)',
+              background: 'transparent',
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-md)',
+              padding: '4px var(--space-3)',
+              cursor: 'pointer',
+            }}
+          >
+            Imprimir / PDF
+          </PrintButton>
+        </div>
 
         {/* ── Header ── */}
         <section

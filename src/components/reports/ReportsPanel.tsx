@@ -4,6 +4,7 @@ import { useState, useActionState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { exportCsv, type ExportCsvState } from '@/actions/reports';
 import { Badge } from '@/components/ui/Badge';
+import { PrintButton } from '@/components/ui/PrintButton';
 import type { PeriodStatus } from '@/domain/ReportingPeriod';
 
 export interface PeriodoExportable {
@@ -135,6 +136,7 @@ export function ReportsPanel({ periodos, historial }: ReportsPanelProps) {
           <>
             {/* Acciones de selección */}
             <div
+              data-no-print
               style={{
                 display: 'flex',
                 gap: 'var(--space-3)',
@@ -270,7 +272,7 @@ export function ReportsPanel({ periodos, historial }: ReportsPanelProps) {
             </div>
 
             {/* Botón exportar */}
-            <form action={formAction} style={{ marginTop: 'var(--space-4)' }}>
+            <form action={formAction} data-no-print style={{ marginTop: 'var(--space-4)' }}>
               <input type="hidden" name="period_ids" value={[...seleccionados].join(',')} />
               <div
                 style={{
@@ -304,6 +306,20 @@ export function ReportsPanel({ periodos, historial }: ReportsPanelProps) {
                     ? 'Generando…'
                     : `Exportar CSV${seleccionados.size > 0 ? ` (${seleccionados.size})` : ''}`}
                 </button>
+                <PrintButton
+                  style={{
+                    fontSize: 'var(--text-sm)',
+                    fontFamily: 'var(--font-mono)',
+                    color: 'var(--color-ink-2)',
+                    background: 'transparent',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: 'var(--space-3) var(--space-5)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Imprimir / PDF
+                </PrintButton>
 
                 {state?.success && state.sha256 && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
