@@ -14,6 +14,7 @@ class EmissionFactorEntity extends Entity {
 
 export class EmissionFactorRepository extends SupabaseRepository<EmissionFactorEntity> {
   protected readonly tableName = 'emission_factors';
+  protected override readonly selectColumns = 'id, set_id, set_version, activity_key, grid_region_id, source_db, co2e_per_unit, unit, created_at';
 
   constructor(client: SupabaseClient) {
     super(client);
@@ -55,7 +56,7 @@ export class EmissionFactorRepository extends SupabaseRepository<EmissionFactorE
   async findByActivityKey(activityKey: string): Promise<EmissionFactor | null> {
     const { data, error } = await this.client
       .from(this.tableName)
-      .select('*')
+      .select('id, set_id, set_version, activity_key, grid_region_id, source_db, co2e_per_unit, unit, created_at')
       .eq('activity_key', activityKey)
       .maybeSingle();
     if (error ?? !data) return null;
