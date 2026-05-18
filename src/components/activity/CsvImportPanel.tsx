@@ -86,7 +86,9 @@ export function CsvImportPanel() {
       {/* ── Zona de carga ── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-2)', fontWeight: 500 }}>
+          <span
+            style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-2)', fontWeight: 500 }}
+          >
             Cargar archivo CSV
           </span>
           <button
@@ -164,7 +166,10 @@ export function CsvImportPanel() {
           <div
             className={`csv-drop-zone${dragOver ? ' drag-over' : ''}`}
             onClick={() => fileInputRef.current?.click()}
-            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
             style={{
@@ -181,11 +186,25 @@ export function CsvImportPanel() {
             }}
           >
             <Upload size={20} style={{ color: 'var(--color-ink-3)' }} />
-            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-2)', textAlign: 'center' }}>
+            <span
+              style={{
+                fontSize: 'var(--text-sm)',
+                color: 'var(--color-ink-2)',
+                textAlign: 'center',
+              }}
+            >
               Arrastra tu CSV aquí o{' '}
-              <span style={{ color: 'var(--color-accent)', fontWeight: 500 }}>haz clic para seleccionar</span>
+              <span style={{ color: 'var(--color-accent)', fontWeight: 500 }}>
+                haz clic para seleccionar
+              </span>
             </span>
-            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', fontFamily: 'var(--font-mono)' }}>
+            <span
+              style={{
+                fontSize: 'var(--text-xs)',
+                color: 'var(--color-ink-3)',
+                fontFamily: 'var(--font-mono)',
+              }}
+            >
               .csv — hasta 5 MB
             </span>
           </div>
@@ -309,11 +328,14 @@ export function CsvImportPanel() {
         >
           <span style={{ fontSize: '16px', lineHeight: 1, flexShrink: 0 }}>✓</span>
           <div>
-            <strong style={{ color: 'var(--color-signal-ok)', display: 'block', marginBottom: '2px' }}>
+            <strong
+              style={{ color: 'var(--color-signal-ok)', display: 'block', marginBottom: '2px' }}
+            >
               Importación completada
             </strong>
             <span style={{ color: 'var(--color-ink-2)' }}>
-              {state.imported} registro{state.imported !== 1 ? 's' : ''} importado{state.imported !== 1 ? 's' : ''}
+              {state.imported} registro{state.imported !== 1 ? 's' : ''} importado
+              {state.imported !== 1 ? 's' : ''}
               {(state.skipped ?? 0) > 0 && ` · ${state.skipped} omitidos`}.
             </span>
           </div>
@@ -336,7 +358,9 @@ export function CsvImportPanel() {
         >
           <span style={{ fontSize: '16px', lineHeight: 1, flexShrink: 0 }}>✗</span>
           <div>
-            <strong style={{ color: 'var(--color-signal-hi)', display: 'block', marginBottom: '2px' }}>
+            <strong
+              style={{ color: 'var(--color-signal-hi)', display: 'block', marginBottom: '2px' }}
+            >
               Error al importar
             </strong>
             <span style={{ color: 'var(--color-ink-2)' }}>{state.error}</span>
@@ -352,7 +376,8 @@ export function CsvImportPanel() {
           disabled={isPending || filaValidas === 0}
           style={{
             padding: 'var(--space-3) var(--space-5)',
-            background: isPending || filaValidas === 0 ? 'var(--color-ink-3)' : 'var(--color-accent)',
+            background:
+              isPending || filaValidas === 0 ? 'var(--color-ink-3)' : 'var(--color-accent)',
             color: '#fff',
             border: 'none',
             borderRadius: 'var(--radius-md)',
@@ -369,7 +394,8 @@ export function CsvImportPanel() {
             <>
               <span
                 style={{
-                  width: '12px', height: '12px',
+                  width: '12px',
+                  height: '12px',
                   border: '2px solid rgba(255,255,255,0.3)',
                   borderTopColor: 'white',
                   borderRadius: '50%',

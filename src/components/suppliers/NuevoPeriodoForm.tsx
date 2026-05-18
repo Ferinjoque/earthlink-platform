@@ -69,21 +69,42 @@ export function NuevoPeriodoForm({ supplierId }: Props) {
       <input type="hidden" name="supplier_id" value={supplierId} />
 
       <div style={{ minWidth: '140px' }}>
-        <label style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)', display: 'block', marginBottom: 'var(--space-1)' }}>
+        <label
+          style={{
+            fontSize: 'var(--text-xs)',
+            color: 'var(--color-ink-2)',
+            display: 'block',
+            marginBottom: 'var(--space-1)',
+          }}
+        >
           Label *
         </label>
         <input name="label" required placeholder="Ej. Q2-2026" style={estiloInput} />
       </div>
 
       <div style={{ minWidth: '140px' }}>
-        <label style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)', display: 'block', marginBottom: 'var(--space-1)' }}>
+        <label
+          style={{
+            fontSize: 'var(--text-xs)',
+            color: 'var(--color-ink-2)',
+            display: 'block',
+            marginBottom: 'var(--space-1)',
+          }}
+        >
           Fecha inicio *
         </label>
         <input name="fecha_inicio" type="date" required style={estiloInput} />
       </div>
 
       <div style={{ minWidth: '140px' }}>
-        <label style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)', display: 'block', marginBottom: 'var(--space-1)' }}>
+        <label
+          style={{
+            fontSize: 'var(--text-xs)',
+            color: 'var(--color-ink-2)',
+            display: 'block',
+            marginBottom: 'var(--space-1)',
+          }}
+        >
           Fecha fin *
         </label>
         <input name="fecha_fin" type="date" required style={estiloInput} />

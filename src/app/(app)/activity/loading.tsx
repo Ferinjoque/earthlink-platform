@@ -41,12 +41,19 @@ export default function ActivityLoading() {
         >
           <Skeleton width="180px" height="14px" />
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+            <div
+              key={i}
+              style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}
+            >
               <Skeleton width="100px" height="10px" />
               <Skeleton height="38px" borderRadius="var(--radius-md)" />
             </div>
           ))}
-          <Skeleton height="38px" borderRadius="var(--radius-md)" style={{ marginTop: 'var(--space-2)' }} />
+          <Skeleton
+            height="38px"
+            borderRadius="var(--radius-md)"
+            style={{ marginTop: 'var(--space-2)' }}
+          />
         </section>
 
         {/* Activity list skeleton */}

@@ -30,7 +30,9 @@ export default async function ProveedoresPage() {
   if (orgIds.length) {
     const { data } = await supabase
       .from('suppliers')
-      .select('id, name, category, contact_email, ruc, organization_id, created_at, updated_at, archived_at')
+      .select(
+        'id, name, category, contact_email, ruc, organization_id, created_at, updated_at, archived_at',
+      )
       .in('organization_id', orgIds)
       .is('archived_at', null)
       .order('name', { ascending: true });
@@ -72,8 +74,7 @@ export default async function ProveedoresPage() {
             Registro de proveedores
           </h2>
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-2)', margin: 0 }}>
-            {nProveedores}{' '}
-            {nProveedores !== 1 ? 'proveedores activos' : 'proveedor activo'} en tu
+            {nProveedores} {nProveedores !== 1 ? 'proveedores activos' : 'proveedor activo'} en tu
             {orgIds.length > 1 ? 's organizaciones' : ' organización'}.
           </p>
         </section>
@@ -117,7 +118,14 @@ export default async function ProveedoresPage() {
               >
                 Sin organización asociada
               </p>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-3)', margin: 0, maxWidth: '40ch' }}>
+              <p
+                style={{
+                  fontSize: 'var(--text-sm)',
+                  color: 'var(--color-ink-3)',
+                  margin: 0,
+                  maxWidth: '40ch',
+                }}
+              >
                 Tu cuenta no está asociada a ninguna organización. Contacta al administrador.
               </p>
             </div>

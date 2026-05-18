@@ -199,7 +199,9 @@ export async function resolveAnomaly(
   if (typeof flagId !== 'string' || !flagId) return { error: 'Falta el ID de la anomalía' };
 
   // Verify caller belongs to same org as the anomaly flag
-  type FlagOrg = { activity_entries: { reporting_periods: { suppliers: { organization_id: string } } } };
+  type FlagOrg = {
+    activity_entries: { reporting_periods: { suppliers: { organization_id: string } } };
+  };
   const { data: flagRaw } = await supabase
     .from('anomaly_flags')
     .select('activity_entries(reporting_periods(suppliers(organization_id)))')

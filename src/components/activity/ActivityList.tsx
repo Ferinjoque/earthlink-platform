@@ -114,9 +114,7 @@ export function ActivityList({ entries }: ActivityListProps) {
         <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
           <select
             value={filtroEstado}
-            onChange={(e) =>
-              setFiltroEstado(e.target.value as ActivityEntryStatus | 'todos')
-            }
+            onChange={(e) => setFiltroEstado(e.target.value as ActivityEntryStatus | 'todos')}
             style={estiloSelect}
             aria-label="Filtrar por estado"
           >
@@ -142,9 +140,7 @@ export function ActivityList({ entries }: ActivityListProps) {
         <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
           <select
             value={filtroFuente}
-            onChange={(e) =>
-              setFiltroFuente(e.target.value as EmissionSourceType | 'todos')
-            }
+            onChange={(e) => setFiltroFuente(e.target.value as EmissionSourceType | 'todos')}
             style={estiloSelect}
             aria-label="Filtrar por fuente"
           >
@@ -252,9 +248,7 @@ export function ActivityList({ entries }: ActivityListProps) {
                   <tr
                     style={{
                       borderBottom:
-                        expandida === entry.id
-                          ? 'none'
-                          : '1px solid var(--color-border)',
+                        expandida === entry.id ? 'none' : '1px solid var(--color-border)',
                       transition: 'background 100ms',
                     }}
                     onMouseEnter={(e) =>
@@ -305,9 +299,7 @@ export function ActivityList({ entries }: ActivityListProps) {
                           />
                         </button>
                       ) : (
-                        <span
-                          style={{ color: 'var(--color-ink-3)', fontSize: 'var(--text-xs)' }}
-                        >
+                        <span style={{ color: 'var(--color-ink-3)', fontSize: 'var(--text-xs)' }}>
                           —
                         </span>
                       )}
@@ -329,9 +321,7 @@ export function ActivityList({ entries }: ActivityListProps) {
 
                   {/* ── Panel de anomalía expandible ── */}
                   {expandida === entry.id && entry.anomaly && (
-                    <tr
-                      style={{ borderBottom: '1px solid var(--color-border)' }}
-                    >
+                    <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
                       <td
                         colSpan={6}
                         style={{

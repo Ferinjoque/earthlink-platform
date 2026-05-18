@@ -106,7 +106,10 @@ export default async function DetalleProveedorPage({
     }
   }
 
-  const entradas: (Pick<ActivityEntryRow, 'id' | 'source_type' | 'raw_quantity' | 'raw_unit' | 'status' | 'created_at'> & {
+  const entradas: (Pick<
+    ActivityEntryRow,
+    'id' | 'source_type' | 'raw_quantity' | 'raw_unit' | 'status' | 'created_at'
+  > & {
     anomaly?: { severity: string; z_score: number; message: string } | null;
   })[] = [];
 
@@ -133,10 +136,17 @@ export default async function DetalleProveedorPage({
         z_score: number;
         message: string;
       }[]) {
-        flagMap.set(f.activity_entry_id, { severity: f.severity, z_score: f.z_score, message: f.message });
+        flagMap.set(f.activity_entry_id, {
+          severity: f.severity,
+          z_score: f.z_score,
+          message: f.message,
+        });
       }
 
-      for (const e of rawEntries as (Pick<ActivityEntryRow, 'id' | 'source_type' | 'raw_quantity' | 'raw_unit' | 'status' | 'created_at'>)[]) {
+      for (const e of rawEntries as Pick<
+        ActivityEntryRow,
+        'id' | 'source_type' | 'raw_quantity' | 'raw_unit' | 'status' | 'created_at'
+      >[]) {
         entradas.push({ ...e, anomaly: flagMap.get(e.id) ?? null });
       }
     }
@@ -199,7 +209,13 @@ export default async function DetalleProveedorPage({
               </span>
             )}
             {supplier.ruc && (
-              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-2)', fontFamily: 'var(--font-mono)' }}>
+              <span
+                style={{
+                  fontSize: 'var(--text-sm)',
+                  color: 'var(--color-ink-2)',
+                  fontFamily: 'var(--font-mono)',
+                }}
+              >
                 RUC {supplier.ruc}
               </span>
             )}
@@ -244,7 +260,9 @@ export default async function DetalleProveedorPage({
               }}
             >
               <style>{`.period-row:hover td { background: var(--color-surface-2) !important; }`}</style>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
+              <table
+                style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}
+              >
                 <thead>
                   <tr>
                     {['Periodo', 'Inicio', 'Fin', 'Estado', 'CO₂e total'].map((h) => (
@@ -275,13 +293,33 @@ export default async function DetalleProveedorPage({
                         className="period-row"
                         style={{ borderBottom: '1px solid var(--color-border)' }}
                       >
-                        <td style={{ padding: 'var(--space-3) var(--space-4)', color: 'var(--color-ink-1)', fontWeight: 500 }}>
+                        <td
+                          style={{
+                            padding: 'var(--space-3) var(--space-4)',
+                            color: 'var(--color-ink-1)',
+                            fontWeight: 500,
+                          }}
+                        >
                           {p.label}
                         </td>
-                        <td style={{ padding: 'var(--space-3) var(--space-4)', color: 'var(--color-ink-2)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>
+                        <td
+                          style={{
+                            padding: 'var(--space-3) var(--space-4)',
+                            color: 'var(--color-ink-2)',
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: 'var(--text-xs)',
+                          }}
+                        >
                           {new Date(p.start_date).toLocaleDateString('es-PE')}
                         </td>
-                        <td style={{ padding: 'var(--space-3) var(--space-4)', color: 'var(--color-ink-2)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>
+                        <td
+                          style={{
+                            padding: 'var(--space-3) var(--space-4)',
+                            color: 'var(--color-ink-2)',
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: 'var(--text-xs)',
+                          }}
+                        >
                           {new Date(p.end_date).toLocaleDateString('es-PE')}
                         </td>
                         <td style={{ padding: 'var(--space-3) var(--space-4)' }}>
@@ -289,7 +327,14 @@ export default async function DetalleProveedorPage({
                             {PERIODO_LABELS[p.status] ?? p.status}
                           </Badge>
                         </td>
-                        <td style={{ padding: 'var(--space-3) var(--space-4)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: co2e ? 'var(--color-ink-1)' : 'var(--color-ink-3)' }}>
+                        <td
+                          style={{
+                            padding: 'var(--space-3) var(--space-4)',
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: 'var(--text-xs)',
+                            color: co2e ? 'var(--color-ink-1)' : 'var(--color-ink-3)',
+                          }}
+                        >
                           {co2e !== undefined ? formatearCo2e(co2e) : '—'}
                         </td>
                       </tr>
@@ -341,15 +386,31 @@ export default async function DetalleProveedorPage({
                     alignItems: 'center',
                     gap: 'var(--space-4)',
                     padding: 'var(--space-4) var(--space-5)',
-                    borderBottom: i < entradas.length - 1 ? '1px solid var(--color-border)' : 'none',
+                    borderBottom:
+                      i < entradas.length - 1 ? '1px solid var(--color-border)' : 'none',
                   }}
                 >
                   <div style={{ flex: 1 }}>
-                    <p style={{ fontWeight: 'var(--fw-medium)', fontSize: 'var(--text-sm)', color: 'var(--color-ink-1)', margin: 0 }}>
+                    <p
+                      style={{
+                        fontWeight: 'var(--fw-medium)',
+                        fontSize: 'var(--text-sm)',
+                        color: 'var(--color-ink-1)',
+                        margin: 0,
+                      }}
+                    >
                       {FUENTE_LABELS[e.source_type] ?? e.source_type}
                     </p>
-                    <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', margin: 'var(--space-1) 0 0', fontFamily: 'var(--font-mono)' }}>
-                      {e.raw_quantity} {e.raw_unit} · {new Date(e.created_at).toLocaleDateString('es-PE')}
+                    <p
+                      style={{
+                        fontSize: 'var(--text-xs)',
+                        color: 'var(--color-ink-3)',
+                        margin: 'var(--space-1) 0 0',
+                        fontFamily: 'var(--font-mono)',
+                      }}
+                    >
+                      {e.raw_quantity} {e.raw_unit} ·{' '}
+                      {new Date(e.created_at).toLocaleDateString('es-PE')}
                     </p>
                   </div>
                   <Badge variant={e.status as 'draft' | 'submitted' | 'validated' | 'rejected'}>

@@ -143,19 +143,11 @@ export function ReportsPanel({ periodos, historial }: ReportsPanelProps) {
                 flexWrap: 'wrap',
               }}
             >
-              <button
-                type="button"
-                onClick={seleccionarTodos}
-                style={estiloBotonSecundario}
-              >
+              <button type="button" onClick={seleccionarTodos} style={estiloBotonSecundario}>
                 Seleccionar todos
               </button>
               {seleccionados.size > 0 && (
-                <button
-                  type="button"
-                  onClick={limpiarSeleccion}
-                  style={estiloBotonSecundario}
-                >
+                <button type="button" onClick={limpiarSeleccion} style={estiloBotonSecundario}>
                   Limpiar selección
                 </button>
               )}
@@ -248,9 +240,7 @@ export function ReportsPanel({ periodos, historial }: ReportsPanelProps) {
                         {p.label}
                       </td>
                       <td style={{ padding: 'var(--space-3) var(--space-4)' }}>
-                        <Badge variant={variantEstado(p.status)}>
-                          {etiquetaEstado(p.status)}
-                        </Badge>
+                        <Badge variant={variantEstado(p.status)}>{etiquetaEstado(p.status)}</Badge>
                       </td>
                       <td
                         style={{
@@ -281,12 +271,15 @@ export function ReportsPanel({ periodos, historial }: ReportsPanelProps) {
 
             {/* Botón exportar */}
             <form action={formAction} style={{ marginTop: 'var(--space-4)' }}>
-              <input
-                type="hidden"
-                name="period_ids"
-                value={[...seleccionados].join(',')}
-              />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
+              <input type="hidden" name="period_ids" value={[...seleccionados].join(',')} />
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--space-4)',
+                  flexWrap: 'wrap',
+                }}
+              >
                 <button
                   type="submit"
                   disabled={isPending || seleccionados.size === 0}
@@ -303,8 +296,7 @@ export function ReportsPanel({ periodos, historial }: ReportsPanelProps) {
                     border: 'none',
                     borderRadius: 'var(--radius-md)',
                     padding: 'var(--space-3) var(--space-6)',
-                    cursor:
-                      seleccionados.size === 0 || isPending ? 'default' : 'pointer',
+                    cursor: seleccionados.size === 0 || isPending ? 'default' : 'pointer',
                     transition: 'background 150ms',
                   }}
                 >
@@ -426,10 +418,7 @@ export function ReportsPanel({ periodos, historial }: ReportsPanelProps) {
               </thead>
               <tbody>
                 {historial.map((h) => (
-                  <tr
-                    key={h.id}
-                    style={{ borderBottom: '1px solid var(--color-border)' }}
-                  >
+                  <tr key={h.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
                     <td
                       style={{
                         padding: 'var(--space-3) var(--space-4)',

@@ -42,7 +42,9 @@ function etiquetaEstado(status: PeriodStatus): string {
   return map[status] ?? status;
 }
 
-function variantEstado(status: PeriodStatus): 'open' | 'calculating' | 'under_review' | 'locked' | 'neutral' {
+function variantEstado(
+  status: PeriodStatus,
+): 'open' | 'calculating' | 'under_review' | 'locked' | 'neutral' {
   if (status === 'open') return 'open';
   if (status === 'calculating') return 'calculating';
   if (status === 'under_review') return 'under_review';
@@ -59,11 +61,16 @@ export default async function DetallePeriodoPage({
   if (!periodId || !/^[0-9a-f-]{36}$/i.test(periodId)) notFound();
 
   const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
   // Load period + supplier
-  type PeriodoCompleto = Pick<ReportingPeriodRow, 'id' | 'label' | 'supplier_id' | 'status' | 'start_date' | 'end_date'>;
+  type PeriodoCompleto = Pick<
+    ReportingPeriodRow,
+    'id' | 'label' | 'supplier_id' | 'status' | 'start_date' | 'end_date'
+  >;
   const { data: rawPeriod } = await supabase
     .from('reporting_periods')
     .select('id, label, supplier_id, status, start_date, end_date')
@@ -94,13 +101,32 @@ export default async function DetallePeriodoPage({
   const membership = memCheck as Pick<MembershipRow, 'role'>;
 
   // Parallel fetch: emission results + audit log
-  type FilaResultado = Pick<EmissionResultRow, 'id' | 'activity_entry_id' | 'scope' | 'co2e_kg' | 'factor_used' | 'factor_unit' | 'calc_hash' | 'calc_version' | 'calculated_at' | 'calculated_by' | 'normalized_quantity' | 'normalized_unit'>;
-  type FilaAuditLog = Pick<AuditLogRow, 'id' | 'action' | 'performed_at' | 'performed_by' | 'new_values'>;
+  type FilaResultado = Pick<
+    EmissionResultRow,
+    | 'id'
+    | 'activity_entry_id'
+    | 'scope'
+    | 'co2e_kg'
+    | 'factor_used'
+    | 'factor_unit'
+    | 'calc_hash'
+    | 'calc_version'
+    | 'calculated_at'
+    | 'calculated_by'
+    | 'normalized_quantity'
+    | 'normalized_unit'
+  >;
+  type FilaAuditLog = Pick<
+    AuditLogRow,
+    'id' | 'action' | 'performed_at' | 'performed_by' | 'new_values'
+  >;
 
   const [resultsRaw, auditLogRaw] = await Promise.all([
     supabase
       .from('emission_results')
-      .select('id, activity_entry_id, scope, co2e_kg, factor_used, factor_unit, calc_hash, calc_version, calculated_at, calculated_by, normalized_quantity, normalized_unit')
+      .select(
+        'id, activity_entry_id, scope, co2e_kg, factor_used, factor_unit, calc_hash, calc_version, calculated_at, calculated_by, normalized_quantity, normalized_unit',
+      )
       .eq('reporting_period_id', periodId)
       .order('scope', { ascending: true })
       .order('co2e_kg', { ascending: false }),
@@ -140,8 +166,16 @@ export default async function DetallePeriodoPage({
   }
 
   const calcVersion = results[0]?.calc_version ?? '—';
-  const inicioFmt = new Date(period.start_date).toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
-  const finFmt = new Date(period.end_date).toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
+  const inicioFmt = new Date(period.start_date).toLocaleDateString('es-PE', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  });
+  const finFmt = new Date(period.end_date).toLocaleDateString('es-PE', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  });
 
   return (
     <>
@@ -183,7 +217,14 @@ export default async function DetallePeriodoPage({
             gap: 'var(--space-3)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-4)',
+              flexWrap: 'wrap',
+            }}
+          >
             <h2
               style={{
                 fontFamily: 'var(--font-serif)',
@@ -249,7 +290,9 @@ export default async function DetallePeriodoPage({
               { label: 'Entradas', valor: String(results.length), color: 'var(--color-ink-1)' },
             ].map(({ label, valor, color }) => (
               <div key={label}>
-                <p className="eyebrow" style={{ marginBottom: 'var(--space-2)' }}>{label}</p>
+                <p className="eyebrow" style={{ marginBottom: 'var(--space-2)' }}>
+                  {label}
+                </p>
                 <span
                   className="numeric-tabular"
                   style={{
@@ -271,10 +314,23 @@ export default async function DetallePeriodoPage({
         {/* ── Tabla de resultados ── */}
         <section>
           <div style={{ marginBottom: 'var(--space-4)' }}>
-            <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--color-ink-1)', margin: 0 }}>
+            <h3
+              style={{
+                fontSize: 'var(--text-base)',
+                fontWeight: 600,
+                color: 'var(--color-ink-1)',
+                margin: 0,
+              }}
+            >
               Resultados de emisiones
             </h3>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-3)', margin: 'var(--space-1) 0 0' }}>
+            <p
+              style={{
+                fontSize: 'var(--text-sm)',
+                color: 'var(--color-ink-3)',
+                margin: 'var(--space-1) 0 0',
+              }}
+            >
               {results.length === 0
                 ? 'Sin resultados calculados para este periodo.'
                 : `${results.length} entrada${results.length !== 1 ? 's' : ''} calculada${results.length !== 1 ? 's' : ''}.`}
@@ -290,11 +346,24 @@ export default async function DetallePeriodoPage({
                 overflowX: 'auto',
               }}
             >
-              <style>{'.result-row:hover { background: var(--color-surface-2) !important; }'}</style>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
+              <style>
+                {'.result-row:hover { background: var(--color-surface-2) !important; }'}
+              </style>
+              <table
+                style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}
+              >
                 <thead>
                   <tr>
-                    {['Fuente', 'Cantidad', 'Normalizado', 'Alcance', 'CO₂e', 'Factor', 'Hash', 'Calculado'].map((h) => (
+                    {[
+                      'Fuente',
+                      'Cantidad',
+                      'Normalizado',
+                      'Alcance',
+                      'CO₂e',
+                      'Factor',
+                      'Hash',
+                      'Calculado',
+                    ].map((h) => (
                       <th
                         key={h}
                         style={{
@@ -325,13 +394,35 @@ export default async function DetallePeriodoPage({
                         <td style={estiloCelda}>
                           {FUENTE_LABELS[entrada?.source_type ?? ''] ?? entrada?.source_type ?? '—'}
                         </td>
-                        <td style={{ ...estiloCelda, fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>
-                          {entrada ? `${entrada.raw_quantity.toLocaleString('es')} ${entrada.raw_unit}` : '—'}
+                        <td
+                          style={{
+                            ...estiloCelda,
+                            fontFamily: 'var(--font-mono)',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {entrada
+                            ? `${entrada.raw_quantity.toLocaleString('es')} ${entrada.raw_unit}`
+                            : '—'}
                         </td>
-                        <td style={{ ...estiloCelda, fontFamily: 'var(--font-mono)', color: 'var(--color-ink-3)', whiteSpace: 'nowrap' }}>
-                          {r.normalized_quantity.toLocaleString('es', { maximumFractionDigits: 4 })} {r.normalized_unit}
+                        <td
+                          style={{
+                            ...estiloCelda,
+                            fontFamily: 'var(--font-mono)',
+                            color: 'var(--color-ink-3)',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {r.normalized_quantity.toLocaleString('es', { maximumFractionDigits: 4 })}{' '}
+                          {r.normalized_unit}
                         </td>
-                        <td style={{ ...estiloCelda, fontFamily: 'var(--font-mono)', textAlign: 'center' as const }}>
+                        <td
+                          style={{
+                            ...estiloCelda,
+                            fontFamily: 'var(--font-mono)',
+                            textAlign: 'center' as const,
+                          }}
+                        >
                           <span
                             style={{
                               color: r.scope === 1 ? 'var(--color-accent)' : 'var(--color-scope2)',
@@ -352,7 +443,14 @@ export default async function DetallePeriodoPage({
                         >
                           {formatearKg(r.co2e_kg)}
                         </td>
-                        <td style={{ ...estiloCelda, fontFamily: 'var(--font-mono)', color: 'var(--color-ink-3)', whiteSpace: 'nowrap' }}>
+                        <td
+                          style={{
+                            ...estiloCelda,
+                            fontFamily: 'var(--font-mono)',
+                            color: 'var(--color-ink-3)',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           {r.factor_used.toFixed(6)} {r.factor_unit}
                         </td>
                         <td
@@ -370,9 +468,20 @@ export default async function DetallePeriodoPage({
                         >
                           {r.calc_hash.slice(0, 8)}…
                         </td>
-                        <td style={{ ...estiloCelda, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', whiteSpace: 'nowrap' }}>
+                        <td
+                          style={{
+                            ...estiloCelda,
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: 'var(--text-xs)',
+                            color: 'var(--color-ink-3)',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           {new Date(r.calculated_at).toLocaleString('es-PE', {
-                            day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+                            day: '2-digit',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit',
                           })}
                         </td>
                       </tr>
@@ -407,10 +516,7 @@ export default async function DetallePeriodoPage({
                     >
                       {formatearKg(totalCo2e)}
                     </td>
-                    <td
-                      colSpan={3}
-                      style={{ borderTop: '1px solid var(--color-border)' }}
-                    />
+                    <td colSpan={3} style={{ borderTop: '1px solid var(--color-border)' }} />
                   </tr>
                 </tfoot>
               </table>
@@ -421,10 +527,23 @@ export default async function DetallePeriodoPage({
         {/* ── Audit log timeline ── */}
         <section>
           <div style={{ marginBottom: 'var(--space-5)' }}>
-            <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--color-ink-1)', margin: 0 }}>
+            <h3
+              style={{
+                fontSize: 'var(--text-base)',
+                fontWeight: 600,
+                color: 'var(--color-ink-1)',
+                margin: 0,
+              }}
+            >
               Registro de auditoría
             </h3>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-3)', margin: 'var(--space-1) 0 0' }}>
+            <p
+              style={{
+                fontSize: 'var(--text-sm)',
+                color: 'var(--color-ink-3)',
+                margin: 'var(--space-1) 0 0',
+              }}
+            >
               Historial inmutable de cambios de estado en este periodo.
             </p>
           </div>
@@ -459,7 +578,7 @@ export default async function DetallePeriodoPage({
               {auditLog.map((entry) => {
                 const accion = entry.action.replace(/_/g, ' ').toLowerCase();
                 const newVals = entry.new_values as Record<string, unknown> | null;
-                const nuevoEstado = (newVals?.status as string | undefined);
+                const nuevoEstado = newVals?.status as string | undefined;
                 return (
                   <div
                     key={entry.id}
@@ -478,9 +597,10 @@ export default async function DetallePeriodoPage({
                         width: '14px',
                         height: '14px',
                         borderRadius: '50%',
-                        background: nuevoEstado === 'locked'
-                          ? 'var(--color-accent)'
-                          : 'var(--color-surface-2)',
+                        background:
+                          nuevoEstado === 'locked'
+                            ? 'var(--color-accent)'
+                            : 'var(--color-surface-2)',
                         border: `2px solid ${nuevoEstado === 'locked' ? 'var(--color-accent)' : 'var(--color-border)'}`,
                         display: 'flex',
                         alignItems: 'center',
@@ -488,11 +608,16 @@ export default async function DetallePeriodoPage({
                         zIndex: 1,
                       }}
                     >
-                      {nuevoEstado === 'locked' && (
-                        <Lock size={6} style={{ color: 'white' }} />
-                      )}
+                      {nuevoEstado === 'locked' && <Lock size={6} style={{ color: 'white' }} />}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'baseline',
+                        gap: 'var(--space-3)',
+                        flexWrap: 'wrap',
+                      }}
+                    >
                       <span
                         style={{
                           fontSize: 'var(--text-sm)',

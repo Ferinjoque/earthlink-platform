@@ -51,7 +51,7 @@ export function StatCard({ label, value, unit, delta, accent }: StatCardProps) {
         flexDirection: 'column',
         gap: 'var(--space-3)',
         background: accent ? 'var(--color-accent-soft)' : undefined,
-      border: accent ? '1px solid oklch(42% 0.12 155 / 22%)' : undefined,
+        border: accent ? '1px solid oklch(42% 0.12 155 / 22%)' : undefined,
         transition: 'box-shadow var(--duration-fast) var(--ease-out-expo)',
       }}
     >

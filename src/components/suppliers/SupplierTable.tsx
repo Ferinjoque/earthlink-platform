@@ -93,7 +93,13 @@ function FormProveedor({
       <div>
         <label
           htmlFor={`nombre-${mode}`}
-          style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)', display: 'block', marginBottom: 'var(--space-1)', fontWeight: 500 }}
+          style={{
+            fontSize: 'var(--text-xs)',
+            color: 'var(--color-ink-2)',
+            display: 'block',
+            marginBottom: 'var(--space-1)',
+            fontWeight: 500,
+          }}
         >
           Nombre *
         </label>
@@ -112,7 +118,13 @@ function FormProveedor({
       <div>
         <label
           htmlFor={`categoria-${mode}`}
-          style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)', display: 'block', marginBottom: 'var(--space-1)', fontWeight: 500 }}
+          style={{
+            fontSize: 'var(--text-xs)',
+            color: 'var(--color-ink-2)',
+            display: 'block',
+            marginBottom: 'var(--space-1)',
+            fontWeight: 500,
+          }}
         >
           Categoría *
         </label>
@@ -123,9 +135,13 @@ function FormProveedor({
           defaultValue={initial?.category ?? ''}
           style={estiloSelect(!!fe.categoria)}
         >
-          <option value="" disabled>Selecciona una categoría</option>
+          <option value="" disabled>
+            Selecciona una categoría
+          </option>
           {CATEGORIAS_VALIDAS.map((c) => (
-            <option key={c} value={c}>{c}</option>
+            <option key={c} value={c}>
+              {c}
+            </option>
           ))}
         </select>
         {fe.categoria && <p style={estiloError}>{fe.categoria}</p>}
@@ -135,7 +151,13 @@ function FormProveedor({
       <div>
         <label
           htmlFor={`contacto-${mode}`}
-          style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)', display: 'block', marginBottom: 'var(--space-1)', fontWeight: 500 }}
+          style={{
+            fontSize: 'var(--text-xs)',
+            color: 'var(--color-ink-2)',
+            display: 'block',
+            marginBottom: 'var(--space-1)',
+            fontWeight: 500,
+          }}
         >
           Correo de contacto
         </label>
@@ -154,7 +176,13 @@ function FormProveedor({
       <div>
         <label
           htmlFor={`ruc-${mode}`}
-          style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)', display: 'block', marginBottom: 'var(--space-1)', fontWeight: 500 }}
+          style={{
+            fontSize: 'var(--text-xs)',
+            color: 'var(--color-ink-2)',
+            display: 'block',
+            marginBottom: 'var(--space-1)',
+            fontWeight: 500,
+          }}
         >
           RUC <span style={{ color: 'var(--color-ink-3)', fontWeight: 400 }}>(11 dígitos)</span>
         </label>
@@ -481,16 +509,40 @@ export function SupplierTable({ suppliers, organizationId }: Props) {
                     style={{ borderBottom: '1px solid var(--color-border)', cursor: 'pointer' }}
                     onClick={() => router.push(`/suppliers/${s.id}`)}
                   >
-                    <td style={{ padding: 'var(--space-3) var(--space-4)', color: 'var(--color-ink-1)', fontWeight: 500 }}>
+                    <td
+                      style={{
+                        padding: 'var(--space-3) var(--space-4)',
+                        color: 'var(--color-ink-1)',
+                        fontWeight: 500,
+                      }}
+                    >
                       {s.name}
                     </td>
-                    <td style={{ padding: 'var(--space-3) var(--space-4)', color: 'var(--color-ink-2)' }}>
+                    <td
+                      style={{
+                        padding: 'var(--space-3) var(--space-4)',
+                        color: 'var(--color-ink-2)',
+                      }}
+                    >
                       {s.category}
                     </td>
-                    <td style={{ padding: 'var(--space-3) var(--space-4)', color: 'var(--color-ink-3)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>
+                    <td
+                      style={{
+                        padding: 'var(--space-3) var(--space-4)',
+                        color: 'var(--color-ink-3)',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 'var(--text-xs)',
+                      }}
+                    >
                       {s.ruc ?? '—'}
                     </td>
-                    <td style={{ padding: 'var(--space-3) var(--space-4)', color: 'var(--color-ink-2)', fontSize: 'var(--text-xs)' }}>
+                    <td
+                      style={{
+                        padding: 'var(--space-3) var(--space-4)',
+                        color: 'var(--color-ink-2)',
+                        fontSize: 'var(--text-xs)',
+                      }}
+                    >
                       {s.contact_email ?? '—'}
                     </td>
                     <td
@@ -564,10 +616,7 @@ export function SupplierTable({ suppliers, organizationId }: Props) {
                   {archivandoId === s.id && (
                     <tr>
                       <td colSpan={5} style={{ padding: 0 }}>
-                        <ConfirmacionArchivo
-                          supplier={s}
-                          onCancel={() => setArchivandoId(null)}
-                        />
+                        <ConfirmacionArchivo supplier={s} onCancel={() => setArchivandoId(null)} />
                       </td>
                     </tr>
                   )}

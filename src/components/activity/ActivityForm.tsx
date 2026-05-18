@@ -96,7 +96,16 @@ export function ActivityForm({ periods }: ActivityFormProps) {
             fontSize: 'var(--text-sm)',
           }}
         >
-          <span style={{ fontSize: '15px', lineHeight: 1, flexShrink: 0, color: 'var(--color-signal-hi)' }}>✗</span>
+          <span
+            style={{
+              fontSize: '15px',
+              lineHeight: 1,
+              flexShrink: 0,
+              color: 'var(--color-signal-hi)',
+            }}
+          >
+            ✗
+          </span>
           <span style={{ color: 'var(--color-ink-1)' }}>{state.error}</span>
         </div>
       )}
@@ -114,12 +123,25 @@ export function ActivityForm({ periods }: ActivityFormProps) {
             fontSize: 'var(--text-sm)',
           }}
         >
-          <span style={{ fontSize: '15px', lineHeight: 1, flexShrink: 0, color: 'var(--color-signal-ok)' }}>✓</span>
+          <span
+            style={{
+              fontSize: '15px',
+              lineHeight: 1,
+              flexShrink: 0,
+              color: 'var(--color-signal-ok)',
+            }}
+          >
+            ✓
+          </span>
           <div>
-            <strong style={{ color: 'var(--color-signal-ok)', display: 'block', marginBottom: '2px' }}>
+            <strong
+              style={{ color: 'var(--color-signal-ok)', display: 'block', marginBottom: '2px' }}
+            >
               Registro enviado
             </strong>
-            <span style={{ color: 'var(--color-ink-2)' }}>El dato fue registrado correctamente.</span>
+            <span style={{ color: 'var(--color-ink-2)' }}>
+              El dato fue registrado correctamente.
+            </span>
           </div>
         </div>
       )}
@@ -185,7 +207,12 @@ export function ActivityForm({ periods }: ActivityFormProps) {
           >
             {labelSecundario}
           </label>
-          <select id="af-secondary" name="secondary" required style={estiloSelect(!!errCampo('secondary'))}>
+          <select
+            id="af-secondary"
+            name="secondary"
+            required
+            style={estiloSelect(!!errCampo('secondary'))}
+          >
             {opcionesSecundarias.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
@@ -227,7 +254,12 @@ export function ActivityForm({ periods }: ActivityFormProps) {
           >
             Unidad
           </label>
-          <select id="af-unit" name="raw_unit" required style={estiloSelect(!!errCampo('raw_unit'))}>
+          <select
+            id="af-unit"
+            name="raw_unit"
+            required
+            style={estiloSelect(!!errCampo('raw_unit'))}
+          >
             {opcionesUnidad.map((u) => (
               <option key={u} value={u}>
                 {u}
@@ -260,7 +292,8 @@ export function ActivityForm({ periods }: ActivityFormProps) {
         disabled={isPending || periods.length === 0}
         style={{
           padding: 'var(--space-2) var(--space-4)',
-          background: isPending || periods.length === 0 ? 'var(--color-ink-3)' : 'var(--color-accent)',
+          background:
+            isPending || periods.length === 0 ? 'var(--color-ink-3)' : 'var(--color-accent)',
           color: '#fff',
           border: 'none',
           borderRadius: 'var(--radius-md)',
@@ -278,7 +311,8 @@ export function ActivityForm({ periods }: ActivityFormProps) {
           <>
             <span
               style={{
-                width: '12px', height: '12px',
+                width: '12px',
+                height: '12px',
                 border: '2px solid rgba(255,255,255,0.3)',
                 borderTopColor: 'white',
                 borderRadius: '50%',
@@ -288,7 +322,9 @@ export function ActivityForm({ periods }: ActivityFormProps) {
             />
             Enviando…
           </>
-        ) : 'Enviar registro'}
+        ) : (
+          'Enviar registro'
+        )}
       </button>
     </form>
   );

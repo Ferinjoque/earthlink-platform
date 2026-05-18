@@ -34,7 +34,20 @@ const ESTADO_LABELS: Record<string, string> = {
   rejected: 'Rechazado',
 };
 
-const MESES_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+const MESES_ES = [
+  'Ene',
+  'Feb',
+  'Mar',
+  'Abr',
+  'May',
+  'Jun',
+  'Jul',
+  'Ago',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dic',
+];
 
 function traducirMensajeAnomalia(msg: string): string {
   if (!msg) return msg;
@@ -68,14 +81,19 @@ function traducirMensajeAnomalia(msg: string): string {
 
 export default async function PanelPage() {
   const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
   const { data: rawMemberships } = await supabase
     .from('memberships')
     .select('organization_id, supplier_id, role')
     .eq('user_id', user.id);
-  const memberships = (rawMemberships ?? []) as Pick<MembershipRow, 'organization_id' | 'supplier_id' | 'role'>[];
+  const memberships = (rawMemberships ?? []) as Pick<
+    MembershipRow,
+    'organization_id' | 'supplier_id' | 'role'
+  >[];
 
   const orgIds = [
     ...new Set(memberships.map((m) => m.organization_id).filter((id): id is string => id !== null)),
@@ -87,7 +105,10 @@ export default async function PanelPage() {
   const supplierNameMap = new Map<string, string>();
   const allSupplierIds: string[] = [...memberSupplierIds];
   if (orgIds.length) {
-    const { data } = await supabase.from('suppliers').select('id, name').in('organization_id', orgIds);
+    const { data } = await supabase
+      .from('suppliers')
+      .select('id, name')
+      .in('organization_id', orgIds);
     if (data) {
       for (const s of data as Array<{ id: string; name: string }>) {
         supplierNameMap.set(s.id, s.name);
@@ -187,7 +208,11 @@ export default async function PanelPage() {
         .eq('is_resolved', false);
 
       const flagMap = new Map<string, { severity: AnomalySeverity; z_score: number }>();
-      for (const f of (flags ?? []) as { activity_entry_id: string; severity: AnomalySeverity; z_score: number }[]) {
+      for (const f of (flags ?? []) as {
+        activity_entry_id: string;
+        severity: AnomalySeverity;
+        z_score: number;
+      }[]) {
         flagMap.set(f.activity_entry_id, { severity: f.severity, z_score: f.z_score });
       }
 
@@ -216,7 +241,9 @@ export default async function PanelPage() {
       .in('reporting_period_id', periodIds);
 
     if (rawEntryIds && (rawEntryIds as { id: string }[]).length > 0) {
-      const allEntryIds = (rawEntryIds as { id: string; reporting_period_id: string }[]).map((e) => e.id);
+      const allEntryIds = (rawEntryIds as { id: string; reporting_period_id: string }[]).map(
+        (e) => e.id,
+      );
       const entryPeriodMap = new Map<string, string>();
       for (const e of rawEntryIds as { id: string; reporting_period_id: string }[]) {
         entryPeriodMap.set(e.id, e.reporting_period_id);
@@ -282,7 +309,14 @@ export default async function PanelPage() {
           >
             Huella de carbono de la cadena de suministro
           </h2>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-2)', margin: 0, maxWidth: '52ch' }}>
+          <p
+            style={{
+              fontSize: 'var(--text-sm)',
+              color: 'var(--color-ink-2)',
+              margin: 0,
+              maxWidth: '52ch',
+            }}
+          >
             {tieneDatos
               ? 'Acumulado en todos los periodos calculados.'
               : 'Los datos aparecerán cuando los proveedores envíen sus registros de actividad.'}
@@ -303,79 +337,217 @@ export default async function PanelPage() {
           }}
         >
           <div>
-            <p className="eyebrow" style={{ marginBottom: 'var(--space-2)', color: 'var(--color-accent)' }}>
+            <p
+              className="eyebrow"
+              style={{ marginBottom: 'var(--space-2)', color: 'var(--color-accent)' }}
+            >
               Total CO₂e
             </p>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--space-3)' }}>
-              <span className="numeric-tabular" style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-4xl)', fontWeight: 700, color: 'var(--color-ink-1)', letterSpacing: '-0.03em', lineHeight: 1 }}>
+              <span
+                className="numeric-tabular"
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 'var(--text-4xl)',
+                  fontWeight: 700,
+                  color: 'var(--color-ink-1)',
+                  letterSpacing: '-0.03em',
+                  lineHeight: 1,
+                }}
+              >
                 {tieneDatos ? total.valor : '—'}
               </span>
-              {tieneDatos && <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-2)' }}>{total.unidad}</span>}
+              {tieneDatos && (
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-2)' }}>
+                  {total.unidad}
+                </span>
+              )}
             </div>
-            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', marginTop: 'var(--space-1)' }}>
+            <p
+              style={{
+                fontSize: 'var(--text-xs)',
+                color: 'var(--color-ink-3)',
+                marginTop: 'var(--space-1)',
+              }}
+            >
               {tieneDatos ? 'acumulado en periodos calculados' : 'sin datos aún'}
             </p>
           </div>
 
           {tieneDatos && (
-            <div style={{ borderLeft: '1px solid var(--color-border)', paddingLeft: 'var(--space-6)' }}>
-              <p className="eyebrow" style={{ marginBottom: 'var(--space-2)' }}>Alcance 1</p>
+            <div
+              style={{ borderLeft: '1px solid var(--color-border)', paddingLeft: 'var(--space-6)' }}
+            >
+              <p className="eyebrow" style={{ marginBottom: 'var(--space-2)' }}>
+                Alcance 1
+              </p>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--space-2)' }}>
-                <span className="numeric-tabular" style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--color-accent)', letterSpacing: '-0.025em', lineHeight: 1 }}>
+                <span
+                  className="numeric-tabular"
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 'var(--text-2xl)',
+                    fontWeight: 700,
+                    color: 'var(--color-accent)',
+                    letterSpacing: '-0.025em',
+                    lineHeight: 1,
+                  }}
+                >
                   {s1.valor}
                 </span>
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)' }}>{s1.unidad}</span>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)' }}>
+                  {s1.unidad}
+                </span>
               </div>
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', marginTop: 'var(--space-1)' }}>Emisiones directas</p>
+              <p
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--color-ink-3)',
+                  marginTop: 'var(--space-1)',
+                }}
+              >
+                Emisiones directas
+              </p>
             </div>
           )}
 
           {tieneDatos && (
-            <div style={{ borderLeft: '1px solid var(--color-border)', paddingLeft: 'var(--space-6)' }}>
-              <p className="eyebrow" style={{ marginBottom: 'var(--space-2)' }}>Alcance 2</p>
+            <div
+              style={{ borderLeft: '1px solid var(--color-border)', paddingLeft: 'var(--space-6)' }}
+            >
+              <p className="eyebrow" style={{ marginBottom: 'var(--space-2)' }}>
+                Alcance 2
+              </p>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--space-2)' }}>
-                <span className="numeric-tabular" style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--color-scope2)', letterSpacing: '-0.025em', lineHeight: 1 }}>
+                <span
+                  className="numeric-tabular"
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 'var(--text-2xl)',
+                    fontWeight: 700,
+                    color: 'var(--color-scope2)',
+                    letterSpacing: '-0.025em',
+                    lineHeight: 1,
+                  }}
+                >
                   {s2.valor}
                 </span>
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)' }}>{s2.unidad}</span>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)' }}>
+                  {s2.unidad}
+                </span>
               </div>
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', marginTop: 'var(--space-1)' }}>Emisiones indirectas</p>
+              <p
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--color-ink-3)',
+                  marginTop: 'var(--space-1)',
+                }}
+              >
+                Emisiones indirectas
+              </p>
             </div>
           )}
         </section>
 
         {/* ── Indicador periodos abiertos ── */}
         {periodosAbiertos > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginTop: 'calc(var(--space-8) * -0.6)' }}>
-            <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'var(--color-signal-ok)', flexShrink: 0, boxShadow: '0 0 0 3px oklch(42% 0.12 155 / 16%)' }} />
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-3)',
+              marginTop: 'calc(var(--space-8) * -0.6)',
+            }}
+          >
+            <span
+              style={{
+                width: '7px',
+                height: '7px',
+                borderRadius: '50%',
+                background: 'var(--color-signal-ok)',
+                flexShrink: 0,
+                boxShadow: '0 0 0 3px oklch(42% 0.12 155 / 16%)',
+              }}
+            />
             <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-2)' }}>
-              <strong style={{ color: 'var(--color-ink-1)', fontFamily: 'var(--font-mono)' }}>{periodosAbiertos}</strong>{' '}
-              periodo{periodosAbiertos !== 1 ? 's' : ''} abierto{periodosAbiertos !== 1 ? 's' : ''} pendientes de actividad
+              <strong style={{ color: 'var(--color-ink-1)', fontFamily: 'var(--font-mono)' }}>
+                {periodosAbiertos}
+              </strong>{' '}
+              periodo{periodosAbiertos !== 1 ? 's' : ''} abierto{periodosAbiertos !== 1 ? 's' : ''}{' '}
+              pendientes de actividad
             </span>
           </div>
         )}
 
         {/* ── Distribución por alcance ── */}
         {tieneDatos && (
-          <section style={{ background: 'var(--color-surface-1)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-6)' }}>
-            <p className="eyebrow" style={{ marginBottom: 'var(--space-5)' }}>Distribución por alcance</p>
+          <section
+            style={{
+              background: 'var(--color-surface-1)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-lg)',
+              padding: 'var(--space-6)',
+            }}
+          >
+            <p className="eyebrow" style={{ marginBottom: 'var(--space-5)' }}>
+              Distribución por alcance
+            </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
               {[
-                { etiqueta: 'Alcance 1 — Directas', valor: scope1Co2eKg, color: 'var(--color-accent)' },
-                { etiqueta: 'Alcance 2 — Indirectas', valor: scope2Co2eKg, color: 'var(--color-scope2)' },
+                {
+                  etiqueta: 'Alcance 1 — Directas',
+                  valor: scope1Co2eKg,
+                  color: 'var(--color-accent)',
+                },
+                {
+                  etiqueta: 'Alcance 2 — Indirectas',
+                  valor: scope2Co2eKg,
+                  color: 'var(--color-scope2)',
+                },
               ].map(({ etiqueta, valor, color }) => {
                 const pct = totalCo2eKg > 0 ? (valor / totalCo2eKg) * 100 : 0;
                 const fmt = formatearCo2e(valor);
                 return (
                   <div key={etiqueta}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 'var(--space-2)' }}>
-                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)' }}>{etiqueta}</span>
-                      <span className="numeric-tabular" style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--color-ink-1)' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'baseline',
+                        marginBottom: 'var(--space-2)',
+                      }}
+                    >
+                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)' }}>
+                        {etiqueta}
+                      </span>
+                      <span
+                        className="numeric-tabular"
+                        style={{
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: 'var(--text-xs)',
+                          color: 'var(--color-ink-1)',
+                        }}
+                      >
                         {fmt.valor} {fmt.unidad} ({pct.toFixed(1)}%)
                       </span>
                     </div>
-                    <div style={{ height: '5px', background: 'var(--color-surface-2)', borderRadius: '9999px', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '9999px', transition: 'width 700ms cubic-bezier(0.16, 1, 0.3, 1)' }} />
+                    <div
+                      style={{
+                        height: '5px',
+                        background: 'var(--color-surface-2)',
+                        borderRadius: '9999px',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <div
+                        style={{
+                          height: '100%',
+                          width: `${pct}%`,
+                          background: color,
+                          borderRadius: '9999px',
+                          transition: 'width 700ms cubic-bezier(0.16, 1, 0.3, 1)',
+                        }}
+                      />
                     </div>
                   </div>
                 );
@@ -385,10 +557,27 @@ export default async function PanelPage() {
         )}
 
         {/* ── Tendencia mensual CO₂e (SVG artesanal) ── */}
-        <section style={{ background: 'var(--color-surface-1)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-6)' }}>
-          <p className="eyebrow" style={{ marginBottom: 'var(--space-5)' }}>Tendencia mensual CO₂e</p>
+        <section
+          style={{
+            background: 'var(--color-surface-1)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-lg)',
+            padding: 'var(--space-6)',
+          }}
+        >
+          <p className="eyebrow" style={{ marginBottom: 'var(--space-5)' }}>
+            Tendencia mensual CO₂e
+          </p>
           {!hayTrend ? (
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-3)', textAlign: 'center', padding: 'var(--space-8) 0', margin: 0 }}>
+            <p
+              style={{
+                fontSize: 'var(--text-sm)',
+                color: 'var(--color-ink-3)',
+                textAlign: 'center',
+                padding: 'var(--space-8) 0',
+                margin: 0,
+              }}
+            >
               Sin datos de emisiones en los últimos 6 meses.
             </p>
           ) : (
@@ -443,7 +632,14 @@ export default async function PanelPage() {
                     </g>
                   );
                 })}
-                <line x1="15" y1="128" x2="525" y2="128" stroke="var(--color-border)" strokeWidth="1" />
+                <line
+                  x1="15"
+                  y1="128"
+                  x2="525"
+                  y2="128"
+                  stroke="var(--color-border)"
+                  strokeWidth="1"
+                />
               </svg>
             </div>
           )}
@@ -451,17 +647,40 @@ export default async function PanelPage() {
 
         {/* ── Anomalías pendientes ── */}
         {totalAnomalias > 0 && (
-          <section style={{ background: 'var(--color-signal-hi-bg)', border: '1px solid oklch(50% 0.16 20 / 20%)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-6)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-5)' }}>
+          <section
+            style={{
+              background: 'var(--color-signal-hi-bg)',
+              border: '1px solid oklch(50% 0.16 20 / 20%)',
+              borderRadius: 'var(--radius-lg)',
+              padding: 'var(--space-6)',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 'var(--space-5)',
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                 <ShieldAlert size={16} style={{ color: 'var(--color-signal-hi)' }} />
                 <p className="eyebrow" style={{ color: 'var(--color-signal-hi)' }}>
-                  {totalAnomalias} anomalía{totalAnomalias !== 1 ? 's' : ''} pendiente{totalAnomalias !== 1 ? 's' : ''}
+                  {totalAnomalias} anomalía{totalAnomalias !== 1 ? 's' : ''} pendiente
+                  {totalAnomalias !== 1 ? 's' : ''}
                 </p>
               </div>
               <Link
                 href="/audit"
-                style={{ fontSize: 'var(--text-xs)', color: 'var(--color-signal-hi)', fontWeight: 'var(--fw-medium)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--color-signal-hi)',
+                  fontWeight: 'var(--fw-medium)',
+                  textDecoration: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--space-1)',
+                }}
               >
                 Ver en auditoría <ArrowRight size={12} />
               </Link>
@@ -482,10 +701,26 @@ export default async function PanelPage() {
                 >
                   <AnomalyBadge severity={a.severity} zScore={a.z_score ?? undefined} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-1)', margin: 0, fontWeight: 'var(--fw-medium)' }}>
+                    <p
+                      style={{
+                        fontSize: 'var(--text-xs)',
+                        color: 'var(--color-ink-1)',
+                        margin: 0,
+                        fontWeight: 'var(--fw-medium)',
+                      }}
+                    >
                       {a.supplierName ?? 'Proveedor'}
                     </p>
-                    <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', margin: 'var(--space-1) 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <p
+                      style={{
+                        fontSize: 'var(--text-xs)',
+                        color: 'var(--color-ink-3)',
+                        margin: 'var(--space-1) 0 0',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
                       {traducirMensajeAnomalia(a.message)}
                     </p>
                   </div>
@@ -498,8 +733,17 @@ export default async function PanelPage() {
         {/* ── Feed actividad reciente ── */}
         {entradaFeed.length > 0 && (
           <section>
-            <p className="eyebrow" style={{ marginBottom: 'var(--space-4)' }}>Actividad reciente</p>
-            <div style={{ background: 'var(--color-surface-1)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+            <p className="eyebrow" style={{ marginBottom: 'var(--space-4)' }}>
+              Actividad reciente
+            </p>
+            <div
+              style={{
+                background: 'var(--color-surface-1)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-lg)',
+                overflow: 'hidden',
+              }}
+            >
               {entradaFeed.map((e, i) => {
                 const supplierId = periodSupplierMap.get(e.reporting_period_id);
                 const supplierName = supplierId ? supplierNameMap.get(supplierId) : undefined;
@@ -512,12 +756,27 @@ export default async function PanelPage() {
                       alignItems: 'center',
                       gap: 'var(--space-4)',
                       padding: 'var(--space-4) var(--space-5)',
-                      borderBottom: i < entradaFeed.length - 1 ? '1px solid var(--color-border)' : 'none',
+                      borderBottom:
+                        i < entradaFeed.length - 1 ? '1px solid var(--color-border)' : 'none',
                     }}
                   >
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
-                        <p style={{ fontWeight: 'var(--fw-medium)', fontSize: 'var(--text-sm)', color: 'var(--color-ink-1)', margin: 0 }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 'var(--space-3)',
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <p
+                          style={{
+                            fontWeight: 'var(--fw-medium)',
+                            fontSize: 'var(--text-sm)',
+                            color: 'var(--color-ink-1)',
+                            margin: 0,
+                          }}
+                        >
                           {FUENTE_LABELS[e.source_type] ?? e.source_type}
                         </p>
                         {supplierName && (
@@ -529,8 +788,16 @@ export default async function PanelPage() {
                           <AnomalyBadge severity={e.anomaly.severity} zScore={e.anomaly.z_score} />
                         )}
                       </div>
-                      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', margin: 'var(--space-1) 0 0', fontFamily: 'var(--font-mono)' }}>
-                        {e.raw_quantity} {e.raw_unit} · {new Date(e.created_at).toLocaleDateString('es-PE')}
+                      <p
+                        style={{
+                          fontSize: 'var(--text-xs)',
+                          color: 'var(--color-ink-3)',
+                          margin: 'var(--space-1) 0 0',
+                          fontFamily: 'var(--font-mono)',
+                        }}
+                      >
+                        {e.raw_quantity} {e.raw_unit} ·{' '}
+                        {new Date(e.created_at).toLocaleDateString('es-PE')}
                       </p>
                     </div>
                     <Badge variant={e.status as 'draft' | 'submitted' | 'validated' | 'rejected'}>
@@ -542,7 +809,6 @@ export default async function PanelPage() {
             </div>
           </section>
         )}
-
       </main>
     </>
   );
