@@ -46,7 +46,7 @@ export class EmissionResultRepository {
   async findByPeriodId(periodId: string): Promise<readonly EmissionResult[]> {
     const { data, error } = await this.client
       .from('emission_results')
-      .select('*')
+      .select('activity_entry_id, emission_factor_id, normalized_quantity, normalized_unit, co2e_kg, scope, calc_version, calc_hash')
       .eq('reporting_period_id', periodId);
     if (error ?? !data) return [];
     return (data as Record<string, unknown>[]).map((row) => ({
