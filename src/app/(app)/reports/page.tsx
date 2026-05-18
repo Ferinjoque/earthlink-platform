@@ -111,6 +111,16 @@ export default async function ReportesPage() {
 
   return (
     <>
+      <style>{`
+        @media print {
+          aside, header { display: none !important; }
+          [data-no-print] { display: none !important; }
+          main { padding: 12mm 0 0 !important; max-width: 100% !important; }
+          @page { margin: 15mm 20mm; size: A4 portrait; }
+          table { page-break-inside: auto; }
+          tr { page-break-inside: avoid; }
+        }
+      `}</style>
       <TopBar title="Reportes" email={user?.email} section="Exportaciones y certificados" />
       <main
         style={{
