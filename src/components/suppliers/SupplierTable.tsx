@@ -12,9 +12,15 @@ import {
 import { CATEGORIAS_VALIDAS } from '@/lib/supplier-constants';
 import type { SupplierRow } from '@/types/database';
 
+interface OrgOption {
+  id: string;
+  name: string;
+}
+
 interface Props {
   suppliers: SupplierRow[];
   organizationId: string;
+  organizations?: OrgOption[];
 }
 
 const estiloInput = (error?: boolean): React.CSSProperties => ({
@@ -50,11 +56,13 @@ const estiloError: React.CSSProperties = {
 
 function FormProveedor({
   organizationId,
+  organizations,
   initial,
   onCancel,
   mode,
 }: {
   organizationId: string;
+  organizations?: OrgOption[];
   initial?: SupplierRow;
   onCancel: () => void;
   mode: 'create' | 'edit';
@@ -87,7 +95,39 @@ function FormProveedor({
       }}
     >
       {mode === 'edit' && <input type="hidden" name="id" value={initial?.id} />}
-      <input type="hidden" name="organization_id" value={organizationId} />
+
+      {/* Organización — selector solo si hay varias y estamos creando */}
+      {mode === 'create' && organizations && organizations.length > 1 ? (
+        <div style={{ gridColumn: '1 / -1' }}>
+          <label
+            htmlFor="org-selector"
+            style={{
+              fontSize: 'var(--text-xs)',
+              color: 'var(--color-ink-2)',
+              display: 'block',
+              marginBottom: 'var(--space-1)',
+              fontWeight: 500,
+            }}
+          >
+            Organización *
+          </label>
+          <select
+            id="org-selector"
+            name="organization_id"
+            required
+            defaultValue={organizationId}
+            style={estiloSelect()}
+          >
+            {organizations.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : (
+        <input type="hidden" name="organization_id" value={organizationId} />
+      )}
 
       {/* Nombre */}
       <div>
@@ -349,7 +389,7 @@ function ConfirmacionArchivo({
   );
 }
 
-export function SupplierTable({ suppliers, organizationId }: Props) {
+export function SupplierTable({ suppliers, organizationId, organizations }: Props) {
   const router = useRouter();
   const [mostrarFormCrear, setMostrarFormCrear] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
@@ -458,6 +498,7 @@ export function SupplierTable({ suppliers, organizationId }: Props) {
         {mostrarFormCrear && (
           <FormProveedor
             organizationId={organizationId}
+            organizations={organizations}
             mode="create"
             onCancel={() => setMostrarFormCrear(false)}
           />
