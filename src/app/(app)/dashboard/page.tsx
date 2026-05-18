@@ -4,9 +4,9 @@ import { TopBar } from '@/components/shell/TopBar';
 import { StatCard } from '@/components/ui/Card';
 import { TrendingDown, Activity, AlertTriangle, FileCheck } from 'lucide-react';
 
-export const metadata: Metadata = { title: 'Dashboard' };
+export const metadata: Metadata = { title: 'Panel' };
 
-const PLACEHOLDER_STATS = [
+const ESTADISTICAS = [
   {
     label: 'Total CO₂e',
     value: '—',
@@ -14,57 +14,74 @@ const PLACEHOLDER_STATS = [
     accent: true,
   },
   {
-    label: 'Scope 1',
+    label: 'Alcance 1',
     value: '—',
     unit: 'kg',
     accent: false,
   },
   {
-    label: 'Scope 2',
+    label: 'Alcance 2',
     value: '—',
     unit: 'kg',
     accent: false,
   },
   {
-    label: 'Active Periods',
+    label: 'Periodos activos',
     value: '—',
     unit: '',
     accent: false,
   },
 ];
 
-const FEATURE_TILES = [
+const MODULOS = [
   {
     icon: <Activity size={20} />,
-    title: 'Activity Entries',
-    description: 'Submit and review Scope 1 & 2 consumption data from suppliers.',
-    phase: 'Phase 5',
+    title: 'Registros de actividad',
+    description: 'Envía y revisa datos de consumo de Alcance 1 y 2 de tus proveedores.',
+    fase: 'Fase 5',
     color: 'var(--color-signal-ok)',
   },
   {
     icon: <AlertTriangle size={20} />,
-    title: 'Anomaly Detection',
-    description: 'Z-score based detection flags unusual consumption patterns.',
-    phase: 'Phase 5',
+    title: 'Detección de anomalías',
+    description: 'Detección por Z-score que señala patrones de consumo inusuales.',
+    fase: 'Fase 5',
     color: 'var(--color-signal-md)',
   },
   {
     icon: <TrendingDown size={20} />,
-    title: 'Audit Console',
-    description: 'Lock reporting periods and view the immutable audit trail.',
-    phase: 'Phase 6',
+    title: 'Consola de auditoría',
+    description: 'Bloquea periodos de reporte y consulta el registro de auditoría inmutable.',
+    fase: 'Fase 6',
     color: 'var(--color-accent)',
   },
   {
     icon: <FileCheck size={20} />,
-    title: 'Reports',
-    description: 'Generate PDF and CSV exports with sha256 verification.',
-    phase: 'Phase 7',
+    title: 'Reportes',
+    description: 'Genera exportaciones PDF y CSV con verificación sha256.',
+    fase: 'Fase 7',
     color: 'var(--color-ink-2)',
   },
 ];
 
-export default async function DashboardPage() {
+const ARQUITECTURA = [
+  ['Paradigma', 'OOP + FP híbrido'],
+  ['Lenguaje', 'TypeScript'],
+  ['Base de datos', 'Supabase / PostgreSQL'],
+  ['Autenticación', 'Supabase Auth + RLS'],
+  ['Motor de cálculo', 'FP puro · big.js · sha256'],
+  ['Pruebas', '122 pruebas unitarias · Vitest'],
+];
+
+const FLUJO = [
+  { paso: '01', titulo: 'Capturar', desc: 'Proveedores envían registros de consumo.' },
+  { paso: '02', titulo: 'Estandarizar', desc: 'Motor FP convierte unidades al estándar.' },
+  { paso: '03', titulo: 'Calcular', desc: 'Pipeline CO₂e según GHG Protocol.' },
+  { paso: '04', titulo: 'Auditar', desc: 'Revisión y bloqueo inmutable del periodo.' },
+  { paso: '05', titulo: 'Reportar', desc: 'Exportación PDF/CSV verificado sha256.' },
+];
+
+export default async function PanelPage() {
   const supabase = await createServerClient();
   const {
     data: { user },
@@ -72,51 +89,57 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <TopBar title="Dashboard" email={user?.email} />
+      <TopBar title="Panel" email={user?.email} />
 
       <main
         style={{
           padding: 'var(--space-8)',
           display: 'flex',
           flexDirection: 'column',
-          gap: 'var(--space-8)',
+          gap: 'var(--space-10)',
         }}
       >
-        {/* Welcome */}
+        {/* Hero editorial */}
         <section>
+          <p className="eyebrow" style={{ marginBottom: 'var(--space-3)' }}>
+            Protocolo GHG · Alcances 1 y 2
+          </p>
           <h2
             style={{
               fontFamily: 'var(--font-serif)',
               fontSize: 'var(--text-3xl)',
-              fontWeight: 'var(--fw-semibold)',
+              fontWeight: 400,
+              fontStyle: 'italic',
               color: 'var(--color-ink-1)',
               margin: '0 0 var(--space-2)',
-              letterSpacing: 'var(--tracking-tight)',
+              letterSpacing: 'var(--tracking-tightest)',
+              lineHeight: 'var(--leading-tight)',
             }}
           >
-            Carbon Footprint Overview
+            Huella de carbono de la cadena de suministro
           </h2>
           <p
             style={{
               fontSize: 'var(--text-sm)',
               color: 'var(--color-ink-2)',
               margin: 0,
+              maxWidth: '52ch',
             }}
           >
-            GHG Protocol Scope 1 &amp; 2 · Data populates once suppliers submit activity entries.
+            Los datos se poblarán cuando los proveedores envíen sus registros de actividad.
           </p>
         </section>
 
-        {/* KPI stats */}
+        {/* KPIs */}
         <section
-          aria-label="Key performance indicators"
+          aria-label="Indicadores clave"
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: 'var(--space-4)',
           }}
         >
-          {PLACEHOLDER_STATS.map((stat) => (
+          {ESTADISTICAS.map((stat) => (
             <StatCard
               key={stat.label}
               label={stat.label}
@@ -127,21 +150,68 @@ export default async function DashboardPage() {
           ))}
         </section>
 
-        {/* Feature tiles */}
+        {/* Flujo */}
         <section>
-          <h3
+          <p className="eyebrow" style={{ marginBottom: 'var(--space-5)' }}>
+            Cómo funciona
+          </p>
+          <div
             style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: 'var(--text-xs)',
-              fontWeight: 'var(--fw-semibold)',
-              color: 'var(--color-ink-3)',
-              textTransform: 'uppercase',
-              letterSpacing: 'var(--tracking-widest)',
-              margin: '0 0 var(--space-4)',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+              gap: 'var(--space-4)',
             }}
           >
-            Platform Modules
-          </h3>
+            {FLUJO.map(({ paso, titulo, desc }) => (
+              <div
+                key={paso}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--space-2)',
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 'var(--text-xs)',
+                    color: 'var(--color-accent)',
+                    fontWeight: 'var(--fw-semibold)',
+                    letterSpacing: 'var(--tracking-wide)',
+                  }}
+                >
+                  {paso}
+                </span>
+                <p
+                  style={{
+                    fontWeight: 'var(--fw-semibold)',
+                    fontSize: 'var(--text-base)',
+                    color: 'var(--color-ink-1)',
+                    margin: 0,
+                  }}
+                >
+                  {titulo}
+                </p>
+                <p
+                  style={{
+                    fontSize: 'var(--text-sm)',
+                    color: 'var(--color-ink-2)',
+                    lineHeight: 'var(--leading-relaxed)',
+                    margin: 0,
+                  }}
+                >
+                  {desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Módulos */}
+        <section>
+          <p className="eyebrow" style={{ marginBottom: 'var(--space-5)' }}>
+            Módulos de la plataforma
+          </p>
           <div
             style={{
               display: 'grid',
@@ -149,7 +219,7 @@ export default async function DashboardPage() {
               gap: 'var(--space-4)',
             }}
           >
-            {FEATURE_TILES.map(({ icon, title, description, phase, color }) => (
+            {MODULOS.map(({ icon, title, description, fase, color }) => (
               <div
                 key={title}
                 style={{
@@ -178,7 +248,7 @@ export default async function DashboardPage() {
                       fontFamily: 'var(--font-mono)',
                     }}
                   >
-                    {phase}
+                    {fase}
                   </span>
                 </div>
                 <div>
@@ -208,7 +278,7 @@ export default async function DashboardPage() {
           </div>
         </section>
 
-        {/* Stack note */}
+        {/* Arquitectura */}
         <section
           style={{
             background: 'var(--color-surface-1)',
@@ -217,35 +287,19 @@ export default async function DashboardPage() {
             padding: 'var(--space-6)',
           }}
         >
-          <h3
-            style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: 'var(--text-xs)',
-              fontWeight: 'var(--fw-semibold)',
-              color: 'var(--color-ink-3)',
-              textTransform: 'uppercase',
-              letterSpacing: 'var(--tracking-widest)',
-              margin: '0 0 var(--space-4)',
-            }}
-          >
-            Architecture
-          </h3>
-          <div
+          <p className="eyebrow" style={{ marginBottom: 'var(--space-5)' }}>
+            Arquitectura
+          </p>
+          <dl
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-              gap: 'var(--space-3)',
+              gap: 'var(--space-4)',
+              margin: 0,
             }}
           >
-            {[
-              ['Paradigm', 'OOP + FP hybrid'],
-              ['Language', 'TypeScript'],
-              ['Database', 'Supabase / PostgreSQL'],
-              ['Auth', 'Supabase Auth + RLS'],
-              ['Calc Engine', 'Pure FP · big.js · sha256'],
-              ['Testing', '122 unit tests · Vitest'],
-            ].map(([key, val]) => (
-              <div key={key}>
+            {ARQUITECTURA.map(([clave, valor]) => (
+              <div key={clave}>
                 <dt
                   style={{
                     fontSize: 'var(--text-xs)',
@@ -255,7 +309,7 @@ export default async function DashboardPage() {
                     marginBottom: 'var(--space-1)',
                   }}
                 >
-                  {key}
+                  {clave}
                 </dt>
                 <dd
                   style={{
@@ -265,11 +319,11 @@ export default async function DashboardPage() {
                     margin: 0,
                   }}
                 >
-                  {val}
+                  {valor}
                 </dd>
               </div>
             ))}
-          </div>
+          </dl>
         </section>
       </main>
     </>

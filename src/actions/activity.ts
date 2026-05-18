@@ -15,7 +15,7 @@ import type { EmissionSourceType } from '@/types/database';
 // ── Zod validation schema ─────────────────────────────────────────────────────
 
 const createEntrySchema = z.object({
-  reporting_period_id: z.string().uuid('Invalid reporting period'),
+  reporting_period_id: z.string().uuid('Periodo de reporte inválido'),
   source_type: z.enum([
     'stationary_combustion',
     'mobile_combustion',
@@ -24,8 +24,8 @@ const createEntrySchema = z.object({
     'fugitive',
   ]),
   secondary: z.string().default(''),
-  raw_quantity: z.coerce.number().positive('Quantity must be positive'),
-  raw_unit: z.string().min(1, 'Unit is required'),
+  raw_quantity: z.coerce.number().positive('La cantidad debe ser positiva'),
+  raw_unit: z.string().min(1, 'La unidad es obligatoria'),
   notes: z.string().optional(),
 });
 
@@ -83,7 +83,7 @@ export async function createActivityEntry(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: 'Not authenticated' };
+  if (!user) return { error: 'No autenticado' };
 
   const parsed = createEntrySchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
@@ -100,7 +100,7 @@ export async function createActivityEntry(
   const activityKind = buildActivityKind(source_type, secondary);
   if (!activityKind) {
     return {
-      error: `Invalid value "${secondary}" for source type "${source_type}"`,
+      error: `Valor inválido "${secondary}" para el tipo de fuente "${source_type}"`,
     };
   }
 
@@ -124,7 +124,7 @@ export async function createActivityEntry(
   try {
     await entryRepo.save(newEntry);
   } catch {
-    return { error: 'Failed to save activity entry. Please try again.' };
+    return { error: 'Error al guardar el registro. Intenta nuevamente.' };
   }
 
   // Anomaly detection — best-effort, non-fatal
@@ -171,11 +171,11 @@ export async function importActivityCsv(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: 'Not authenticated' };
+  if (!user) return { error: 'No autenticado' };
 
   const csvText = formData.get('csv_text');
   if (typeof csvText !== 'string' || !csvText.trim()) {
-    return { error: 'No CSV data provided' };
+    return { error: 'No se proporcionaron datos CSV' };
   }
 
   const rows = parseCsvText(csvText);
@@ -183,7 +183,7 @@ export async function importActivityCsv(
   let skipped = rows.length - validRows.length;
 
   if (validRows.length === 0) {
-    return { error: `No valid rows found. ${skipped} row(s) had validation errors.`, skipped };
+    return { error: `No se encontraron filas válidas. ${skipped} fila(s) con errores de validación.`, skipped };
   }
 
   const entryRepo = new ActivityEntryRepository(supabase);

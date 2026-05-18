@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 import { TopBar } from '@/components/shell/TopBar';
 import { createServerClient } from '@/services/supabase/server';
 
-export const metadata: Metadata = { title: 'Audit' };
+export const metadata: Metadata = { title: 'Auditoría' };
 
-export default async function AuditPage() {
+export default async function AuditoriaPage() {
   const supabase = await createServerClient();
   const {
     data: { user },
@@ -12,7 +12,7 @@ export default async function AuditPage() {
 
   return (
     <>
-      <TopBar title="Audit Console" email={user?.email} />
+      <TopBar title="Consola de auditoría" email={user?.email} />
       <main style={{ padding: 'var(--space-8)' }}>
         <p
           style={{
@@ -21,7 +21,7 @@ export default async function AuditPage() {
             fontSize: 'var(--text-sm)',
           }}
         >
-          Phase 6 — audit console and immutable audit trail coming soon.
+          Fase 6 — consola de auditoría y registro inmutable próximamente.
         </p>
       </main>
     </>

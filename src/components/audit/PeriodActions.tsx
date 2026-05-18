@@ -25,7 +25,7 @@ const BTN_BASE: React.CSSProperties = {
   transition: 'opacity 150ms',
 };
 
-function ErrorMsg({ msg }: { msg: string }) {
+function MensajeError({ msg }: { msg: string }) {
   return (
     <span
       style={{
@@ -41,7 +41,7 @@ function ErrorMsg({ msg }: { msg: string }) {
   );
 }
 
-function SuccessMsg({ msg }: { msg: string }) {
+function MensajeExito({ msg }: { msg: string }) {
   return (
     <span
       style={{
@@ -84,13 +84,13 @@ export function PeriodActions({ periodId, status }: PeriodActionsProps) {
               opacity: calcPending ? 0.7 : 1,
             }}
           >
-            {calcPending ? 'Calculating…' : 'Calculate CO₂e'}
+            {calcPending ? 'Calculando…' : 'Calcular CO₂e'}
           </button>
         </form>
-        {calcState?.error && <ErrorMsg msg={calcState.error} />}
+        {calcState?.error && <MensajeError msg={calcState.error} />}
         {calcState?.success && calcState.totals && (
-          <SuccessMsg
-            msg={`Done — ${(calcState.totals.totalCo2eKg / 1000).toFixed(3)} tCO₂e across ${calcState.totals.entryCount} entries`}
+          <MensajeExito
+            msg={`Listo — ${(calcState.totals.totalCo2eKg / 1000).toFixed(3)} tCO₂e en ${calcState.totals.entryCount} registros`}
           />
         )}
       </div>
@@ -114,11 +114,13 @@ export function PeriodActions({ periodId, status }: PeriodActionsProps) {
               opacity: lockPending ? 0.7 : 1,
             }}
           >
-            {lockPending ? 'Locking…' : '🔒 Lock Period'}
+            {lockPending ? 'Bloqueando…' : '🔒 Bloquear periodo'}
           </button>
         </form>
-        {lockState?.error && <ErrorMsg msg={lockState.error} />}
-        {lockState?.success && <SuccessMsg msg="Period locked — data is now immutable." />}
+        {lockState?.error && <MensajeError msg={lockState.error} />}
+        {lockState?.success && (
+          <MensajeExito msg="Periodo bloqueado — los datos son ahora inmutables." />
+        )}
       </div>
     );
   }
