@@ -12,6 +12,7 @@ export abstract class SupabaseRepository<
   TId extends string = string,
 > extends Repository<TEntity, TId> {
   protected abstract readonly tableName: string;
+  protected readonly selectColumns: string = '*';
 
   constructor(protected readonly client: SupabaseClient) {
     super();
@@ -23,17 +24,17 @@ export abstract class SupabaseRepository<
   async findById(id: TId): Promise<TEntity | null> {
     const { data, error } = await this.client
       .from(this.tableName)
-      .select('*')
+      .select(this.selectColumns)
       .eq('id', id)
       .single();
     if (error ?? !data) return null;
-    return this.toEntity(data as Record<string, unknown>);
+    return this.toEntity(data as unknown as Record<string, unknown>);
   }
 
   async findAll(): Promise<readonly TEntity[]> {
-    const { data, error } = await this.client.from(this.tableName).select('*');
+    const { data, error } = await this.client.from(this.tableName).select(this.selectColumns);
     if (error ?? !data) return [];
-    return (data as Record<string, unknown>[]).map((row) => this.toEntity(row));
+    return (data as unknown as Record<string, unknown>[]).map((row) => this.toEntity(row));
   }
 
   async save(entity: TEntity): Promise<TEntity> {

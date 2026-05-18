@@ -35,7 +35,7 @@ export class AuditLogRepository {
   async findByRecordId(recordId: string): Promise<readonly AuditLogEntry[]> {
     const { data, error } = await this.client
       .from('audit_log')
-      .select('*')
+      .select('id, action, table_name, record_id, old_values, new_values, performed_by, performed_at')
       .eq('record_id', recordId)
       .order('performed_at', { ascending: true });
     if (error ?? !data) return [];
