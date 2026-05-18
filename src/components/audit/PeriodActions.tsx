@@ -1,9 +1,10 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
 import { calculatePeriod, lockPeriod } from '@/actions/audit';
 import type { AuditActionState } from '@/actions/audit';
 import type { PeriodStatus } from '@/domain/ReportingPeriod';
+import { useToast } from '@/components/ui/Toast';
 
 interface PeriodActionsProps {
   periodId: string;
@@ -58,6 +59,7 @@ function MensajeExito({ msg }: { msg: string }) {
 }
 
 export function PeriodActions({ periodId, status }: PeriodActionsProps) {
+  const { toast } = useToast();
   const [calcState, calcAction, calcPending] = useActionState<AuditActionState | null, FormData>(
     calculatePeriod,
     null,
@@ -66,6 +68,12 @@ export function PeriodActions({ periodId, status }: PeriodActionsProps) {
     lockPeriod,
     null,
   );
+
+  useEffect(() => {
+    if (lockState?.success) {
+      toast('Periodo bloqueado — los datos son ahora inmutables.', 'success');
+    }
+  }, [lockState?.success, toast]);
 
   if (status === 'open') {
     return (
@@ -118,9 +126,6 @@ export function PeriodActions({ periodId, status }: PeriodActionsProps) {
           </button>
         </form>
         {lockState?.error && <MensajeError msg={lockState.error} />}
-        {lockState?.success && (
-          <MensajeExito msg="Periodo bloqueado — los datos son ahora inmutables." />
-        )}
       </div>
     );
   }

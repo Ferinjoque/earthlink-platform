@@ -410,4 +410,148 @@ describe('exportCsv', () => {
     expect(lines).toHaveLength(1);
     expect(lines[0]).toContain('periodo');
   });
+
+  it('handles null reporting_periods response from Supabase (defensive ?? [])', async () => {
+    const baseData: Record<string, unknown> = {
+      memberships: [{ organization_id: ORG_ID }],
+      reporting_periods: null,
+      suppliers: [{ id: SUPPLIER_ID, name: 'Test Corp', organization_id: ORG_ID }],
+      emission_results: [],
+      activity_entries: [],
+      report_exports: [],
+    };
+
+    function chain(table: string) {
+      const data = table in baseData ? baseData[table] : [];
+      const resolved = Promise.resolve({ data });
+      const c: Record<string, unknown> = {
+        select: () => c, eq: () => c, in: () => c,
+        insert: vi.fn().mockResolvedValue({ error: null }),
+        order: () => resolved,
+        then: resolved.then.bind(resolved),
+        catch: resolved.catch.bind(resolved),
+      };
+      return c;
+    }
+
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: USER_ID } } }) },
+      from: vi.fn().mockImplementation((table: string) => chain(table)),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
+
+    const fd = makeFormData({ period_ids: PERIOD_ID });
+    const result = await exportCsv(null, fd);
+    expect(result.error).toMatch(/acceso/i);
+  });
+
+  it('handles null suppliers response from Supabase (defensive ?? [])', async () => {
+    const baseData: Record<string, unknown> = {
+      memberships: [{ organization_id: ORG_ID }],
+      reporting_periods: [{ id: PERIOD_ID, label: 'Q1-2026', supplier_id: SUPPLIER_ID }],
+      suppliers: null,
+      emission_results: [],
+      activity_entries: [],
+      report_exports: [],
+    };
+
+    function chain(table: string) {
+      const data = table in baseData ? baseData[table] : [];
+      const resolved = Promise.resolve({ data });
+      const c: Record<string, unknown> = {
+        select: () => c, eq: () => c, in: () => c,
+        insert: vi.fn().mockResolvedValue({ error: null }),
+        order: () => resolved,
+        then: resolved.then.bind(resolved),
+        catch: resolved.catch.bind(resolved),
+      };
+      return c;
+    }
+
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: USER_ID } } }) },
+      from: vi.fn().mockImplementation((table: string) => chain(table)),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
+
+    const fd = makeFormData({ period_ids: PERIOD_ID });
+    const result = await exportCsv(null, fd);
+    expect(result.error).toMatch(/acceso/i);
+  });
+
+  it('handles null emission_results response from Supabase (defensive ?? [])', async () => {
+    const baseData: Record<string, unknown> = {
+      memberships: [{ organization_id: ORG_ID }],
+      reporting_periods: [{ id: PERIOD_ID, label: 'Q1-2026', supplier_id: SUPPLIER_ID }],
+      suppliers: [{ id: SUPPLIER_ID, name: 'Test Corp', organization_id: ORG_ID }],
+      emission_results: null,
+      activity_entries: [],
+      report_exports: [],
+    };
+
+    function chain(table: string) {
+      const data = table in baseData ? baseData[table] : [];
+      const resolved = Promise.resolve({ data });
+      const c: Record<string, unknown> = {
+        select: () => c, eq: () => c, in: () => c,
+        insert: vi.fn().mockResolvedValue({ error: null }),
+        order: () => resolved,
+        then: resolved.then.bind(resolved),
+        catch: resolved.catch.bind(resolved),
+      };
+      return c;
+    }
+
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: USER_ID } } }) },
+      from: vi.fn().mockImplementation((table: string) => chain(table)),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
+
+    const fd = makeFormData({ period_ids: PERIOD_ID });
+    const result = await exportCsv(null, fd);
+    expect(result.error).toMatch(/resultados calculados/i);
+  });
+
+  it('handles null activity_entries response from Supabase (defensive ?? [])', async () => {
+    const resultsData = [{
+      id: RESULT_ID, activity_entry_id: ENTRY_ID, reporting_period_id: PERIOD_ID,
+      scope: 1, co2e_kg: 42.5, factor_used: 2.1, factor_unit: 'kg CO2/unit',
+      calc_hash: 'abc123', calc_version: '1.0.0', calculated_at: '2026-01-15T10:00:00Z',
+    }];
+    const baseData: Record<string, unknown> = {
+      memberships: [{ organization_id: ORG_ID }],
+      reporting_periods: [{ id: PERIOD_ID, label: 'Q1-2026', supplier_id: SUPPLIER_ID }],
+      suppliers: [{ id: SUPPLIER_ID, name: 'Test Corp', organization_id: ORG_ID }],
+      emission_results: resultsData,
+      activity_entries: null,
+      report_exports: [],
+    };
+
+    function chain(table: string) {
+      const data = table in baseData ? baseData[table] : [];
+      const resolved = Promise.resolve({ data });
+      const c: Record<string, unknown> = {
+        select: () => c, eq: () => c, in: () => c,
+        insert: vi.fn().mockResolvedValue({ error: null }),
+        order: () => resolved,
+        then: resolved.then.bind(resolved),
+        catch: resolved.catch.bind(resolved),
+      };
+      return c;
+    }
+
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: USER_ID } } }) },
+      from: vi.fn().mockImplementation((table: string) => chain(table)),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
+
+    const fd = makeFormData({ period_ids: PERIOD_ID });
+    const result = await exportCsv(null, fd);
+    expect(result.success).toBe(true);
+    const lines = result.csvContent?.split('\n') ?? [];
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain('periodo');
+  });
 });
