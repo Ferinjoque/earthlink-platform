@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { createServerClient } from '@/services/supabase/server';
 import { TopBar } from '@/components/shell/TopBar';
 import { ActivityForm } from '@/components/activity/ActivityForm';
 import { ActivityList } from '@/components/activity/ActivityList';
 import { CsvImportPanel } from '@/components/activity/CsvImportPanel';
+import { ClipboardList } from 'lucide-react';
 import type { ActivityEntryView } from '@/components/activity/ActivityList';
 import type {
   MembershipRow,
@@ -143,6 +145,77 @@ export default async function ActividadPage() {
 
   const nEntradas = entries.length;
 
+  // Empty state: no open periods at all
+  if (periods.length === 0) {
+    return (
+      <>
+        <TopBar title="Registros de actividad" email={user?.email} section="Alcance 1 y 2" />
+        <main style={{ padding: 'var(--space-8)' }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 'var(--space-5)',
+              padding: 'var(--space-16) var(--space-8)',
+              textAlign: 'center',
+              maxWidth: '480px',
+              margin: '0 auto',
+            }}
+          >
+            <span
+              style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: 'var(--radius-lg)',
+                background: 'var(--color-surface-2)',
+                display: 'grid',
+                placeItems: 'center',
+                color: 'var(--color-ink-3)',
+              }}
+            >
+              <ClipboardList size={24} />
+            </span>
+            <div>
+              <h2
+                style={{
+                  fontSize: 'var(--text-base)',
+                  fontWeight: 600,
+                  color: 'var(--color-ink-1)',
+                  margin: '0 0 var(--space-2)',
+                }}
+              >
+                Sin periodos abiertos
+              </h2>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-3)', margin: 0 }}>
+                No hay periodos de reporte abiertos asignados a tu cuenta. Crea un periodo
+                desde la consola de auditoría para poder registrar actividad.
+              </p>
+            </div>
+            <Link
+              href="/audit"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)',
+                fontSize: 'var(--text-sm)',
+                fontWeight: 600,
+                color: 'var(--color-accent)',
+                textDecoration: 'none',
+                padding: 'var(--space-2) var(--space-4)',
+                border: '1px solid var(--color-accent)',
+                borderRadius: 'var(--radius-md)',
+              }}
+            >
+              Ir a auditoría
+            </Link>
+          </div>
+        </main>
+      </>
+    );
+  }
+
   return (
     <>
       <TopBar title="Registros de actividad" email={user?.email} section="Alcance 1 y 2" />
@@ -196,17 +269,50 @@ export default async function ActividadPage() {
         <section>
           <CabeceraSección
             titulo="Registros recientes"
-            subtitulo={`${nEntradas} ${nEntradas === 1 ? 'registro' : 'registros'} en periodos abiertos.`}
+            subtitulo={
+              nEntradas === 0
+                ? 'Sin registros en periodos abiertos aún.'
+                : `${nEntradas} ${nEntradas === 1 ? 'registro' : 'registros'} en periodos abiertos.`
+            }
           />
           <div
             style={{
               background: 'var(--color-surface-1)',
               border: '1px solid var(--color-border)',
               borderRadius: 'var(--radius-lg)',
-              padding: 'var(--space-4) 0',
+              padding: nEntradas === 0 ? 'var(--space-8)' : 'var(--space-4) 0',
             }}
           >
-            <ActivityList entries={entries} />
+            {nEntradas === 0 ? (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 'var(--space-3)',
+                  textAlign: 'center',
+                }}
+              >
+                <span
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'var(--color-surface-2)',
+                    display: 'grid',
+                    placeItems: 'center',
+                    color: 'var(--color-ink-3)',
+                  }}
+                >
+                  <ClipboardList size={18} />
+                </span>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-3)', margin: 0 }}>
+                  Usa el formulario de arriba para registrar el primer dato de actividad.
+                </p>
+              </div>
+            ) : (
+              <ActivityList entries={entries} />
+            )}
           </div>
         </section>
       </main>
