@@ -17,7 +17,7 @@ vi.mock('next/navigation', () => ({
 
 import { createServerClient } from '../../../src/services/supabase/server';
 import { redirect } from 'next/navigation';
-import { signIn, signOut } from '../../../src/app/(public)/login/actions';
+import { signIn, signOut } from '../../../src/actions/auth';
 
 const mockRedirect = vi.mocked(redirect);
 
