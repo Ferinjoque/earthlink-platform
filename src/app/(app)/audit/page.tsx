@@ -84,7 +84,7 @@ export default async function AuditoriaPage() {
   const allPeriodIds = periodsData.map((p) => p.id);
   const nonOpenPeriodIds = periodsData.filter((p) => p.status !== 'open').map((p) => p.id);
 
-  // Fetch emission results for non-open periods
+  // Parallel fetch: emission_results + all activity_entries (both depend only on period IDs)
   type FilaResultado = Pick<
     EmissionResultRow,
     | 'id'
@@ -96,58 +96,56 @@ export default async function AuditoriaPage() {
     | 'factor_unit'
     | 'calculated_at'
   >;
-  const resultsData: FilaResultado[] = [];
-  if (nonOpenPeriodIds.length) {
-    const { data } = await supabase
-      .from('emission_results')
-      .select(
-        'id, activity_entry_id, reporting_period_id, scope, co2e_kg, factor_used, factor_unit, calculated_at',
-      )
-      .in('reporting_period_id', nonOpenPeriodIds);
-    if (data) resultsData.push(...(data as FilaResultado[]));
-  }
-
-  // Fetch activity entries for result entry ids
-  const resultEntryIds = [...new Set(resultsData.map((r) => r.activity_entry_id))];
-  type FilaEntrada = Pick<ActivityEntryRow, 'id' | 'source_type' | 'raw_quantity' | 'raw_unit'>;
-  const entriesForResults: FilaEntrada[] = [];
-  if (resultEntryIds.length) {
-    const { data } = await supabase
-      .from('activity_entries')
-      .select('id, source_type, raw_quantity, raw_unit')
-      .in('id', resultEntryIds);
-    if (data) entriesForResults.push(...(data as FilaEntrada[]));
-  }
-  const entryMap = new Map(entriesForResults.map((e) => [e.id, e]));
-
-  // Fetch unresolved anomaly flags for all periods' entries
-  // First get all entry ids for all periods
   type FilaEntradaMin = Pick<ActivityEntryRow, 'id' | 'reporting_period_id' | 'source_type'>;
-  const allEntriesData: FilaEntradaMin[] = [];
-  if (allPeriodIds.length) {
-    const { data } = await supabase
-      .from('activity_entries')
-      .select('id, reporting_period_id, source_type')
-      .in('reporting_period_id', allPeriodIds);
-    if (data) allEntriesData.push(...(data as FilaEntradaMin[]));
-  }
+
+  const [resultsRaw, allEntriesRaw] = await Promise.all([
+    nonOpenPeriodIds.length
+      ? supabase
+          .from('emission_results')
+          .select('id, activity_entry_id, reporting_period_id, scope, co2e_kg, factor_used, factor_unit, calculated_at')
+          .in('reporting_period_id', nonOpenPeriodIds)
+      : Promise.resolve({ data: [] as FilaResultado[] }),
+    allPeriodIds.length
+      ? supabase
+          .from('activity_entries')
+          .select('id, reporting_period_id, source_type')
+          .in('reporting_period_id', allPeriodIds)
+      : Promise.resolve({ data: [] as FilaEntradaMin[] }),
+  ]);
+
+  const resultsData = (resultsRaw.data ?? []) as FilaResultado[];
+  const allEntriesData = (allEntriesRaw.data ?? []) as FilaEntradaMin[];
   const entryPeriodMap = new Map(allEntriesData.map((e) => [e.id, e]));
   const allEntryIds = allEntriesData.map((e) => e.id);
 
+  // Parallel fetch: entries for result detail + anomaly flags (both ready to run now)
+  type FilaEntrada = Pick<ActivityEntryRow, 'id' | 'source_type' | 'raw_quantity' | 'raw_unit'>;
   type FilaFlag = Pick<
     AnomalyFlagRow,
     'id' | 'activity_entry_id' | 'severity' | 'z_score' | 'message' | 'flagged_at'
   >;
-  const flagsData: FilaFlag[] = [];
-  if (allEntryIds.length) {
-    const { data } = await supabase
-      .from('anomaly_flags')
-      .select('id, activity_entry_id, severity, z_score, message, flagged_at')
-      .in('activity_entry_id', allEntryIds)
-      .eq('is_resolved', false)
-      .order('flagged_at', { ascending: false });
-    if (data) flagsData.push(...(data as FilaFlag[]));
-  }
+  const resultEntryIds = [...new Set(resultsData.map((r) => r.activity_entry_id))];
+
+  const [entriesForResultsRaw, flagsRaw] = await Promise.all([
+    resultEntryIds.length
+      ? supabase
+          .from('activity_entries')
+          .select('id, source_type, raw_quantity, raw_unit')
+          .in('id', resultEntryIds)
+      : Promise.resolve({ data: [] as FilaEntrada[] }),
+    allEntryIds.length
+      ? supabase
+          .from('anomaly_flags')
+          .select('id, activity_entry_id, severity, z_score, message, flagged_at')
+          .in('activity_entry_id', allEntryIds)
+          .eq('is_resolved', false)
+          .order('flagged_at', { ascending: false })
+      : Promise.resolve({ data: [] as FilaFlag[] }),
+  ]);
+
+  const entriesForResults = (entriesForResultsRaw.data ?? []) as FilaEntrada[];
+  const flagsData = (flagsRaw.data ?? []) as FilaFlag[];
+  const entryMap = new Map(entriesForResults.map((e) => [e.id, e]));
 
   // Build per-period maps
   const mapaResumen = new Map<string, ResumenEmisiones>();

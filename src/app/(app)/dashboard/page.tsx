@@ -82,23 +82,14 @@ export default async function PanelPage() {
     ...new Set(memberships.map((m) => m.supplier_id).filter((id): id is string => id !== null)),
   ];
 
+  const supplierNameMap = new Map<string, string>();
   const allSupplierIds: string[] = [...memberSupplierIds];
   if (orgIds.length) {
     const { data } = await supabase.from('suppliers').select('id, name').in('organization_id', orgIds);
     if (data) {
       for (const s of data as Array<{ id: string; name: string }>) {
-        if (!allSupplierIds.includes(s.id)) allSupplierIds.push(s.id);
-      }
-    }
-  }
-
-  // Build supplier name map
-  const supplierNameMap = new Map<string, string>();
-  if (orgIds.length) {
-    const { data } = await supabase.from('suppliers').select('id, name').in('organization_id', orgIds);
-    if (data) {
-      for (const s of data as Array<{ id: string; name: string }>) {
         supplierNameMap.set(s.id, s.name);
+        if (!allSupplierIds.includes(s.id)) allSupplierIds.push(s.id);
       }
     }
   }
