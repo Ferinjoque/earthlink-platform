@@ -183,7 +183,10 @@ export async function importActivityCsv(
   let skipped = rows.length - validRows.length;
 
   if (validRows.length === 0) {
-    return { error: `No se encontraron filas válidas. ${skipped} fila(s) con errores de validación.`, skipped };
+    return {
+      error: `No se encontraron filas válidas. ${skipped} fila(s) con errores de validación.`,
+      skipped,
+    };
   }
 
   const entryRepo = new ActivityEntryRepository(supabase);

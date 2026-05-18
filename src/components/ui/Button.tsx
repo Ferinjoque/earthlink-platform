@@ -2,7 +2,7 @@
 
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'warm';
 type Size = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -17,6 +17,7 @@ const VARIANT_STYLES: Record<Variant, React.CSSProperties> = {
     background: 'var(--color-accent)',
     color: 'white',
     border: 'none',
+    boxShadow: 'var(--shadow-glow)',
   },
   secondary: {
     background: 'var(--color-surface-2)',
@@ -31,7 +32,12 @@ const VARIANT_STYLES: Record<Variant, React.CSSProperties> = {
   danger: {
     background: 'var(--color-signal-hi-bg)',
     color: 'var(--color-signal-hi)',
-    border: '1px solid var(--color-signal-hi)',
+    border: '1px solid oklch(50% 0.16 20 / 30%)',
+  },
+  warm: {
+    background: 'var(--color-warm-soft)',
+    color: 'var(--color-warm)',
+    border: '1px solid oklch(62% 0.14 40 / 25%)',
   },
 };
 
@@ -73,17 +79,35 @@ export function Button({
         fontFamily: 'var(--font-sans)',
         fontWeight: 'var(--fw-semibold)',
         cursor: isDisabled ? 'not-allowed' : 'pointer',
-        opacity: isDisabled ? 0.55 : 1,
-        transition: `opacity var(--duration-fast) var(--ease-out-expo), transform var(--duration-fast) var(--ease-out-expo)`,
+        opacity: isDisabled ? 0.5 : 1,
+        transition: `opacity var(--duration-fast) var(--ease-out-expo), transform var(--duration-fast) var(--ease-out-expo), box-shadow var(--duration-fast)`,
         lineHeight: 1.4,
         whiteSpace: 'nowrap',
+        letterSpacing: 'var(--tracking-normal)',
         ...VARIANT_STYLES[variant],
         ...SIZE_STYLES[size],
         ...style,
       }}
       {...props}
     >
-      {loading ? '…' : children}
+      {loading ? (
+        <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+          <span
+            style={{
+              width: '12px',
+              height: '12px',
+              border: '2px solid currentColor',
+              borderTopColor: 'transparent',
+              borderRadius: '50%',
+              display: 'inline-block',
+              animation: 'ringSpin 0.7s linear infinite',
+            }}
+          />
+          Cargando…
+        </span>
+      ) : (
+        children
+      )}
     </button>
   );
 }

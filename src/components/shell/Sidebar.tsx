@@ -62,7 +62,8 @@ export function Sidebar() {
             width: '30px',
             height: '30px',
             borderRadius: 'var(--radius-md)',
-            background: 'linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-2) 100%)',
+            background:
+              'linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-2) 100%)',
             display: 'grid',
             placeItems: 'center',
             flexShrink: 0,
@@ -125,9 +126,7 @@ export function Sidebar() {
                 fontSize: 'var(--text-sm)',
                 fontWeight: isActive ? 'var(--fw-semibold)' : 'var(--fw-normal)',
                 color: isActive ? 'var(--color-accent)' : 'var(--color-ink-2)',
-                background: isActive
-                  ? 'oklch(58% 0.16 155 / 14%)'
-                  : 'transparent',
+                background: isActive ? 'oklch(58% 0.16 155 / 14%)' : 'transparent',
                 textDecoration: 'none',
                 transition: `background var(--duration-fast) var(--ease-out-expo), color var(--duration-fast) var(--ease-out-expo)`,
                 position: 'relative',

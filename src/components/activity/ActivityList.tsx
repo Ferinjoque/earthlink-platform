@@ -139,9 +139,7 @@ export function ActivityList({ entries }: ActivityListProps) {
                   whiteSpace: 'nowrap',
                 }}
               >
-                {entry.submitted_at
-                  ? new Date(entry.submitted_at).toLocaleDateString('es')
-                  : '—'}
+                {entry.submitted_at ? new Date(entry.submitted_at).toLocaleDateString('es') : '—'}
               </td>
             </tr>
           ))}

@@ -123,7 +123,8 @@ export function TopBar({ title, email, section }: TopBarProps) {
                 width: '30px',
                 height: '30px',
                 borderRadius: 'var(--radius-pill)',
-                background: 'linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-2) 100%)',
+                background:
+                  'linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-2) 100%)',
                 display: 'grid',
                 placeItems: 'center',
                 flexShrink: 0,

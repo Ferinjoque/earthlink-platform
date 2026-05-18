@@ -162,7 +162,8 @@ export default function LoginPage() {
               margin: '0 0 var(--space-12)',
             }}
           >
-            Audita la huella de carbono de tu cadena de suministro con trazabilidad inmutable y motor de cálculo verificado.
+            Audita la huella de carbono de tu cadena de suministro con trazabilidad inmutable y
+            motor de cálculo verificado.
           </motion.p>
 
           {/* Stats */}
@@ -177,7 +178,10 @@ export default function LoginPage() {
             }}
           >
             {STATS.map(({ valor, etiqueta, icono }) => (
-              <div key={etiqueta} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+              <div
+                key={etiqueta}
+                style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}
+              >
                 <div
                   style={{
                     display: 'flex',
@@ -455,7 +459,14 @@ export default function LoginPage() {
                   }}
                 >
                   {isPending ? (
-                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-2)' }}>
+                    <span
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 'var(--space-2)',
+                      }}
+                    >
                       <span
                         style={{
                           width: '14px',

@@ -78,12 +78,60 @@ export function AmbientBackground() {
         xmlns="http://www.w3.org/2000/svg"
       >
         {/* Líneas de constelación */}
-        <line x1="15%" y1="25%" x2="30%" y2="15%" stroke="oklch(58% 0.12 155)" strokeWidth="0.5" opacity="0.6" />
-        <line x1="30%" y1="15%" x2="45%" y2="30%" stroke="oklch(58% 0.12 155)" strokeWidth="0.5" opacity="0.6" />
-        <line x1="45%" y1="30%" x2="35%" y2="55%" stroke="oklch(58% 0.12 155)" strokeWidth="0.5" opacity="0.4" />
-        <line x1="20%" y1="65%" x2="35%" y2="55%" stroke="oklch(58% 0.12 155)" strokeWidth="0.5" opacity="0.4" />
-        <line x1="20%" y1="65%" x2="10%" y2="80%" stroke="oklch(58% 0.12 155)" strokeWidth="0.5" opacity="0.3" />
-        <line x1="35%" y1="55%" x2="25%" y2="85%" stroke="oklch(58% 0.12 155)" strokeWidth="0.5" opacity="0.3" />
+        <line
+          x1="15%"
+          y1="25%"
+          x2="30%"
+          y2="15%"
+          stroke="oklch(58% 0.12 155)"
+          strokeWidth="0.5"
+          opacity="0.6"
+        />
+        <line
+          x1="30%"
+          y1="15%"
+          x2="45%"
+          y2="30%"
+          stroke="oklch(58% 0.12 155)"
+          strokeWidth="0.5"
+          opacity="0.6"
+        />
+        <line
+          x1="45%"
+          y1="30%"
+          x2="35%"
+          y2="55%"
+          stroke="oklch(58% 0.12 155)"
+          strokeWidth="0.5"
+          opacity="0.4"
+        />
+        <line
+          x1="20%"
+          y1="65%"
+          x2="35%"
+          y2="55%"
+          stroke="oklch(58% 0.12 155)"
+          strokeWidth="0.5"
+          opacity="0.4"
+        />
+        <line
+          x1="20%"
+          y1="65%"
+          x2="10%"
+          y2="80%"
+          stroke="oklch(58% 0.12 155)"
+          strokeWidth="0.5"
+          opacity="0.3"
+        />
+        <line
+          x1="35%"
+          y1="55%"
+          x2="25%"
+          y2="85%"
+          stroke="oklch(58% 0.12 155)"
+          strokeWidth="0.5"
+          opacity="0.3"
+        />
         {/* Puntos */}
         <circle cx="15%" cy="25%" r="2.5" fill="oklch(58% 0.12 155)" opacity="0.5" />
         <circle cx="30%" cy="15%" r="2" fill="oklch(58% 0.12 155)" opacity="0.4" />
