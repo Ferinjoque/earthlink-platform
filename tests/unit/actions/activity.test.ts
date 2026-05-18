@@ -219,4 +219,95 @@ describe('importActivityCsv', () => {
     const result = await importActivityCsv(null, fd);
     expect(result.error).toBeDefined();
   });
+
+  it('returns error when CSV exceeds 512 KB', async () => {
+    mockAuthenticatedClient();
+    const bigCsv = 'x'.repeat(513_000);
+    const fd = makeFormData({ csv_text: bigCsv });
+    const result = await importActivityCsv(null, fd);
+    expect(result.error).toMatch(/512/);
+  });
+
+  it('skips rows with valid source_type but invalid secondary', async () => {
+    mockAuthenticatedClient();
+    // mobile_combustion row with invalid fuel → buildActivityKind returns null → skipped
+    const csv = [
+      `${VALID_UUID},stationary_combustion,diesel,100,L,`,
+      `${VALID_UUID},mobile_combustion,hydrogen,200,L,`,
+    ].join('\n');
+    const fd = makeFormData({ csv_text: csv });
+    const result = await importActivityCsv(null, fd);
+    expect(result.success).toBe(true);
+    expect(result.imported).toBe(1);
+    expect(result.skipped).toBe(1);
+  });
+});
+
+describe('createActivityEntry — mobile_combustion', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns success for valid mobile_combustion entry', async () => {
+    mockAuthenticatedClient();
+    const fd = makeFormData({
+      reporting_period_id: VALID_UUID,
+      source_type: 'mobile_combustion',
+      secondary: 'diesel',
+      raw_quantity: '300',
+      raw_unit: 'L',
+    });
+    const result = await createActivityEntry(null, fd);
+    expect(result.success).toBe(true);
+  });
+
+  it('returns success for mobile_combustion with gasoline', async () => {
+    mockAuthenticatedClient();
+    const fd = makeFormData({
+      reporting_period_id: VALID_UUID,
+      source_type: 'mobile_combustion',
+      secondary: 'gasoline',
+      raw_quantity: '150',
+      raw_unit: 'L',
+    });
+    const result = await createActivityEntry(null, fd);
+    expect(result.success).toBe(true);
+  });
+
+  it('returns error for invalid mobile_combustion secondary', async () => {
+    mockAuthenticatedClient();
+    const fd = makeFormData({
+      reporting_period_id: VALID_UUID,
+      source_type: 'mobile_combustion',
+      secondary: 'hydrogen',
+      raw_quantity: '100',
+      raw_unit: 'L',
+    });
+    const result = await createActivityEntry(null, fd);
+    expect(result.error).toBeDefined();
+  });
+
+  it('returns error for invalid purchased_electricity grid region', async () => {
+    mockAuthenticatedClient();
+    const fd = makeFormData({
+      reporting_period_id: VALID_UUID,
+      source_type: 'purchased_electricity',
+      secondary: 'INVALID_GRID',
+      raw_quantity: '500',
+      raw_unit: 'kWh',
+    });
+    const result = await createActivityEntry(null, fd);
+    expect(result.error).toBeDefined();
+  });
+
+  it('returns error for invalid fugitive refrigerant', async () => {
+    mockAuthenticatedClient();
+    const fd = makeFormData({
+      reporting_period_id: VALID_UUID,
+      source_type: 'fugitive',
+      secondary: 'R22',
+      raw_quantity: '2',
+      raw_unit: 'kg',
+    });
+    const result = await createActivityEntry(null, fd);
+    expect(result.error).toBeDefined();
+  });
 });
