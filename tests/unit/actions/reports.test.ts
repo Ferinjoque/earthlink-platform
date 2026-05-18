@@ -15,6 +15,8 @@ vi.mock('../../../src/services/supabase/server', () => ({
 import { createServerClient } from '../../../src/services/supabase/server';
 import { exportCsv } from '../../../src/actions/reports';
 
+type MockClient = Awaited<ReturnType<typeof createServerClient>>;
+
 const USER_ID = 'aaaa0000-0000-0000-0000-000000000001';
 const ORG_ID = 'bbbb0000-0000-0000-0000-000000000002';
 const SUPPLIER_ID = 'cccc0000-0000-0000-0000-000000000003';
@@ -87,7 +89,7 @@ function mockClient({
       return chain;
     }),
   };
-  vi.mocked(createServerClient).mockResolvedValue(client as never);
+  vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
   return client;
 }
 
@@ -178,7 +180,7 @@ describe('exportCsv', () => {
       },
       from: vi.fn().mockImplementation((table: string) => chain(table)),
     };
-    vi.mocked(createServerClient).mockResolvedValue(client as never);
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
 
     const fd = makeFormData({ period_ids: PERIOD_ID });
     const result = await exportCsv(null, fd);
@@ -218,7 +220,7 @@ describe('exportCsv', () => {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: USER_ID } } }) },
       from: vi.fn().mockImplementation((table: string) => chain(table)),
     };
-    vi.mocked(createServerClient).mockResolvedValue(client as never);
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
 
     const fd = makeFormData({ period_ids: PERIOD_ID });
     const result = await exportCsv(null, fd);
@@ -253,7 +255,7 @@ describe('exportCsv', () => {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: USER_ID } } }) },
       from: vi.fn().mockImplementation((table: string) => chain(table)),
     };
-    vi.mocked(createServerClient).mockResolvedValue(client as never);
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
 
     const fd = makeFormData({ period_ids: PERIOD_ID });
     const result = await exportCsv(null, fd);
@@ -301,7 +303,7 @@ describe('exportCsv', () => {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: USER_ID } } }) },
       from: vi.fn().mockImplementation((table: string) => chain(table)),
     };
-    vi.mocked(createServerClient).mockResolvedValue(client as never);
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
 
     const fd = makeFormData({ period_ids: PERIOD_ID });
     const result = await exportCsv(null, fd);

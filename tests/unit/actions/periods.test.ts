@@ -16,6 +16,8 @@ vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 import { createServerClient } from '../../../src/services/supabase/server';
 import { createPeriod } from '../../../src/actions/periods';
 
+type MockClient = Awaited<ReturnType<typeof createServerClient>>;
+
 const VALID_UUID = '11111111-1111-1111-1111-111111111111';
 const SUPPLIER_UUID = '22222222-2222-2222-2222-222222222222';
 const ORG_UUID = '33333333-3333-3333-3333-333333333333';
@@ -59,7 +61,7 @@ function mockClient({
       }),
     })),
   };
-  vi.mocked(createServerClient).mockResolvedValue(client as never);
+  vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
   return client;
 }
 

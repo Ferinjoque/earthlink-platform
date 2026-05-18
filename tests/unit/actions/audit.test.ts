@@ -85,6 +85,8 @@ vi.mock('../../../src/repos/EmissionResultRepository', () => ({
 import { createServerClient } from '../../../src/services/supabase/server';
 import { calculatePeriod, lockPeriod, resolveAnomaly, createPeriod as createPeriodAudit } from '../../../src/actions/audit';
 
+type MockClient = Awaited<ReturnType<typeof createServerClient>>;
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const VALID_UUID = '00000000-0000-4000-8000-000000000001';
@@ -106,7 +108,7 @@ function mockAuth(userId = 'user-abc') {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: userId } } }) },
     from: vi.fn().mockReturnValue(makeSelectChain({ organization_id: 'org-001', role: 'admin' })),
   };
-  (createServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(client);
+  vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
   return client;
 }
 
@@ -115,7 +117,7 @@ function mockNoAuth() {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null } }) },
     from: vi.fn(),
   };
-  (createServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(client);
+  vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
 }
 
 function makeFormData(fields: Record<string, string>): FormData {
@@ -284,7 +286,7 @@ describe('lockPeriod', () => {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: VALID_UUID } } }) },
       from: vi.fn().mockReturnValueOnce(makeSelectChain(null)),
     };
-    (createServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(client);
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
     mocks.findById.mockResolvedValueOnce(makePeriod('under_review'));
     const result = await lockPeriod(null, makeFormData({ period_id: VALID_UUID }));
     expect(result.error).toMatch(/proveedor.*no encontrado/i);
@@ -297,7 +299,7 @@ describe('lockPeriod', () => {
         .mockReturnValueOnce(makeSelectChain({ organization_id: VALID_ORG_ID }))
         .mockReturnValueOnce(makeSelectChain(null)),
     };
-    (createServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(client);
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
     mocks.findById.mockResolvedValueOnce(makePeriod('under_review'));
     const result = await lockPeriod(null, makeFormData({ period_id: VALID_UUID }));
     expect(result.error).toMatch(/permisos/i);
@@ -351,7 +353,7 @@ describe('calculatePeriod — error paths', () => {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: VALID_UUID } } }) },
       from: vi.fn().mockReturnValueOnce(makeSelectChain(null)),
     };
-    (createServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(client);
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
     mocks.findById.mockResolvedValueOnce(makePeriod('open'));
     const result = await calculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
     expect(result.error).toMatch(/proveedor.*no encontrado/i);
@@ -364,7 +366,7 @@ describe('calculatePeriod — error paths', () => {
         .mockReturnValueOnce(makeSelectChain({ organization_id: VALID_ORG_ID }))
         .mockReturnValueOnce(makeSelectChain(null)),
     };
-    (createServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(client);
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
     mocks.findById.mockResolvedValueOnce(makePeriod('open'));
     const result = await calculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
     expect(result.error).toMatch(/permisos/i);
@@ -404,7 +406,7 @@ function mockResolveClient({
       .mockReturnValueOnce(makeSelectChain(hasMembership ? { role: 'admin' } : null))
       .mockReturnValueOnce(makeUpdateResolveChain(updateError)),
   };
-  (createServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(client);
+  vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
   return client;
 }
 
@@ -416,7 +418,7 @@ describe('resolveAnomaly', () => {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null } }) },
       from: vi.fn(),
     };
-    (createServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(client);
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
     const result = await resolveAnomaly(null, makeFormData({ flag_id: FLAG_ID }));
     expect(result.error).toMatch(/autenticado/i);
   });
@@ -469,7 +471,7 @@ function mockCreatePeriodAuditClient({
       .mockReturnValueOnce(makeSelectChain(hasMembership ? { role: 'admin' } : null))
       .mockReturnValueOnce({ insert: vi.fn().mockResolvedValue({ error: insertError }) }),
   };
-  (createServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(client);
+  vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
   return client;
 }
 
@@ -488,7 +490,7 @@ describe('createPeriod (audit.ts)', () => {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null } }) },
       from: vi.fn(),
     };
-    (createServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(client);
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
     const result = await createPeriodAudit(null, makeFormData(validAuditPeriodFields));
     expect(result.error).toMatch(/autenticado/i);
   });

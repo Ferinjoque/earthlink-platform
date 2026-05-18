@@ -46,6 +46,8 @@ vi.mock('../../../src/services/AnomalyService', () => ({
 import { createServerClient } from '../../../src/services/supabase/server';
 import { createActivityEntry, importActivityCsv } from '../../../src/actions/activity';
 
+type MockClient = Awaited<ReturnType<typeof createServerClient>>;
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const VALID_UUID = '00000000-0000-4000-8000-000000000001';
@@ -78,7 +80,7 @@ function mockAuthenticatedClient(userId = 'user-abc') {
         [{ organization_id: 'org-001' }],
       )),
   };
-  (createServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(mockSupabase);
+  vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
   return mockSupabase;
 }
 
@@ -87,7 +89,7 @@ function mockUnauthenticatedClient() {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null } }) },
     from: vi.fn(),
   };
-  (createServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(mockSupabase);
+  vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
 }
 
 function makeArrayChain(data: unknown[]) {
@@ -107,7 +109,7 @@ function mockImportUnauthorizedClient() {
       .mockReturnValueOnce(makeArrayChain([{ id: 'supplier-001', organization_id: 'other-org' }]))
       .mockReturnValueOnce(makeArrayChain([])),
   };
-  (createServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(mockSupabase);
+  vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
 }
 
 function mockImportPeriodsNotFoundClient() {
@@ -116,7 +118,7 @@ function mockImportPeriodsNotFoundClient() {
     from: vi.fn()
       .mockReturnValueOnce(makeArrayChain([])),
   };
-  (createServerClient as ReturnType<typeof vi.fn>).mockResolvedValue(mockSupabase);
+  vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
 }
 
 function makeFormData(fields: Record<string, string>): FormData {

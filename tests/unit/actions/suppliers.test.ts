@@ -17,6 +17,8 @@ vi.mock('next/navigation', () => ({ redirect: vi.fn() }));
 import { createServerClient } from '../../../src/services/supabase/server';
 import { createSupplier, updateSupplier, archiveSupplier } from '../../../src/actions/suppliers';
 
+type MockClient = Awaited<ReturnType<typeof createServerClient>>;
+
 const VALID_USER_ID = '00000000-0000-4000-8000-000000000001';
 const VALID_ORG_ID = '00000000-0000-4000-8000-000000000002';
 const VALID_SUPPLIER_ID = '00000000-0000-4000-8000-000000000003';
@@ -81,7 +83,7 @@ function mockClient({
     from: vi.fn((table: string) => chainBuilder(table)),
   };
 
-  vi.mocked(createServerClient).mockResolvedValue(client as never);
+  vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
   return client;
 }
 
@@ -129,7 +131,7 @@ describe('createSupplier', () => {
       },
       from: vi.fn(),
     };
-    vi.mocked(createServerClient).mockResolvedValue(client as never);
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
 
     const fd = makeFormData({
       nombre: 'Proveedor A',
@@ -193,7 +195,7 @@ describe('archiveSupplier', () => {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null } }) },
       from: vi.fn(),
     };
-    vi.mocked(createServerClient).mockResolvedValue(client as never);
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
     const fd = makeFormData({ id: VALID_SUPPLIER_ID });
     const result = await archiveSupplier(null, fd);
     expect(result.error).toMatch(/autenticado/i);
@@ -243,7 +245,7 @@ describe('updateSupplier', () => {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null } }) },
       from: vi.fn(),
     };
-    vi.mocked(createServerClient).mockResolvedValue(client as never);
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
     const fd = makeFormData({ id: VALID_SUPPLIER_ID, nombre: 'Updated', categoria: 'Manufactura' });
     const result = await updateSupplier(null, fd);
     expect(result.error).toMatch(/autenticado/i);
