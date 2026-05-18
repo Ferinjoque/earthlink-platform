@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useActionState } from 'react';
+import { useRef, useEffect, useActionState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Leaf, Shield, BarChart3, ArrowRight, CheckCircle } from 'lucide-react';
@@ -141,11 +141,16 @@ function ParticleField() {
   );
 }
 
+/* ─── Hidden next-redirect input (must be in Suspense for SSR) ──────── */
+function NextRedirectInput() {
+  const searchParams = useSearchParams();
+  const next = searchParams.get('next') ?? '';
+  return next ? <input type="hidden" name="next" value={next} /> : null;
+}
+
 /* ─── Page ─────────────────────────────────────────────────────────── */
 export default function LoginPage() {
   const [state, action, isPending] = useActionState<State, FormData>(signIn, undefined);
-  const searchParams = useSearchParams();
-  const nextPath = searchParams.get('next') ?? '';
 
   return (
     <div
@@ -439,7 +444,7 @@ export default function LoginPage() {
               action={action}
               style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}
             >
-              {nextPath && <input type="hidden" name="next" value={nextPath} />}
+              <Suspense fallback={null}><NextRedirectInput /></Suspense>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
                 <label
                   htmlFor="email"
