@@ -4,14 +4,7 @@ import { createServerClient } from '@/services/supabase/server';
 import { TopBar } from '@/components/shell/TopBar';
 import { Badge } from '@/components/ui/Badge';
 import { AnomalyBadge } from '@/components/activity/AnomalyBadge';
-import {
-  Activity,
-  AlertTriangle,
-  TrendingDown,
-  FileCheck,
-  ArrowRight,
-  ShieldAlert,
-} from 'lucide-react';
+import { ArrowRight, ShieldAlert } from 'lucide-react';
 import type { MembershipRow, ReportingPeriodRow, AnomalySeverity } from '@/types/database';
 
 export const metadata: Metadata = { title: 'Panel' };
@@ -42,12 +35,35 @@ const ESTADO_LABELS: Record<string, string> = {
 
 const MESES_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
-const MODULOS = [
-  { href: '/activity', icono: Activity, titulo: 'Registros de actividad', descripcion: 'Envía y revisa datos de consumo Alcance 1 y 2.', fase: 'Fase 5', colorIcono: 'var(--color-signal-ok)' },
-  { href: '/activity', icono: AlertTriangle, titulo: 'Detección de anomalías', descripcion: 'Z-score señala patrones de consumo inusuales.', fase: 'Fase 5', colorIcono: 'var(--color-signal-md)' },
-  { href: '/audit', icono: TrendingDown, titulo: 'Consola de auditoría', descripcion: 'Bloquea periodos y consulta el registro inmutable.', fase: 'Fase 6', colorIcono: 'var(--color-accent)' },
-  { href: '/reports', icono: FileCheck, titulo: 'Reportes', descripcion: 'Exportaciones PDF y CSV con verificación sha256.', fase: 'Fase 7', colorIcono: 'var(--color-ink-3)' },
-];
+function traducirMensajeAnomalia(msg: string): string {
+  if (!msg) return msg;
+  // Already Spanish (new AnomalyService format)
+  if (msg.includes('sobre la media histórica') || msg.includes('Verificar datos')) return msg;
+  // Seed format: "X consumption of Y Z in P is Nσ above the Q baseline of B Z. Verify ..."
+  const m1 = msg.match(
+    /^(.+?)\s+consumption of ([\d,\.]+)\s+(\S+)\s+in\s+(.+?)\s+is\s+([\d\.]+)σ\s+above the\s+(.+?)\s+baseline of\s+([\d,\.]+)\s+\S+\./i,
+  );
+  if (m1) {
+    const [, fuel, qty, unit, period, zscore, basePeriod, baseQty] = m1;
+    return `${fuel}: ${qty} ${unit} en ${period} es ${zscore}σ sobre la línea base de ${basePeriod} (${baseQty} ${unit}). Verificar facturas.`;
+  }
+  // Old AnomalyService English format
+  const m2 = msg.match(
+    /^(\S+)\s+quantity\s+([\d\.]+)\s+(\S+)\s+is\s+([\d\.]+)σ\s+above historical mean of\s+([\d\.]+)/i,
+  );
+  if (m2) {
+    const SOURCE_LABELS: Record<string, string> = {
+      stationary_combustion: 'Combustión estacionaria',
+      mobile_combustion: 'Combustión móvil',
+      purchased_electricity: 'Electricidad',
+      purchased_steam: 'Vapor',
+      fugitive: 'Emisiones fugitivas',
+    };
+    const [, sourceType = '', qty = '', unit = '', zscore = '', mean = ''] = m2;
+    return `${SOURCE_LABELS[sourceType] ?? sourceType}: ${qty} ${unit} es ${zscore}σ sobre la media histórica (${mean} ${unit}). Verificar datos.`;
+  }
+  return msg;
+}
 
 export default async function PanelPage() {
   const supabase = await createServerClient();
@@ -385,7 +401,7 @@ export default async function PanelPage() {
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <svg
-                viewBox="0 0 540 160"
+                viewBox="0 0 540 178"
                 style={{ width: '100%', minWidth: '320px', display: 'block' }}
                 aria-label="Tendencia mensual de emisiones CO₂e"
               >
@@ -393,9 +409,10 @@ export default async function PanelPage() {
                   const barW = 60;
                   const gap = 30;
                   const x = i * (barW + gap) + gap / 2;
-                  const maxH = 100;
+                  const maxH = 88;
+                  const baseline = 128;
                   const barH = mes.kg > 0 ? Math.max((mes.kg / maxKg) * maxH, 4) : 2;
-                  const y = 110 - barH;
+                  const y = baseline - barH;
                   const fmt = formatearCo2e(mes.kg);
                   return (
                     <g key={mes.label}>
@@ -411,7 +428,7 @@ export default async function PanelPage() {
                       {mes.kg > 0 && (
                         <text
                           x={x + barW / 2}
-                          y={y - 5}
+                          y={Math.max(y - 5, 12)}
                           textAnchor="middle"
                           fontSize="9"
                           fill="var(--color-ink-2)"
@@ -422,7 +439,7 @@ export default async function PanelPage() {
                       )}
                       <text
                         x={x + barW / 2}
-                        y={128}
+                        y={146}
                         textAnchor="middle"
                         fontSize="9"
                         fill="var(--color-ink-3)"
@@ -433,7 +450,7 @@ export default async function PanelPage() {
                     </g>
                   );
                 })}
-                <line x1="15" y1="110" x2="525" y2="110" stroke="var(--color-border)" strokeWidth="1" />
+                <line x1="15" y1="128" x2="525" y2="128" stroke="var(--color-border)" strokeWidth="1" />
               </svg>
             </div>
           )}
@@ -476,7 +493,7 @@ export default async function PanelPage() {
                       {a.supplierName ?? 'Proveedor'}
                     </p>
                     <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', margin: 'var(--space-1) 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {a.message}
+                      {traducirMensajeAnomalia(a.message)}
                     </p>
                   </div>
                 </div>
@@ -533,37 +550,6 @@ export default async function PanelPage() {
           </section>
         )}
 
-        {/* ── Módulos — lista editorial ── */}
-        <section>
-          <p className="eyebrow" style={{ marginBottom: 'var(--space-4)' }}>Módulos de la plataforma</p>
-          <div style={{ background: 'var(--color-surface-1)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
-            {MODULOS.map(({ icono: Icono, titulo, descripcion, fase, colorIcono }, i) => (
-              <div
-                key={titulo}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'auto 1fr auto',
-                  alignItems: 'center',
-                  gap: 'var(--space-4)',
-                  padding: 'var(--space-4) var(--space-6)',
-                  borderBottom: i < MODULOS.length - 1 ? '1px solid var(--color-border)' : 'none',
-                }}
-              >
-                <span style={{ width: '34px', height: '34px', borderRadius: 'var(--radius-md)', background: 'var(--color-surface-2)', display: 'grid', placeItems: 'center', color: colorIcono, flexShrink: 0 }}>
-                  <Icono size={16} />
-                </span>
-                <div>
-                  <p style={{ fontWeight: 'var(--fw-medium)', fontSize: 'var(--text-sm)', color: 'var(--color-ink-1)', margin: 0 }}>{titulo}</p>
-                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', margin: 'var(--space-1) 0 0' }}>{descripcion}</p>
-                </div>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                  {fase}
-                  <ArrowRight size={13} style={{ opacity: 0.4 }} />
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
       </main>
     </>
   );
