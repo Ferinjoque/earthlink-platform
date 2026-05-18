@@ -143,7 +143,7 @@ export default async function ProveedoresPage() {
           <SupplierTable
             suppliers={suppliersData}
             organizationId={primaryOrgId}
-            organizations={orgsData.length > 1 ? orgsData : undefined}
+            {...(orgsData.length > 1 ? { organizations: orgsData } : {})}
           />
         )}
       </main>

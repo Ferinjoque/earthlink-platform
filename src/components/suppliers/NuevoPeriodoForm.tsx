@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useActionState } from 'react';
+import { useState, useActionState, useEffect } from 'react';
 import { Plus, X, Check } from 'lucide-react';
 import { createPeriod, type PeriodActionState } from '@/actions/periods';
+import { useToast } from '@/components/ui/Toast';
 
 interface Props {
   supplierId: string;
@@ -26,6 +27,14 @@ export function NuevoPeriodoForm({ supplierId }: Props) {
     createPeriod,
     null,
   );
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (state?.success) {
+      setAbierto(false);
+      toast('Periodo creado correctamente', 'success');
+    }
+  }, [state?.success, toast]);
 
   if (!abierto) {
     return (
