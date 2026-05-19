@@ -365,7 +365,7 @@ export default function LoginPage() {
         </div>
 
         {/* ━━━━━ FORMULARIO ━━━━━ */}
-        <div
+        <main
           className="login-form"
           style={{
             display: 'flex',
@@ -560,7 +560,7 @@ export default function LoginPage() {
               style={{
                 textAlign: 'center',
                 fontSize: 'var(--text-xs)',
-                color: 'var(--color-ink-3)',
+                color: 'var(--color-ink-2)',
                 margin: 'var(--space-8) 0 0',
                 fontFamily: 'var(--font-mono)',
               }}
@@ -568,7 +568,7 @@ export default function LoginPage() {
               EarthLink ESG · Alcances 1 y 2
             </p>
           </motion.div>
-        </div>
+        </main>
       </div>
     </div>
   );

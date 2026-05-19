@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createServerClient } from '@/services/supabase/server';
 import { TopBar } from '@/components/shell/TopBar';
@@ -300,7 +301,6 @@ export default async function AuditoriaPage({ searchParams }: PageProps) {
           {(
             [
               ['open', 'Abierto'],
-              ['calculating', 'Calculando'],
               ['under_review', 'En revisión'],
               ['locked', 'Bloqueado'],
             ] as [PeriodStatus, string][]
@@ -320,7 +320,7 @@ export default async function AuditoriaPage({ searchParams }: PageProps) {
           ))}
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 'var(--space-2)' }}>
             {[nowYear - 1, nowYear, nowYear + 1].filter((y) => y >= 2024).map((y) => (
-              <a
+              <Link
                 key={y}
                 href={`/audit?year=${y}`}
                 style={{
@@ -335,7 +335,7 @@ export default async function AuditoriaPage({ searchParams }: PageProps) {
                 }}
               >
                 {y}
-              </a>
+              </Link>
             ))}
           </div>
         </section>
