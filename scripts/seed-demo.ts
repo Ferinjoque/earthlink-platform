@@ -330,6 +330,46 @@ const SUPPLIER_DEFS: SupplierDef[] = [
   },
 ];
 
+const DEMO_EMAIL = 'admin@earthlink.test';
+const DEMO_PASSWORD = 'Earthlink2025!';
+const ORG_ECO    = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000001';
+const ORG_MINING = 'aaaaaaaa-aaaa-aaaa-aaaa-000000000002';
+
+// ── Ensure demo user + memberships exist ───────────────────────────────────────
+
+async function ensureDemoUser(): Promise<string> {
+  // List users and find by email
+  const { data: listData, error: listErr } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+  if (listErr) throw new Error(`listUsers failed: ${listErr.message}`);
+
+  const existing = listData.users.find((u) => u.email === DEMO_EMAIL);
+  if (existing) {
+    process.stdout.write(`✓  Demo user exists (${existing.id.slice(0, 8)}…)\n`);
+    return existing.id;
+  }
+
+  const { data: created, error: createErr } = await supabase.auth.admin.createUser({
+    email: DEMO_EMAIL,
+    password: DEMO_PASSWORD,
+    email_confirm: true,
+  });
+  if (createErr ?? !created.user) throw new Error(`createUser failed: ${createErr?.message}`);
+  process.stdout.write(`✓  Demo user created (${created.user.id.slice(0, 8)}…)\n`);
+  return created.user.id;
+}
+
+async function ensureMemberships(userId: string): Promise<void> {
+  const { error } = await supabase.from('memberships').upsert(
+    [
+      { user_id: userId, organization_id: ORG_ECO,    supplier_id: null, role: 'admin' },
+      { user_id: userId, organization_id: ORG_MINING, supplier_id: null, role: 'admin' },
+    ],
+    { onConflict: 'user_id,organization_id' },
+  );
+  if (error) throw new Error(`upsert memberships failed: ${error.message}`);
+  process.stdout.write('✓  Admin memberships confirmed\n');
+}
+
 // ── Reset ──────────────────────────────────────────────────────────────────────
 
 async function reset(): Promise<void> {
@@ -533,6 +573,10 @@ const doSeed = args.includes('--seed') || args.length === 0;
 (async () => {
   try {
     if (doReset) await reset();
+    // Always ensure the demo user + memberships exist (reset wipes supplier-role
+    // memberships but preserves admin ones; this also handles a fresh environment)
+    const userId = await ensureDemoUser();
+    await ensureMemberships(userId);
     if (doSeed) await seed();
   } catch (err) {
     console.error('❌ ', err instanceof Error ? err.message : err);
