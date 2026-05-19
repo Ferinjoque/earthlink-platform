@@ -2,6 +2,7 @@
 
 import { Fragment, useState, useActionState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
 import { AnomalyBadge } from '@/components/activity/AnomalyBadge';
 import { traducirMensajeAnomalia } from '@/lib/anomaly';
@@ -765,7 +766,7 @@ export function ActivityList({ entries, periodos, pagination }: ActivityListProp
           </span>
           <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
             {pagination.page > 1 && (
-              <a
+              <Link
                 href={`${pagination.basePath}?page=${pagination.page - 1}`}
                 style={{
                   fontSize: 'var(--text-xs)',
@@ -779,10 +780,10 @@ export function ActivityList({ entries, periodos, pagination }: ActivityListProp
                 }}
               >
                 Anterior
-              </a>
+              </Link>
             )}
             {pagination.page * pagination.pageSize < pagination.total && (
-              <a
+              <Link
                 href={`${pagination.basePath}?page=${pagination.page + 1}`}
                 style={{
                   fontSize: 'var(--text-xs)',
@@ -796,7 +797,7 @@ export function ActivityList({ entries, periodos, pagination }: ActivityListProp
                 }}
               >
                 Siguiente
-              </a>
+              </Link>
             )}
           </div>
         </div>
