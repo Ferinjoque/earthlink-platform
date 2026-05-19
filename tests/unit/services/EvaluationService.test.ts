@@ -187,6 +187,95 @@ describe('EvaluationService.evaluate()', () => {
     expect(totals.recordCount).toBe(2);
   });
 
+  it('water_use entry: zero CO2e, included in totals, NOT persisted to emission_results', async () => {
+    const waterEntry = makeEntry({
+      id: 'water-001',
+      sourceType: 'water_use',
+      activityKind: { kind: 'water_use', subtype: 'potable_mixed' },
+      rawQuantity: 150,
+      rawUnit: 'kgal_us',
+    });
+    const { service, emissionResultRepo } = makeService({ entries: [waterEntry], factors: new Map() });
+    const { totals, errors } = await service.evaluate('period-001');
+
+    expect(errors).toHaveLength(0);
+    expect(totals.totalCo2eKg).toBe(0);
+    expect(totals.recordCount).toBe(1);
+    expect(emissionResultRepo.insertMany).not.toHaveBeenCalled();
+  });
+
+  it('waste entry: zero CO2e, included in totals, NOT persisted to emission_results', async () => {
+    const wasteEntry = makeEntry({
+      id: 'waste-001',
+      sourceType: 'waste',
+      activityKind: { kind: 'waste', subtype: 'recycled' },
+      rawQuantity: 1.2,
+      rawUnit: 'tonne',
+    });
+    const { service, emissionResultRepo } = makeService({ entries: [wasteEntry], factors: new Map() });
+    const { totals, errors } = await service.evaluate('period-001');
+
+    expect(errors).toHaveLength(0);
+    expect(totals.totalCo2eKg).toBe(0);
+    expect(totals.recordCount).toBe(1);
+    expect(emissionResultRepo.insertMany).not.toHaveBeenCalled();
+  });
+
+  it('mixed GHG + water: GHG persisted, water NOT persisted, totals include both', async () => {
+    const dieselEntry = makeEntry({ id: 'diesel-001', rawQuantity: 100 });
+    const waterEntry = makeEntry({
+      id: 'water-001',
+      sourceType: 'water_use',
+      activityKind: { kind: 'water_use', subtype: 'potable_mixed' },
+      rawQuantity: 150,
+      rawUnit: 'kgal_us',
+    });
+    const { service, emissionResultRepo } = makeService({ entries: [dieselEntry, waterEntry] });
+    const { totals, errors } = await service.evaluate('period-001');
+
+    expect(errors).toHaveLength(0);
+    // GHG: 100 × 2.5139 = 251.39; water: 0
+    expect(totals.totalCo2eKg).toBeCloseTo(251.39, 2);
+    expect(totals.recordCount).toBe(2);
+    // Only GHG entry should be persisted
+    expect(emissionResultRepo.insertMany).toHaveBeenCalledOnce();
+    const [rows] = emissionResultRepo.insertMany.mock.calls[0]!;
+    expect(rows).toHaveLength(1);
+    expect(rows[0].result.scope).toBe('scope1');
+  });
+
+  it('multiple water subtypes accumulate recordCount but zero CO2e', async () => {
+    const entries = [
+      makeEntry({
+        id: 'w1',
+        sourceType: 'water_use',
+        activityKind: { kind: 'water_use', subtype: 'potable_mixed' },
+        rawQuantity: 100,
+        rawUnit: 'kgal_us',
+      }),
+      makeEntry({
+        id: 'w2',
+        sourceType: 'water_use',
+        activityKind: { kind: 'water_use', subtype: 'reclaimed_mixed' },
+        rawQuantity: 30,
+        rawUnit: 'kgal_us',
+      }),
+      makeEntry({
+        id: 'w3',
+        sourceType: 'waste',
+        activityKind: { kind: 'waste', subtype: 'disposed_trash' },
+        rawQuantity: 2.5,
+        rawUnit: 'ton_us',
+      }),
+    ];
+    const { service, emissionResultRepo } = makeService({ entries, factors: new Map() });
+    const { totals } = await service.evaluate('period-001');
+
+    expect(totals.totalCo2eKg).toBe(0);
+    expect(totals.recordCount).toBe(3);
+    expect(emissionResultRepo.insertMany).not.toHaveBeenCalled();
+  });
+
   it('scope2 electricity evaluated correctly', async () => {
     const elecEntry = makeEntry({
       id: 'elec-001',
@@ -212,5 +301,90 @@ describe('EvaluationService.evaluate()', () => {
     expect(totals.totalCo2eKg).toBeCloseTo(451.7, 1);
     expect(totals.byScope['scope2']).toBeCloseTo(451.7, 1);
     expect(totals.byScope['scope1']).toBe(0);
+  });
+
+  it('mixed scope1 + scope2 entries produce correct split totals', async () => {
+    const dieselEntry = makeEntry({
+      id: 'diesel-001',
+      sourceType: 'stationary_combustion',
+      activityKind: { kind: 'stationary_combustion', fuel: 'diesel' },
+      rawQuantity: 100,
+      rawUnit: 'L',
+    });
+    const elecEntry = makeEntry({
+      id: 'elec-001',
+      sourceType: 'purchased_electricity',
+      activityKind: { kind: 'purchased_electricity', gridRegion: 'SEIN_PERU' },
+      rawQuantity: 1000,
+      rawUnit: 'kWh',
+    });
+    const elecFactor: EmissionFactor = {
+      id: 'ef-elec',
+      setId: 'MINEM_2023',
+      setVersion: '2023',
+      activityKey: 'purchased_electricity.SEIN_PERU',
+      region: 'SEIN_PERU',
+      factorKgCo2ePerUnit: 0.4517,
+      standardUnit: 'kWh',
+    };
+    const { service, emissionResultRepo } = makeService({
+      entries: [dieselEntry, elecEntry],
+      factors: new Map([
+        ['stationary_combustion.diesel', dieselFactor],
+        ['purchased_electricity.SEIN_PERU', elecFactor],
+      ]),
+    });
+    const { totals, errors } = await service.evaluate('period-001');
+
+    expect(errors).toHaveLength(0);
+    // scope1: 100L × 2.5139 = 251.39; scope2: 1000kWh × 0.4517 = 451.7
+    expect(totals.byScope['scope1']).toBeCloseTo(251.39, 1);
+    expect(totals.byScope['scope2']).toBeCloseTo(451.7, 1);
+    expect(totals.totalCo2eKg).toBeCloseTo(703.09, 0);
+    expect(totals.recordCount).toBe(2);
+    // both results persisted
+    const [rows] = emissionResultRepo.insertMany.mock.calls[0]!;
+    expect(rows).toHaveLength(2);
+    const scopes = rows.map((r: { result: { scope: string } }) => r.result.scope).sort();
+    expect(scopes).toEqual(['scope1', 'scope2']);
+  });
+
+  it('purchased_steam entry assigned to scope2', async () => {
+    const steamEntry = makeEntry({
+      id: 'steam-001',
+      sourceType: 'purchased_steam',
+      activityKind: { kind: 'purchased_steam' },
+      rawQuantity: 500,
+      rawUnit: 'kWh',
+    });
+    const steamFactor: EmissionFactor = {
+      id: 'ef-steam',
+      setId: 'DEFRA_2024',
+      setVersion: '2024',
+      activityKey: 'purchased_steam.default',
+      region: 'GLOBAL',
+      factorKgCo2ePerUnit: 0.18,
+      standardUnit: 'kWh',
+    };
+    const { service } = makeService({
+      entries: [steamEntry],
+      factors: new Map([['purchased_steam.default', steamFactor]]),
+    });
+    const { totals } = await service.evaluate('period-001');
+    // 500 × 0.18 = 90
+    expect(totals.totalCo2eKg).toBeCloseTo(90, 1);
+    expect(totals.byScope['scope2']).toBeCloseTo(90, 1);
+    expect(totals.byScope['scope1']).toBe(0);
+  });
+
+  it('byScope totals match sum of individual result scopes', async () => {
+    const e1 = makeEntry({ id: 'e1', rawQuantity: 100 }); // scope1: 251.39
+    const e2 = makeEntry({ id: 'e2', rawQuantity: 200 }); // scope1: 502.78
+    const { service } = makeService({ entries: [e1, e2] });
+    const { totals } = await service.evaluate('period-001');
+    // both diesel → scope1 only; scope2 must be exactly 0
+    expect(totals.byScope['scope1']).toBeCloseTo(totals.totalCo2eKg, 4);
+    expect(totals.byScope['scope2']).toBe(0);
+    expect(totals.byScope['scope1'] + totals.byScope['scope2']).toBeCloseTo(totals.totalCo2eKg, 4);
   });
 });

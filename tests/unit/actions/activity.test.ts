@@ -51,34 +51,50 @@ type MockClient = Awaited<ReturnType<typeof createServerClient>>;
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const VALID_UUID = '00000000-0000-4000-8000-000000000001';
+const VALID_YM = '2026-01';
+const PERIOD_ID = '00000000-0000-4000-8000-000000000002';
 
-function makeOwnershipChain(singleData: unknown, arrayData: unknown[]) {
-  const singleResult = Promise.resolve({ data: singleData });
-  const arrayResult = Promise.resolve({ data: arrayData });
+/** Chain for: .select(...).eq(...).maybeSingle() */
+function makeMaybeSingleChain(data: unknown) {
+  const p = Promise.resolve({ data });
   const c: Record<string, unknown> = {};
   c['select'] = () => c;
   c['eq'] = () => c;
-  c['in'] = () => arrayResult;
-  c['maybeSingle'] = () => singleResult;
+  c['maybeSingle'] = () => p;
   return c;
 }
 
+/** Chain for: .insert({}).select('id').single() */
+function makeInsertChain(data: unknown, error: unknown = null) {
+  const p = Promise.resolve({ data, error });
+  const c: Record<string, unknown> = {};
+  c['insert'] = () => c;
+  c['select'] = () => c;
+  c['single'] = () => p;
+  return c;
+}
+
+function makeFormData(fields: Record<string, string>): FormData {
+  const fd = new FormData();
+  for (const [k, v] of Object.entries(fields)) fd.append(k, v);
+  return fd;
+}
+
+/**
+ * Happy-path mock for createActivityEntry:
+ *   from(1) suppliers → org found
+ *   from(2) memberships → access ok
+ *   from(3) reporting_periods maybeSingle → null (no existing period)
+ *   from(4) reporting_periods insert → new period created
+ */
 function mockAuthenticatedClient(userId = 'user-abc') {
   const mockSupabase = {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: userId } } }) },
     from: vi.fn()
-      .mockReturnValueOnce(makeOwnershipChain(
-        { supplier_id: 'supplier-001' },
-        [{ id: VALID_UUID, supplier_id: 'supplier-001' }],
-      ))
-      .mockReturnValueOnce(makeOwnershipChain(
-        { organization_id: 'org-001' },
-        [{ id: 'supplier-001', organization_id: 'org-001' }],
-      ))
-      .mockReturnValueOnce(makeOwnershipChain(
-        { role: 'admin' },
-        [{ organization_id: 'org-001' }],
-      )),
+      .mockReturnValueOnce(makeMaybeSingleChain({ organization_id: 'org-001' }))
+      .mockReturnValueOnce(makeMaybeSingleChain({ role: 'admin' }))
+      .mockReturnValueOnce(makeMaybeSingleChain(null))
+      .mockReturnValueOnce(makeInsertChain({ id: PERIOD_ID })),
   };
   vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
   return mockSupabase;
@@ -92,58 +108,6 @@ function mockUnauthenticatedClient() {
   vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
 }
 
-function makeArrayChain(data: unknown[]) {
-  const p = Promise.resolve({ data });
-  const c: Record<string, unknown> = {};
-  c['select'] = () => c;
-  c['eq'] = () => c;
-  c['in'] = () => p;
-  return c;
-}
-
-function makeNullDataChain() {
-  const p = Promise.resolve({ data: null });
-  const c: Record<string, unknown> = {};
-  c['select'] = () => c;
-  c['eq'] = () => c;
-  c['in'] = () => p;
-  return c;
-}
-
-function mockImportUnauthorizedClient() {
-  const mockSupabase = {
-    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
-    from: vi.fn()
-      .mockReturnValueOnce(makeArrayChain([{ id: VALID_UUID, supplier_id: 'supplier-001' }]))
-      .mockReturnValueOnce(makeArrayChain([{ id: 'supplier-001', organization_id: 'other-org' }]))
-      .mockReturnValueOnce(makeArrayChain([])),
-  };
-  vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
-}
-
-function mockImportPeriodsNotFoundClient() {
-  const mockSupabase = {
-    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
-    from: vi.fn()
-      .mockReturnValueOnce(makeArrayChain([])),
-  };
-  vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
-}
-
-function makeFormData(fields: Record<string, string>): FormData {
-  const fd = new FormData();
-  for (const [k, v] of Object.entries(fields)) fd.append(k, v);
-  return fd;
-}
-
-function makeSingleChain(data: unknown) {
-  const c: Record<string, unknown> = {};
-  c['select'] = () => c;
-  c['eq'] = () => c;
-  c['maybeSingle'] = () => Promise.resolve({ data });
-  return c;
-}
-
 // ── createActivityEntry ───────────────────────────────────────────────────────
 
 describe('createActivityEntry', () => {
@@ -154,7 +118,8 @@ describe('createActivityEntry', () => {
   it('returns error when not authenticated', async () => {
     mockUnauthenticatedClient();
     const fd = makeFormData({
-      reporting_period_id: VALID_UUID,
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
       source_type: 'stationary_combustion',
       secondary: 'diesel',
       raw_quantity: '100',
@@ -174,7 +139,8 @@ describe('createActivityEntry', () => {
   it('returns fieldErrors when quantity is negative', async () => {
     mockAuthenticatedClient();
     const fd = makeFormData({
-      reporting_period_id: VALID_UUID,
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
       source_type: 'stationary_combustion',
       secondary: 'diesel',
       raw_quantity: '-5',
@@ -187,7 +153,8 @@ describe('createActivityEntry', () => {
   it('returns error for invalid secondary with combustion source', async () => {
     mockAuthenticatedClient();
     const fd = makeFormData({
-      reporting_period_id: VALID_UUID,
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
       source_type: 'stationary_combustion',
       secondary: 'hydrogen',
       raw_quantity: '100',
@@ -200,7 +167,8 @@ describe('createActivityEntry', () => {
   it('returns success for valid stationary_combustion entry', async () => {
     mockAuthenticatedClient();
     const fd = makeFormData({
-      reporting_period_id: VALID_UUID,
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
       source_type: 'stationary_combustion',
       secondary: 'natural_gas',
       raw_quantity: '1000',
@@ -215,7 +183,8 @@ describe('createActivityEntry', () => {
   it('returns success for purchased_electricity entry', async () => {
     mockAuthenticatedClient();
     const fd = makeFormData({
-      reporting_period_id: VALID_UUID,
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
       source_type: 'purchased_electricity',
       secondary: 'SEIN_PERU',
       raw_quantity: '5000',
@@ -228,7 +197,8 @@ describe('createActivityEntry', () => {
   it('returns success for purchased_steam (no secondary)', async () => {
     mockAuthenticatedClient();
     const fd = makeFormData({
-      reporting_period_id: VALID_UUID,
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
       source_type: 'purchased_steam',
       secondary: '',
       raw_quantity: '200',
@@ -241,7 +211,8 @@ describe('createActivityEntry', () => {
   it('returns success for fugitive entry', async () => {
     mockAuthenticatedClient();
     const fd = makeFormData({
-      reporting_period_id: VALID_UUID,
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
       source_type: 'fugitive',
       secondary: 'R410A',
       raw_quantity: '5',
@@ -251,33 +222,57 @@ describe('createActivityEntry', () => {
     expect(result.success).toBe(true);
   });
 
-  it('returns error when reporting period not found in DB', async () => {
+  it('returns success when period already exists (open)', async () => {
     const mockSupabase = {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
-      from: vi.fn().mockReturnValueOnce(makeSingleChain(null)),
+      from: vi.fn()
+        .mockReturnValueOnce(makeMaybySingleChain({ organization_id: 'org-001' }))
+        .mockReturnValueOnce(makeMaybySingleChain({ role: 'admin' }))
+        .mockReturnValueOnce(makeMaybySingleChain({ id: PERIOD_ID, status: 'open' })),
     };
     vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
     const fd = makeFormData({
-      reporting_period_id: VALID_UUID,
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
+      source_type: 'stationary_combustion',
+      secondary: 'natural_gas',
+      raw_quantity: '1000',
+      raw_unit: 'm3_ng',
+    });
+    const result = await createActivityEntry(null, fd);
+    expect(result.success).toBe(true);
+  });
+
+  it('returns error when period is locked', async () => {
+    const mockSupabase = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+      from: vi.fn()
+        .mockReturnValueOnce(makeMaybySingleChain({ organization_id: 'org-001' }))
+        .mockReturnValueOnce(makeMaybySingleChain({ role: 'admin' }))
+        .mockReturnValueOnce(makeMaybySingleChain({ id: PERIOD_ID, status: 'locked' })),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
+    const fd = makeFormData({
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
       source_type: 'stationary_combustion',
       secondary: 'diesel',
       raw_quantity: '100',
       raw_unit: 'L',
     });
     const result = await createActivityEntry(null, fd);
-    expect(result.error).toMatch(/periodo.*no encontrado/i);
+    expect(result.error).toMatch(/bloqueado/i);
   });
 
-  it('returns error when supplier for period not found in DB', async () => {
+  it('returns error when supplier not found in DB', async () => {
     const mockSupabase = {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
-      from: vi.fn()
-        .mockReturnValueOnce(makeSingleChain({ supplier_id: 'supplier-001' }))
-        .mockReturnValueOnce(makeSingleChain(null)),
+      from: vi.fn().mockReturnValueOnce(makeMaybySingleChain(null)),
     };
     vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
     const fd = makeFormData({
-      reporting_period_id: VALID_UUID,
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
       source_type: 'stationary_combustion',
       secondary: 'diesel',
       raw_quantity: '100',
@@ -291,13 +286,13 @@ describe('createActivityEntry', () => {
     const mockSupabase = {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
       from: vi.fn()
-        .mockReturnValueOnce(makeSingleChain({ supplier_id: 'supplier-001' }))
-        .mockReturnValueOnce(makeSingleChain({ organization_id: 'org-001' }))
-        .mockReturnValueOnce(makeSingleChain(null)),
+        .mockReturnValueOnce(makeMaybySingleChain({ organization_id: 'org-001' }))
+        .mockReturnValueOnce(makeMaybySingleChain(null)),
     };
     vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
     const fd = makeFormData({
-      reporting_period_id: VALID_UUID,
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
       source_type: 'stationary_combustion',
       secondary: 'diesel',
       raw_quantity: '100',
@@ -317,7 +312,7 @@ describe('importActivityCsv', () => {
 
   it('returns error when not authenticated', async () => {
     mockUnauthenticatedClient();
-    const fd = makeFormData({ csv_text: `${VALID_UUID},stationary_combustion,diesel,100,L,` });
+    const fd = makeFormData({ csv_text: `${VALID_UUID},${VALID_YM},stationary_combustion,diesel,100,L,` });
     const result: CsvImportState = await importActivityCsv(null, fd);
     expect(result.error).toMatch(/autenticado/i);
   });
@@ -330,10 +325,20 @@ describe('importActivityCsv', () => {
   });
 
   it('returns success with imported count for valid CSV', async () => {
-    mockAuthenticatedClient();
+    // Two rows, same supplier → access check runs once, period check runs twice
+    const mockSupabase = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+      from: vi.fn()
+        .mockReturnValueOnce(makeMaybySingleChain({ organization_id: 'org-001' })) // verifyAccess: supplier
+        .mockReturnValueOnce(makeMaybySingleChain({ role: 'admin' }))              // verifyAccess: membership
+        .mockReturnValueOnce(makeMaybySingleChain(null))                            // findOrCreate row1: no existing
+        .mockReturnValueOnce(makeInsertChain({ id: PERIOD_ID }))                   // findOrCreate row1: insert
+        .mockReturnValueOnce(makeMaybySingleChain({ id: PERIOD_ID, status: 'open' })), // findOrCreate row2: found
+    };
+    vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
     const csv = [
-      `${VALID_UUID},stationary_combustion,diesel,100,L,`,
-      `${VALID_UUID},purchased_electricity,SEIN_PERU,500,kWh,`,
+      `${VALID_UUID},${VALID_YM},stationary_combustion,diesel,100,L,`,
+      `${VALID_UUID},2026-02,purchased_electricity,SEIN_PERU,500,kWh,`,
     ].join('\n');
     const fd = makeFormData({ csv_text: csv });
     const result = await importActivityCsv(null, fd);
@@ -343,10 +348,11 @@ describe('importActivityCsv', () => {
   });
 
   it('counts invalid rows as skipped', async () => {
+    // 1 valid, 1 invalid (bad UUID) → only 1 from() call set for the valid row's access+period
     mockAuthenticatedClient();
     const csv = [
-      `${VALID_UUID},stationary_combustion,diesel,100,L,`,
-      `bad-uuid,stationary_combustion,diesel,100,L,`,
+      `${VALID_UUID},${VALID_YM},stationary_combustion,diesel,100,L,`,
+      `bad-uuid,${VALID_YM},stationary_combustion,diesel,100,L,`,
     ].join('\n');
     const fd = makeFormData({ csv_text: csv });
     const result = await importActivityCsv(null, fd);
@@ -357,7 +363,7 @@ describe('importActivityCsv', () => {
 
   it('returns error when all rows are invalid', async () => {
     mockAuthenticatedClient();
-    const csv = `bad-uuid,bad_source,x,-1,`;
+    const csv = `bad-uuid,bad_month,bad_source,x,-1,`;
     const fd = makeFormData({ csv_text: csv });
     const result = await importActivityCsv(null, fd);
     expect(result.error).toBeDefined();
@@ -372,11 +378,22 @@ describe('importActivityCsv', () => {
   });
 
   it('skips rows with valid source_type but invalid secondary', async () => {
-    mockAuthenticatedClient();
-    // mobile_combustion row with invalid fuel → buildActivityKind returns null → skipped
+    // Row 2: mobile_combustion with invalid fuel → buildActivityKind returns null → skipped
+    // Row 1 needs full access+period chain; Row 2 also needs access+period (period skipped after activityKind fails)
+    const mockSupabase = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+      from: vi.fn()
+        .mockReturnValueOnce(makeMaybySingleChain({ organization_id: 'org-001' })) // verifyAccess: supplier
+        .mockReturnValueOnce(makeMaybySingleChain({ role: 'admin' }))              // verifyAccess: membership
+        .mockReturnValueOnce(makeMaybySingleChain(null))                            // findOrCreate row1
+        .mockReturnValueOnce(makeInsertChain({ id: PERIOD_ID }))                   // findOrCreate row1 insert
+        .mockReturnValueOnce(makeMaybySingleChain(null))                            // findOrCreate row2
+        .mockReturnValueOnce(makeInsertChain({ id: '00000000-0000-4000-8000-000000000003' })), // row2 insert
+    };
+    vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
     const csv = [
-      `${VALID_UUID},stationary_combustion,diesel,100,L,`,
-      `${VALID_UUID},mobile_combustion,hydrogen,200,L,`,
+      `${VALID_UUID},${VALID_YM},stationary_combustion,diesel,100,L,`,
+      `${VALID_UUID},2026-02,mobile_combustion,hydrogen,200,L,`,
     ].join('\n');
     const fd = makeFormData({ csv_text: csv });
     const result = await importActivityCsv(null, fd);
@@ -386,13 +403,16 @@ describe('importActivityCsv', () => {
   });
 });
 
+// ── createActivityEntry — mobile_combustion ───────────────────────────────────
+
 describe('createActivityEntry — mobile_combustion', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('returns success for valid mobile_combustion entry', async () => {
     mockAuthenticatedClient();
     const fd = makeFormData({
-      reporting_period_id: VALID_UUID,
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
       source_type: 'mobile_combustion',
       secondary: 'diesel',
       raw_quantity: '300',
@@ -405,7 +425,8 @@ describe('createActivityEntry — mobile_combustion', () => {
   it('returns success for mobile_combustion with gasoline', async () => {
     mockAuthenticatedClient();
     const fd = makeFormData({
-      reporting_period_id: VALID_UUID,
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
       source_type: 'mobile_combustion',
       secondary: 'gasoline',
       raw_quantity: '150',
@@ -418,7 +439,8 @@ describe('createActivityEntry — mobile_combustion', () => {
   it('returns error for invalid mobile_combustion secondary', async () => {
     mockAuthenticatedClient();
     const fd = makeFormData({
-      reporting_period_id: VALID_UUID,
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
       source_type: 'mobile_combustion',
       secondary: 'hydrogen',
       raw_quantity: '100',
@@ -431,7 +453,8 @@ describe('createActivityEntry — mobile_combustion', () => {
   it('returns error for invalid purchased_electricity grid region', async () => {
     mockAuthenticatedClient();
     const fd = makeFormData({
-      reporting_period_id: VALID_UUID,
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
       source_type: 'purchased_electricity',
       secondary: 'INVALID_GRID',
       raw_quantity: '500',
@@ -444,7 +467,8 @@ describe('createActivityEntry — mobile_combustion', () => {
   it('returns error for invalid fugitive refrigerant', async () => {
     mockAuthenticatedClient();
     const fd = makeFormData({
-      reporting_period_id: VALID_UUID,
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
       source_type: 'fugitive',
       secondary: 'R22',
       raw_quantity: '2',
@@ -464,7 +488,8 @@ describe('createActivityEntry — save + history', () => {
     mocks.save.mockRejectedValueOnce(new Error('unique constraint'));
     mockAuthenticatedClient();
     const fd = makeFormData({
-      reporting_period_id: VALID_UUID,
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
       source_type: 'stationary_combustion',
       secondary: 'diesel',
       raw_quantity: '100',
@@ -481,7 +506,8 @@ describe('createActivityEntry — save + history', () => {
     ]);
     mockAuthenticatedClient();
     const fd = makeFormData({
-      reporting_period_id: VALID_UUID,
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
       source_type: 'stationary_combustion',
       secondary: 'diesel',
       raw_quantity: '100',
@@ -506,7 +532,8 @@ describe('createActivityEntry — anomaly detection', () => {
     }]);
     mockAuthenticatedClient();
     const fd = makeFormData({
-      reporting_period_id: VALID_UUID,
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
       source_type: 'stationary_combustion',
       secondary: 'natural_gas',
       raw_quantity: '9999',
@@ -527,7 +554,8 @@ describe('createActivityEntry — anomaly detection', () => {
     mocks.anomalySave.mockRejectedValueOnce(new Error('DB error'));
     mockAuthenticatedClient();
     const fd = makeFormData({
-      reporting_period_id: VALID_UUID,
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
       source_type: 'stationary_combustion',
       secondary: 'diesel',
       raw_quantity: '500',
@@ -543,29 +571,41 @@ describe('createActivityEntry — anomaly detection', () => {
 describe('importActivityCsv — ownership check', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('returns error when reporting periods not found in DB', async () => {
-    mockImportPeriodsNotFoundClient();
-    const csv = `${VALID_UUID},stationary_combustion,diesel,100,L,`;
-    const fd = makeFormData({ csv_text: csv });
-    const result = await importActivityCsv(null, fd);
-    expect(result.error).toMatch(/periodo/i);
-  });
-
-  it('returns error when periods query returns null (defensive ?? [])', async () => {
+  it('returns error when all rows are invalid (no valid rows to process)', async () => {
     const mockSupabase = {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
-      from: vi.fn().mockReturnValueOnce(makeNullDataChain()),
+      from: vi.fn(),
     };
     vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
-    const csv = `${VALID_UUID},stationary_combustion,diesel,100,L,`;
+    const csv = `not-a-uuid,bad-month,bad_source,x,-1,`;
     const fd = makeFormData({ csv_text: csv });
     const result = await importActivityCsv(null, fd);
-    expect(result.error).toMatch(/periodo/i);
+    expect(result.error).toBeDefined();
+    expect(result.error).toMatch(/válidas/i);
   });
 
-  it('returns error when user lacks permission for period orgs', async () => {
-    mockImportUnauthorizedClient();
-    const csv = `${VALID_UUID},stationary_combustion,diesel,100,L,`;
+  it('returns error when supplier is not found for a valid CSV row', async () => {
+    const mockSupabase = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+      from: vi.fn()
+        .mockReturnValueOnce(makeMaybySingleChain(null)), // supplier not found
+    };
+    vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
+    const csv = `${VALID_UUID},${VALID_YM},stationary_combustion,diesel,100,L,`;
+    const fd = makeFormData({ csv_text: csv });
+    const result = await importActivityCsv(null, fd);
+    expect(result.error).toMatch(/proveedor/i);
+  });
+
+  it('returns error when user lacks permission for supplier org', async () => {
+    const mockSupabase = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+      from: vi.fn()
+        .mockReturnValueOnce(makeMaybySingleChain({ organization_id: 'org-001' })) // supplier found
+        .mockReturnValueOnce(makeMaybySingleChain(null)), // no membership
+    };
+    vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
+    const csv = `${VALID_UUID},${VALID_YM},stationary_combustion,diesel,100,L,`;
     const fd = makeFormData({ csv_text: csv });
     const result = await importActivityCsv(null, fd);
     expect(result.error).toMatch(/permisos/i);
@@ -574,7 +614,7 @@ describe('importActivityCsv — ownership check', () => {
   it('counts row as skipped when entryRepo.save throws', async () => {
     mocks.save.mockRejectedValueOnce(new Error('DB constraint'));
     mockAuthenticatedClient();
-    const csv = `${VALID_UUID},stationary_combustion,diesel,100,L,`;
+    const csv = `${VALID_UUID},${VALID_YM},stationary_combustion,diesel,100,L,`;
     const fd = makeFormData({ csv_text: csv });
     const result = await importActivityCsv(null, fd);
     expect(result.success).toBe(true);
@@ -582,20 +622,27 @@ describe('importActivityCsv — ownership check', () => {
     expect(result.skipped).toBe(1);
   });
 
-  it('handles null suppliers and memberships from Supabase (defensive ?? [])', async () => {
+  it('handles period creation failure gracefully (row skipped)', async () => {
     const mockSupabase = {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
       from: vi.fn()
-        .mockReturnValueOnce(makeArrayChain([{ id: VALID_UUID, supplier_id: 'supplier-001' }]))
-        .mockReturnValueOnce(makeNullDataChain())
-        .mockReturnValueOnce(makeNullDataChain()),
+        .mockReturnValueOnce(makeMaybySingleChain({ organization_id: 'org-001' })) // verifyAccess: supplier
+        .mockReturnValueOnce(makeMaybySingleChain({ role: 'admin' }))              // verifyAccess: membership
+        .mockReturnValueOnce(makeMaybySingleChain(null))                            // findOrCreate: no existing
+        .mockReturnValueOnce(makeInsertChain(null, { message: 'constraint error' })), // insert fails
     };
     vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
-
-    const csv = `${VALID_UUID},stationary_combustion,diesel,100,L,`;
+    const csv = `${VALID_UUID},${VALID_YM},stationary_combustion,diesel,100,L,`;
     const fd = makeFormData({ csv_text: csv });
     const result = await importActivityCsv(null, fd);
     expect(result.success).toBe(true);
-    expect(result.imported).toBe(1);
+    expect(result.imported).toBe(0);
+    expect(result.skipped).toBe(1);
   });
 });
+
+// ── helper used in tests above that references an unqualified name ────────────
+
+function makeMaybySingleChain(data: unknown) {
+  return makeMaybeSingleChain(data);
+}

@@ -337,7 +337,7 @@ describe('score', () => {
   function makeTotals(totalCo2eKg: number): EvaluationTotals {
     return {
       totalCo2eKg,
-      byScope: { scope1: totalCo2eKg, scope2: 0 },
+      byScope: { scope1: totalCo2eKg, scope2: 0, none: 0 },
       byActivity: {},
       recordCount: 1,
     };
@@ -396,6 +396,317 @@ describe('score', () => {
     expect(s.trend).toBe('up');
     expect(s.score).toBe(75);
     expect(s.level).toBe('critical');
+  });
+});
+
+// ── GRESB: water_use / waste zero-CO2e path ──────────────────────────────────
+
+describe('calculate — water_use zero-CO2e path', () => {
+  it('returns ok with co2eKg = 0 for potable_mixed water', () => {
+    const record = makeRecord({
+      activity: { kind: 'water_use', subtype: 'potable_mixed' },
+      rawValue: 150,
+      rawUnit: 'kgal_us',
+    });
+    const result = calculate(record, new Map());
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.co2eKg).toBe(0);
+    expect(result.value.scope).toBe('none');
+    expect(result.value.factorId).toBe('none');
+    expect(result.value.normalizedValue).toBe(150);
+    expect(result.value.normalizedUnit).toBe('kgal_us');
+  });
+
+  it('returns ok for all_sources water subtype', () => {
+    const record = makeRecord({
+      activity: { kind: 'water_use', subtype: 'all_sources' },
+      rawValue: 5,
+      rawUnit: 'megaliter',
+    });
+    const result = calculate(record, new Map());
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.co2eKg).toBe(0);
+    expect(result.value.scope).toBe('none');
+  });
+
+  it('calcHash is deterministic for water records', () => {
+    const record = makeRecord({
+      activity: { kind: 'water_use', subtype: 'reclaimed_mixed' },
+      rawValue: 30,
+      rawUnit: 'kgal_us',
+    });
+    const r1 = calculate(record, new Map());
+    const r2 = calculate(record, new Map());
+    expect(r1.ok && r2.ok).toBe(true);
+    if (!r1.ok || !r2.ok) return;
+    expect(r1.value.calcHash).toBe(r2.value.calcHash);
+    expect(r1.value.calcHash).toHaveLength(64);
+  });
+
+  it('still validates rawValue — rejects negative water quantity', () => {
+    const record = makeRecord({
+      activity: { kind: 'water_use', subtype: 'potable_mixed' },
+      rawValue: -5,
+      rawUnit: 'kgal_us',
+    });
+    const result = calculate(record, new Map());
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.type).toBe('INVALID_VALUE');
+  });
+});
+
+describe('calculate — waste zero-CO2e path', () => {
+  it('returns ok with co2eKg = 0 for disposed_trash', () => {
+    const record = makeRecord({
+      activity: { kind: 'waste', subtype: 'disposed_trash' },
+      rawValue: 2.5,
+      rawUnit: 'ton_us',
+    });
+    const result = calculate(record, new Map());
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.co2eKg).toBe(0);
+    expect(result.value.scope).toBe('none');
+    expect(result.value.factorId).toBe('none');
+  });
+
+  it('returns ok for recycled waste subtype', () => {
+    const record = makeRecord({
+      activity: { kind: 'waste', subtype: 'recycled' },
+      rawValue: 1.2,
+      rawUnit: 'tonne',
+    });
+    const result = calculate(record, new Map());
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.co2eKg).toBe(0);
+  });
+
+  it('returns ok for composted waste subtype', () => {
+    const record = makeRecord({
+      activity: { kind: 'waste', subtype: 'composted' },
+      rawValue: 0.8,
+      rawUnit: 'tonne',
+    });
+    const result = calculate(record, new Map());
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.co2eKg).toBe(0);
+    expect(result.value.scope).toBe('none');
+  });
+});
+
+// ── GRESB: fuel_oil_no2 / propane factor keys ─────────────────────────────────
+
+describe('_internals.resolveFactorKey — new fuels', () => {
+  it('fuel_oil_no2 produces correct key', () => {
+    expect(
+      _internals.resolveFactorKey({ kind: 'stationary_combustion', fuel: 'fuel_oil_no2' }),
+    ).toBe('stationary_combustion.fuel_oil_no2');
+  });
+
+  it('propane produces correct key', () => {
+    expect(
+      _internals.resolveFactorKey({ kind: 'stationary_combustion', fuel: 'propane' }),
+    ).toBe('stationary_combustion.propane');
+  });
+
+  it('water_use produces key including subtype', () => {
+    expect(_internals.resolveFactorKey({ kind: 'water_use', subtype: 'potable_mixed' })).toBe(
+      'water_use.potable_mixed',
+    );
+    expect(_internals.resolveFactorKey({ kind: 'water_use', subtype: 'all_sources' })).toBe(
+      'water_use.all_sources',
+    );
+  });
+
+  it('waste produces key including subtype', () => {
+    expect(_internals.resolveFactorKey({ kind: 'waste', subtype: 'disposed_trash' })).toBe(
+      'waste.disposed_trash',
+    );
+    expect(_internals.resolveFactorKey({ kind: 'waste', subtype: 'recycled' })).toBe(
+      'waste.recycled',
+    );
+    expect(_internals.resolveFactorKey({ kind: 'waste', subtype: 'composted' })).toBe(
+      'waste.composted',
+    );
+  });
+});
+
+describe('_internals.resolveScope — none for water/waste', () => {
+  it('returns none for water_use', () => {
+    expect(_internals.resolveScope({ kind: 'water_use', subtype: 'potable_mixed' })).toBe('none');
+    expect(_internals.resolveScope({ kind: 'water_use', subtype: 'reclaimed_mixed' })).toBe('none');
+  });
+
+  it('returns none for waste', () => {
+    expect(_internals.resolveScope({ kind: 'waste', subtype: 'disposed_trash' })).toBe('none');
+    expect(_internals.resolveScope({ kind: 'waste', subtype: 'recycled' })).toBe('none');
+  });
+});
+
+// ── GRESB: kBtu unit conversion ───────────────────────────────────────────────
+
+describe('_internals.normalizeUnit — GRESB units', () => {
+  it('converts kBtu → kWh', () => {
+    const conversions = makeConversions([['kBtu->kWh', 0.29307100]]);
+    const result = _internals.normalizeUnit(1000, 'kBtu', 'kWh', conversions);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value).toBeCloseTo(293.071, 3);
+  });
+
+  it('converts kgal_us → L', () => {
+    const conversions = makeConversions([['kgal_us->L', 3785.412]]);
+    const result = _internals.normalizeUnit(1, 'kgal_us', 'L', conversions);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value).toBeCloseTo(3785.412, 3);
+  });
+
+  it('converts ton_us → tonne', () => {
+    const conversions = makeConversions([['ton_us->tonne', 0.90718474]]);
+    const result = _internals.normalizeUnit(2, 'ton_us', 'tonne', conversions);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value).toBeCloseTo(1.81436948, 6);
+  });
+
+  it('converts m3 → kgal_us', () => {
+    const conversions = makeConversions([['m3->kgal_us', 0.264172]]);
+    const result = _internals.normalizeUnit(100, 'm3', 'kgal_us', conversions);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value).toBeCloseTo(26.4172, 4);
+  });
+
+  it('converts megaliter → m3', () => {
+    const conversions = makeConversions([['megaliter->m3', 1000]]);
+    const result = _internals.normalizeUnit(0.5, 'megaliter', 'm3', conversions);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value).toBeCloseTo(500, 6);
+  });
+});
+
+// ── aggregate — handles none scope ───────────────────────────────────────────
+
+describe('aggregate — none scope', () => {
+  function makeNoneResult(id: string, normalizedValue: number): EmissionResult {
+    return {
+      activityRecordId: id,
+      factorId: 'none',
+      factorSetId: 'none',
+      factorSetVersion: '0',
+      normalizedValue,
+      normalizedUnit: 'kgal_us',
+      co2eKg: 0,
+      scope: 'none',
+      engineVersion: ENGINE_VERSION,
+      calcHash: `hash-${id}`,
+    };
+  }
+
+  it('none scope results do not add to totalCo2eKg', () => {
+    const results = [makeNoneResult('w1', 150), makeNoneResult('w2', 30)];
+    const totals = aggregate(results);
+    expect(totals.totalCo2eKg).toBe(0);
+    expect(totals.byScope.none).toBe(0);
+    expect(totals.recordCount).toBe(2);
+  });
+
+  it('mixed GHG + water/waste aggregates correctly', () => {
+    const ghgResult: EmissionResult = {
+      activityRecordId: 'ghg-1',
+      factorId: 'ef-diesel',
+      factorSetId: 'DEFRA_2024',
+      factorSetVersion: '2024',
+      normalizedValue: 100,
+      normalizedUnit: 'L',
+      co2eKg: 251.39,
+      scope: 'scope1',
+      engineVersion: ENGINE_VERSION,
+      calcHash: 'hash-ghg',
+    };
+    const waterResult = makeNoneResult('water-1', 150);
+
+    const totals = aggregate([ghgResult, waterResult]);
+    expect(totals.totalCo2eKg).toBeCloseTo(251.39, 2);
+    expect(totals.byScope.scope1).toBeCloseTo(251.39, 2);
+    expect(totals.byScope.none).toBe(0);
+    expect(totals.byScope.scope2).toBe(0);
+    expect(totals.recordCount).toBe(2);
+  });
+});
+
+// ── calculate — fuel_oil_no2 / propane with factor ───────────────────────────
+
+describe('calculate — new GRESB fuels', () => {
+  it('computes CO2e for fuel_oil_no2 with DEFRA factor', () => {
+    const record = makeRecord({
+      activity: { kind: 'stationary_combustion', fuel: 'fuel_oil_no2' },
+      rawValue: 500,
+      rawUnit: 'L',
+    });
+    const factor = makeFactor({
+      id: 'ef-fuel-oil-no2',
+      activityKey: 'stationary_combustion.fuel_oil_no2',
+      factorKgCo2ePerUnit: 2.68344,
+      standardUnit: 'L',
+    });
+    const result = calculate(record, makeFactorTable(factor));
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.co2eKg).toBeCloseTo(500 * 2.68344, 3);
+    expect(result.value.scope).toBe('scope1');
+  });
+
+  it('computes CO2e for propane with DEFRA factor', () => {
+    const record = makeRecord({
+      activity: { kind: 'stationary_combustion', fuel: 'propane' },
+      rawValue: 200,
+      rawUnit: 'L',
+    });
+    const factor = makeFactor({
+      id: 'ef-propane',
+      activityKey: 'stationary_combustion.propane',
+      factorKgCo2ePerUnit: 1.49304,
+      standardUnit: 'L',
+    });
+    const result = calculate(record, makeFactorTable(factor));
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.co2eKg).toBeCloseTo(200 * 1.49304, 3);
+    expect(result.value.scope).toBe('scope1');
+  });
+
+  it('computes CO2e for fuel_oil_no2 in kBtu via conversion', () => {
+    const record = makeRecord({
+      activity: { kind: 'stationary_combustion', fuel: 'fuel_oil_no2' },
+      rawValue: 500,
+      rawUnit: 'kBtu',
+    });
+    const factor = makeFactor({
+      id: 'ef-fuel-oil-no2',
+      activityKey: 'stationary_combustion.fuel_oil_no2',
+      factorKgCo2ePerUnit: 2.68344,
+      standardUnit: 'L',
+    });
+    // 1 kBtu ≈ 0.1054 L for fuel oil (energy density conversion, approximate)
+    // For this test we just verify the conversion path works
+    const conversions = makeConversions([['kBtu->L', 0.1054]]);
+    const result = calculate(record, makeFactorTable(factor), conversions);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.co2eKg).toBeCloseTo(500 * 0.1054 * 2.68344, 2);
   });
 });
 
@@ -500,7 +811,7 @@ describe('property tests (fast-check)', () => {
         (co2eKg) => {
           const totals: EvaluationTotals = {
             totalCo2eKg: co2eKg,
-            byScope: { scope1: co2eKg, scope2: 0 },
+            byScope: { scope1: co2eKg, scope2: 0, none: 0 },
             byActivity: {},
             recordCount: 1,
           };

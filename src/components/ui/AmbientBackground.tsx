@@ -33,7 +33,7 @@ export function AmbientBackground() {
           inset: 0,
           width: '100%',
           height: '100%',
-          opacity: 0.35,
+          opacity: 0.11,
         }}
         xmlns="http://www.w3.org/2000/svg"
         preserveAspectRatio="xMidYMid slice"
@@ -73,7 +73,7 @@ export function AmbientBackground() {
           inset: 0,
           width: '100%',
           height: '100%',
-          opacity: 0.4,
+          opacity: 0.14,
         }}
         xmlns="http://www.w3.org/2000/svg"
       >
@@ -153,7 +153,7 @@ export function AmbientBackground() {
           maxWidth: '600px',
           maxHeight: '600px',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, oklch(58% 0.16 155 / 16%) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, oklch(58% 0.16 155 / 9%) 0%, transparent 70%)',
           animation: 'orbDrift 22s ease-in-out infinite',
         }}
       />
@@ -169,7 +169,7 @@ export function AmbientBackground() {
           maxWidth: '380px',
           maxHeight: '380px',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, oklch(62% 0.14 40 / 10%) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, oklch(62% 0.14 40 / 6%) 0%, transparent 70%)',
           animation: 'orbDrift 28s ease-in-out infinite reverse',
           animationDelay: '-8s',
         }}
@@ -186,7 +186,7 @@ export function AmbientBackground() {
           maxWidth: '240px',
           maxHeight: '240px',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, oklch(72% 0.12 85 / 8%) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, oklch(72% 0.12 85 / 5%) 0%, transparent 70%)',
           animation: 'orbDrift 18s ease-in-out infinite',
           animationDelay: '-4s',
         }}

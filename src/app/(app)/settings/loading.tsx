@@ -43,9 +43,9 @@ export default function SettingsLoading() {
             <Skeleton width="80px" height="13px" />
           </div>
           {/* Rows */}
-          {[1, section === 2 ? 2 : 1].map((row, i) => (
+          {[1, section === 2 ? 2 : 1].map((_, i) => (
             <div
-              key={row}
+              key={i}
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',

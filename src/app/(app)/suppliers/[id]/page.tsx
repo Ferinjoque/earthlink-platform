@@ -5,7 +5,6 @@ import { createServerClient } from '@/services/supabase/server';
 import { TopBar } from '@/components/shell/TopBar';
 import { Badge } from '@/components/ui/Badge';
 import { AnomalyBadge } from '@/components/activity/AnomalyBadge';
-import { NuevoPeriodoForm } from '@/components/suppliers/NuevoPeriodoForm';
 import { variantEstadoPeriodo, etiquetaEstadoPeriodo } from '@/lib/reporting-period';
 import type {
   SupplierRow,
@@ -209,17 +208,7 @@ export default async function DetalleProveedorPage({
 
         {/* Periodos de reporte */}
         <section>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: 'var(--space-4)',
-            }}
-          >
-            <p className="eyebrow">Periodos de reporte</p>
-            <NuevoPeriodoForm supplierId={supplier.id} />
-          </div>
+          <p className="eyebrow" style={{ marginBottom: 'var(--space-4)' }}>Periodos de reporte</p>
 
           {periods.length === 0 ? (
             <div
@@ -232,7 +221,7 @@ export default async function DetalleProveedorPage({
               }}
             >
               <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-3)', margin: 0 }}>
-                Sin periodos de reporte. Crea el primero.
+                Sin periodos aún. Se crean automáticamente al registrar actividad.
               </p>
             </div>
           ) : (

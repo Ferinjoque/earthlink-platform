@@ -110,6 +110,13 @@ describe('exportCsv', () => {
     expect(result.error).toBeTruthy();
   });
 
+  it('returns error when period_ids is only commas (all empty after split)', async () => {
+    mockClient();
+    const fd = makeFormData({ period_ids: ',' });
+    const result = await exportCsv(null, fd);
+    expect(result.error).toMatch(/periodo/i);
+  });
+
   it('returns error when period_ids field is missing', async () => {
     mockClient();
     const fd = new FormData();

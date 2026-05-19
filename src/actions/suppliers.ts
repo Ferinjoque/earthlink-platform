@@ -5,8 +5,6 @@ import { revalidatePath } from 'next/cache';
 import { createServerClient } from '@/services/supabase/server';
 import { CATEGORIAS_VALIDAS } from '@/lib/supplier-constants';
 
-export { CATEGORIAS_VALIDAS };
-
 const rucSchema = z
   .string()
   .regex(/^\d{11}$/, 'El RUC debe tener exactamente 11 dígitos numéricos')

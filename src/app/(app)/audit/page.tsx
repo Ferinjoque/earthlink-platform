@@ -13,6 +13,7 @@ import type {
   AnomalyFlagRow,
 } from '@/types/database';
 import { variantEstadoPeriodo, etiquetaEstadoPeriodo } from '@/lib/reporting-period';
+import { formatearKg } from '@/lib/format';
 import type { PeriodStatus } from '@/domain/ReportingPeriod';
 import type {
   PeriodoFila,
@@ -88,7 +89,7 @@ export default async function AuditoriaPage() {
     | 'factor_unit'
     | 'calculated_at'
   >;
-  type FilaEntradaMin = Pick<ActivityEntryRow, 'id' | 'reporting_period_id' | 'source_type'>;
+  type FilaEntradaMin = Pick<ActivityEntryRow, 'id' | 'reporting_period_id' | 'source_type' | 'raw_quantity' | 'raw_unit'>;
 
   const [resultsRaw, allEntriesRaw] = await Promise.all([
     nonOpenPeriodIds.length
@@ -102,7 +103,7 @@ export default async function AuditoriaPage() {
     allPeriodIds.length
       ? supabase
           .from('activity_entries')
-          .select('id, reporting_period_id, source_type')
+          .select('id, reporting_period_id, source_type, raw_quantity, raw_unit')
           .in('reporting_period_id', allPeriodIds)
       : Promise.resolve({ data: [] as FilaEntradaMin[] }),
   ]);
@@ -111,6 +112,14 @@ export default async function AuditoriaPage() {
   const allEntriesData = (allEntriesRaw.data ?? []) as FilaEntradaMin[];
   const entryPeriodMap = new Map(allEntriesData.map((e) => [e.id, e]));
   const allEntryIds = allEntriesData.map((e) => e.id);
+
+  // Build unique source types per period
+  const mapaSourceTypes = new Map<string, Set<string>>();
+  for (const e of allEntriesData) {
+    const set = mapaSourceTypes.get(e.reporting_period_id) ?? new Set<string>();
+    set.add(e.source_type);
+    mapaSourceTypes.set(e.reporting_period_id, set);
+  }
 
   // Parallel fetch: entries for result detail + anomaly flags (both ready to run now)
   type FilaEntrada = Pick<ActivityEntryRow, 'id' | 'source_type' | 'raw_quantity' | 'raw_unit'>;
@@ -189,6 +198,8 @@ export default async function AuditoriaPage() {
       z_score: f.z_score,
       message: f.message,
       flagged_at: f.flagged_at,
+      raw_quantity: entradaInfo.raw_quantity,
+      raw_unit: entradaInfo.raw_unit,
     };
     const list = mapaAnomalias.get(entradaInfo.reporting_period_id) ?? [];
     list.push(detalle);
@@ -217,21 +228,27 @@ export default async function AuditoriaPage() {
     resumen: mapaResumen.get(p.id),
     results: mapaResultados.get(p.id) ?? [],
     anomalias: mapaAnomalias.get(p.id) ?? [],
+    sourceTypes: [...(mapaSourceTypes.get(p.id) ?? [])],
   }));
 
   const bloqueadosConResumen = periodos.filter(
     (p) => p.status === 'locked' && p.resumen !== undefined,
   );
 
-  function formatearKg(kg: number): string {
-    if (kg === 0) return '—';
-    if (kg >= 1_000) return `${(kg / 1_000).toFixed(3)} tCO₂e`;
-    return `${kg.toFixed(2)} kg`;
-  }
 
   return (
     <>
       <TopBar title="Consola de auditoría" email={user?.email} section="Registro inmutable" />
+      <style>{`
+        .locked-card {
+          transition: box-shadow 180ms var(--ease-out-expo), transform 180ms var(--ease-out-expo), border-color 180ms;
+        }
+        .locked-card:hover {
+          box-shadow: var(--shadow-md);
+          transform: translateY(-2px);
+          border-color: oklch(42% 0.12 155 / 45%) !important;
+        }
+      `}</style>
       <main
         style={{
           padding: 'var(--space-8)',
@@ -280,7 +297,7 @@ export default async function AuditoriaPage() {
 
         {/* Tabla de periodos con filtro y paneles expandibles */}
         <section>
-          <AuditTable periodos={periodos} suppliers={suppliersData} />
+          <AuditTable periodos={periodos} />
         </section>
 
         {/* Tarjetas de periodos bloqueados */}
@@ -319,6 +336,7 @@ export default async function AuditoriaPage() {
                 return (
                   <div
                     key={p.id}
+                    className="locked-card"
                     style={{
                       background: 'var(--color-accent-soft)',
                       border: '1px solid oklch(42% 0.12 155 / 22%)',

@@ -232,7 +232,14 @@ export function TopBar({ title, email, section }: TopBarProps) {
         {/* Derecha */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
           {/* Búsqueda inline */}
-          <div ref={searchWrapRef} style={{ position: 'relative' }}>
+          <div
+            ref={searchWrapRef}
+            style={{
+              position: 'relative',
+              width: searchOpen ? '280px' : '128px',
+              transition: 'width 220ms var(--ease-out-expo)',
+            }}
+          >
             {searchOpen ? (
               /* Input expandido */
               <div
@@ -240,7 +247,7 @@ export function TopBar({ title, email, section }: TopBarProps) {
                   display: 'flex',
                   alignItems: 'center',
                   gap: 'var(--space-2)',
-                  width: '280px',
+                  width: '100%',
                   padding: '5px 10px',
                   borderRadius: 'var(--radius-md)',
                   border: '1px solid var(--color-accent)',
@@ -297,6 +304,7 @@ export function TopBar({ title, email, section }: TopBarProps) {
                   alignItems: 'center',
                   gap: 'var(--space-2)',
                   padding: '5px 10px',
+                  width: '100%',
                   borderRadius: 'var(--radius-md)',
                   border: '1px solid var(--color-border)',
                   background: 'var(--color-surface-2)',

@@ -6,10 +6,13 @@ const SOURCE_TYPES = [
   'purchased_electricity',
   'purchased_steam',
   'fugitive',
+  'water_use',
+  'waste',
 ] as const;
 
 const csvRowSchema = z.object({
-  reporting_period_id: z.string().uuid('Debe ser un UUID válido'),
+  supplier_id: z.string().uuid('Debe ser un UUID de proveedor válido'),
+  year_month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Formato mes inválido (YYYY-MM, ej: 2026-01)'),
   source_type: z.enum(SOURCE_TYPES, { message: 'Tipo de fuente inválido' }),
   secondary: z.string().default(''),
   raw_quantity: z.coerce.number().positive('Debe ser un número positivo'),
@@ -27,15 +30,24 @@ export interface ParsedCsvRow {
 
 // Canonical field → accepted header aliases (lowercased, spaces normalised)
 const COL_ALIASES: Record<string, string[]> = {
-  reporting_period_id: [
-    'reporting_period_id',
-    'period_id',
-    'periodo_id',
-    'id_periodo',
+  supplier_id: [
+    'supplier_id',
+    'id_proveedor',
+    'proveedor_id',
+    'id proveedor',
+    'proveedor',
+  ],
+  year_month: [
+    'year_month',
+    'mes',
+    'month',
+    'año_mes',
+    'ano_mes',
+    'year month',
+    'mes_año',
+    'mes_ano',
     'periodo',
-    'id periodo',
-    'id_del_periodo',
-    'reporting period id',
+    'fecha',
   ],
   source_type: [
     'source_type',
@@ -58,6 +70,8 @@ const COL_ALIASES: Record<string, string[]> = {
     'grid_region',
     'grid region',
     'tipo combustible',
+    'subtipo',
+    'subtype',
   ],
   raw_quantity: [
     'raw_quantity',
@@ -135,19 +149,22 @@ function buildColMap(headerLine: string, sep: string): Map<string, number> | nul
     const canonical = resolveColumn(col);
     if (canonical && !map.has(canonical)) map.set(canonical, i);
   });
-  const required = ['reporting_period_id', 'source_type', 'raw_quantity', 'raw_unit'];
+  const required = ['supplier_id', 'year_month', 'source_type', 'raw_quantity', 'raw_unit'];
   return required.every((r) => map.has(r)) ? map : null;
 }
 
 function looksLikeHeader(line: string): boolean {
   const firstCol = line.split(/[,;\t]/)[0]?.trim() ?? '';
-  // UUID in first column → definitely a data row, not a header
+  // UUID in first column → data row (supplier_id), not a header
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(firstCol)) {
     return false;
   }
   const lower = line.toLowerCase();
   return (
-    lower.includes('period') ||
+    lower.includes('supplier') ||
+    lower.includes('proveedor') ||
+    lower.includes('year_month') ||
+    lower.includes('mes') ||
     lower.includes('fuente') ||
     lower.includes('source') ||
     lower.includes('cantidad') ||
@@ -172,7 +189,8 @@ function parseRow(
       return idx !== undefined ? (cols[idx] ?? '') : '';
     };
     raw = {
-      reporting_period_id: get('reporting_period_id'),
+      supplier_id: get('supplier_id'),
+      year_month: get('year_month'),
       source_type: get('source_type'),
       secondary: get('secondary') || '',
       raw_quantity: get('raw_quantity'),
@@ -180,9 +198,10 @@ function parseRow(
       notes: get('notes') || '',
     };
   } else {
-    const [reporting_period_id, source_type, secondary, raw_quantity, raw_unit, notes] = cols;
+    const [supplier_id, year_month, source_type, secondary, raw_quantity, raw_unit, notes] = cols;
     raw = {
-      reporting_period_id: reporting_period_id ?? '',
+      supplier_id: supplier_id ?? '',
+      year_month: year_month ?? '',
       source_type: source_type ?? '',
       secondary: secondary ?? '',
       raw_quantity: raw_quantity ?? '',
@@ -227,11 +246,18 @@ export function parseCsvText(text: string): ParsedCsvRow[] {
 
 export function getCsvTemplate(): string {
   return [
-    'reporting_period_id,source_type,secondary,raw_quantity,raw_unit,notes',
-    '<UUID-del-periodo>,stationary_combustion,natural_gas,1000,m3_ng,Caldera A',
-    '<UUID-del-periodo>,purchased_electricity,SEIN_PERU,5000,kWh,Piso 2 oficinas',
-    '<UUID-del-periodo>,mobile_combustion,diesel,200,L,Flota de vehiculos',
-    '<UUID-del-periodo>,fugitive,R410A,5,kg,Mantenimiento HVAC',
-    '<UUID-del-periodo>,purchased_steam,,100,GJ,',
+    'supplier_id,year_month,source_type,secondary,raw_quantity,raw_unit,notes',
+    '<UUID-del-proveedor>,2026-01,stationary_combustion,natural_gas,1000,m3_ng,Caldera A',
+    '<UUID-del-proveedor>,2026-01,stationary_combustion,fuel_oil_no2,500,kBtu,Generador de emergencia',
+    '<UUID-del-proveedor>,2026-01,stationary_combustion,propane,200,L,Calefaccion exterior',
+    '<UUID-del-proveedor>,2026-01,purchased_electricity,SEIN_PERU,5000,kWh,Piso 2 oficinas',
+    '<UUID-del-proveedor>,2026-01,mobile_combustion,diesel,200,L,Flota de vehiculos',
+    '<UUID-del-proveedor>,2026-01,fugitive,R410A,5,kg,Mantenimiento HVAC',
+    '<UUID-del-proveedor>,2026-01,purchased_steam,,100,GJ,',
+    '<UUID-del-proveedor>,2026-01,water_use,potable_mixed,150,kgal_us,Medidor principal',
+    '<UUID-del-proveedor>,2026-01,water_use,reclaimed_mixed,30,kgal_us,Riego exterior',
+    '<UUID-del-proveedor>,2026-01,waste,disposed_trash,2.5,ton_us,Contenedor general',
+    '<UUID-del-proveedor>,2026-01,waste,recycled,1.2,ton_us,Reciclaje papel/carton',
+    '<UUID-del-proveedor>,2026-01,waste,composted,0.8,tonne,Compost residuos organicos',
   ].join('\n');
 }

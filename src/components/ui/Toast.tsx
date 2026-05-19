@@ -136,12 +136,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const container = typeof document !== 'undefined' ? document.getElementById('toast-root') : null;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   return (
     <ToastContext.Provider value={{ toast }}>
       {children}
-      {container &&
+      {mounted &&
         createPortal(
           <div
             style={{
@@ -162,7 +163,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               </div>
             ))}
           </div>,
-          container,
+          document.getElementById('toast-root') ?? document.body,
         )}
     </ToastContext.Provider>
   );
