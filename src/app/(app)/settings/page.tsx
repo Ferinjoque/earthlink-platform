@@ -2,8 +2,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { createServerClient } from '@/services/supabase/server';
 import { TopBar } from '@/components/shell/TopBar';
-import { signOut } from '@/actions/auth';
-import { User, Building2, Shield, LogOut } from 'lucide-react';
+import { User, Building2, Shield } from 'lucide-react';
 import type { MembershipRow, OrganizationRow } from '@/types/database';
 
 export const metadata: Metadata = { title: 'Configuración' };
@@ -270,31 +269,6 @@ export default async function ConfiguracionPage() {
           </div>
         </section>
 
-        {/* Cerrar sesión */}
-        <section>
-          <form action={signOut}>
-            <button
-              type="submit"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 'var(--space-2)',
-                padding: 'var(--space-3) var(--space-5)',
-                borderRadius: 'var(--radius-md)',
-                fontSize: 'var(--text-sm)',
-                fontWeight: 'var(--fw-medium)',
-                color: 'var(--color-signal-hi)',
-                background: 'var(--color-signal-hi-bg)',
-                border: '1px solid oklch(50% 0.16 20 / 20%)',
-                cursor: 'pointer',
-                transition: 'opacity var(--duration-fast)',
-              }}
-            >
-              <LogOut size={15} />
-              Cerrar sesión
-            </button>
-          </form>
-        </section>
       </main>
     </>
   );
