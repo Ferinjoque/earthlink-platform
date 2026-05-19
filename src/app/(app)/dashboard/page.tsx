@@ -378,7 +378,7 @@ export default async function PanelPage({ searchParams }: PageProps) {
           }}
         >
           {/* ── Editorial header ── */}
-          <section>
+          <section className="animate-fade-up stagger-1">
             <p className="eyebrow" style={{ marginBottom: 'var(--space-3)' }}>
               Protocolo GHG · Alcances 1 y 2
             </p>
@@ -426,6 +426,7 @@ export default async function PanelPage({ searchParams }: PageProps) {
 
           {/* ── Scorecard strip: 4 KPIs ── */}
           <section
+            className="animate-fade-up stagger-2"
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(4, 1fr)',
@@ -619,6 +620,7 @@ export default async function PanelPage({ searchParams }: PageProps) {
           {/* ── Leaderboard + Source mix (2 columns) ── */}
           {tieneDatos && (
             <section
+              className="animate-fade-up stagger-3"
               style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 300px',
@@ -712,6 +714,7 @@ export default async function PanelPage({ searchParams }: PageProps) {
                             >
                               {supplier.s1 > 0 && (
                                 <div
+                                  className="bar-animate"
                                   style={{
                                     width: `${s1Pct}%`,
                                     background: 'var(--color-accent)',
@@ -721,6 +724,7 @@ export default async function PanelPage({ searchParams }: PageProps) {
                               )}
                               {supplier.s2 > 0 && (
                                 <div
+                                  className="bar-animate"
                                   style={{
                                     width: `${s2Pct}%`,
                                     background: 'var(--color-scope2)',
@@ -869,6 +873,7 @@ export default async function PanelPage({ searchParams }: PageProps) {
                             }}
                           >
                             <div
+                              className="bar-animate"
                               style={{
                                 height: '100%',
                                 width: `${pct}%`,
@@ -889,6 +894,7 @@ export default async function PanelPage({ searchParams }: PageProps) {
           {/* ── Audit pipeline matrix ── */}
           {pipelineSupplierIds.length > 0 && pipelineLabels.length > 0 && (
             <section
+              className="animate-fade-up stagger-4"
               style={{
                 background: 'var(--color-surface-1)',
                 border: '1px solid var(--color-border)',
@@ -1065,6 +1071,7 @@ export default async function PanelPage({ searchParams }: PageProps) {
 
           {/* ── Tendencia anual CO₂e ── */}
           <section
+            className="animate-fade-up stagger-5"
             style={{
               background: 'var(--color-surface-1)',
               border: '1px solid var(--color-border)',
@@ -1191,6 +1198,7 @@ export default async function PanelPage({ searchParams }: PageProps) {
           {/* ── Anomalías pendientes ── */}
           {totalAnomalias > 0 && (
             <section
+              className="animate-fade-up stagger-6"
               style={{
                 background: 'var(--color-signal-hi-bg)',
                 border: '1px solid oklch(50% 0.16 20 / 20%)',

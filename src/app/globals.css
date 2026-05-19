@@ -153,6 +153,22 @@ button {
 .stagger-5 { animation-delay: 600ms; }
 .stagger-6 { animation-delay: 780ms; }
 
+@keyframes barGrow {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+.bar-animate {
+  animation: barGrow 700ms var(--ease-out-expo) both;
+  transform-origin: left center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up, .animate-fade-in, .bar-animate {
+    animation: none !important;
+  }
+}
+
 /* Líneas editoriales */
 .hairline {
   height: 1px;

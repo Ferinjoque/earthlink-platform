@@ -252,7 +252,7 @@ export default async function ActividadPage({ searchParams }: PageProps) {
         }}
       >
         {/* Registro de consumo — unified panel */}
-        <section>
+        <section className="animate-fade-up stagger-1">
           <CabeceraSección
             titulo="Registro de consumo"
             subtitulo="Registra consumos manualmente o importa desde CSV / Excel."
@@ -271,7 +271,7 @@ export default async function ActividadPage({ searchParams }: PageProps) {
         </section>
 
         {/* Lista de registros */}
-        <section>
+        <section className="animate-fade-up stagger-2">
           <CabeceraSección
             titulo="Registros recientes"
             subtitulo={
