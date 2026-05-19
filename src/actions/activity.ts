@@ -177,7 +177,7 @@ async function findOrCreatePeriod(
 // ── verifySupplierAccess ──────────────────────────────────────────────────────
 
 type SupplierOrg = { organization_id: string };
-type MembershipCheck = { role: string };
+type MembershipCheck = { role: string; supplier_id: string | null };
 
 async function verifySupplierAccess(
   supabase: SupabaseClient,
@@ -194,12 +194,17 @@ async function verifySupplierAccess(
 
   const { data: memRaw } = await supabase
     .from('memberships')
-    .select('role')
+    .select('role, supplier_id')
     .eq('user_id', userId)
     .eq('organization_id', supplier.organization_id)
     .maybeSingle();
   const mem = memRaw as MembershipCheck | null;
   if (!mem) return { error: 'Sin permisos para registrar actividad en este proveedor' };
+
+  // Supplier-role users may only write to their assigned supplier
+  if (mem.role === 'supplier' && mem.supplier_id !== supplierId) {
+    return { error: 'Sin permisos para registrar actividad en este proveedor' };
+  }
 
   return { ok: true };
 }

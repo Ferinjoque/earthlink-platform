@@ -132,7 +132,14 @@ function VoidEntryButton({ entryId }: { entryId: string }) {
         }}
       >
         <input type="hidden" name="entry_id" value={entryId} />
+        <label
+          htmlFor={`void-reason-${entryId}`}
+          style={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}
+        >
+          Motivo de anulacion
+        </label>
         <input
+          id={`void-reason-${entryId}`}
           name="void_reason"
           required
           placeholder="Motivo de anulación"
@@ -637,6 +644,7 @@ export function ActivityList({ entries, periodos, pagination }: ActivityListProp
           {anuladas.length > 0 && (
             <button
               type="button"
+              aria-pressed={mostrarAnulados}
               onClick={() => setMostrarAnulados((v) => !v)}
               style={{
                 fontSize: 'var(--text-xs)',
@@ -674,6 +682,7 @@ export function ActivityList({ entries, periodos, pagination }: ActivityListProp
         <div style={{ overflowX: 'auto' }}>
           <style>{'.activity-row:hover .activity-void-btn { opacity: 1 !important; }'}</style>
           <table
+            aria-label="Registros de actividad"
             style={{
               width: '100%',
               borderCollapse: 'collapse',
