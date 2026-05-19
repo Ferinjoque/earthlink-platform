@@ -2,6 +2,8 @@ import { Entity } from './Entity';
 import type { ActivityKind, ActivityRecord, Unit } from '../calc/types';
 import type { ActivityEntryStatus, EmissionSourceType } from '../types/database';
 
+export type DataQuality = 'measured' | 'estimated' | 'calculated';
+
 export class ActivityEntry extends Entity {
   readonly reportingPeriodId: string;
   readonly sourceType: EmissionSourceType;
@@ -11,6 +13,7 @@ export class ActivityEntry extends Entity {
   readonly status: ActivityEntryStatus;
   readonly submittedAt: Date | null;
   readonly submittedBy: string | null;
+  readonly dataQuality: DataQuality;
 
   constructor(props: {
     id: string;
@@ -23,6 +26,7 @@ export class ActivityEntry extends Entity {
     submittedAt: Date | null;
     submittedBy: string | null;
     createdAt: Date;
+    dataQuality?: DataQuality;
   }) {
     super(props.id, props.createdAt);
     this.reportingPeriodId = props.reportingPeriodId;
@@ -33,6 +37,7 @@ export class ActivityEntry extends Entity {
     this.status = props.status;
     this.submittedAt = props.submittedAt;
     this.submittedBy = props.submittedBy;
+    this.dataQuality = props.dataQuality ?? 'measured';
   }
 
   toActivityRecord(supplierId: string): ActivityRecord {
