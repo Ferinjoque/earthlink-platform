@@ -11,7 +11,9 @@ import {
   Leaf,
   BarChart2,
   Settings,
+  LogOut,
 } from 'lucide-react';
+import { signOut } from '@/actions/auth';
 
 interface NavItem {
   href: string;
@@ -194,6 +196,44 @@ export function Sidebar({ anomaliaCount = 0 }: SidebarProps) {
           );
         })}
       </nav>
+
+      {/* Sign out */}
+      <div style={{ padding: 'var(--space-3)', borderTop: '1px solid var(--color-border)' }}>
+        <form action={signOut}>
+          <button
+            type="submit"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-3)',
+              width: '100%',
+              padding: 'var(--space-2) var(--space-3)',
+              borderRadius: 'var(--radius-md)',
+              fontSize: 'var(--text-sm)',
+              fontWeight: 'var(--fw-normal)' as React.CSSProperties['fontWeight'],
+              color: 'var(--color-ink-3)',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'background var(--duration-fast), color var(--duration-fast)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'oklch(58% 0.16 155 / 7%)';
+              e.currentTarget.style.color = 'var(--color-ink-1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = 'var(--color-ink-3)';
+            }}
+          >
+            <span style={{ opacity: 0.55, display: 'flex', alignItems: 'center' }}>
+              <LogOut size={18} />
+            </span>
+            <span>Cerrar sesión</span>
+          </button>
+        </form>
+      </div>
 
     </aside>
   );

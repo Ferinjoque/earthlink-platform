@@ -708,7 +708,7 @@ export default async function DetallePeriodoPage({
                   calculate: 'Cálculo',
                   void: 'Anulación',
                 };
-                const accion = ACCION_LABEL[entry.action] ?? entry.action.replace(/_/g, ' ');
+                const accion = ACCION_LABEL[entry.action.toLowerCase()] ?? entry.action.replace(/_/g, ' ').toLowerCase();
                 const newVals = entry.new_values as Record<string, unknown> | null;
                 const nuevoEstado = newVals?.status as string | undefined;
                 return (
