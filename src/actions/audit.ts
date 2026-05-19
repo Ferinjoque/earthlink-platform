@@ -11,6 +11,7 @@ import { UnitConversionRepository } from '@/repos/UnitConversionRepository';
 import { EmissionResultRepository } from '@/repos/EmissionResultRepository';
 import { ReportingPeriodRepository } from '@/repos/ReportingPeriodRepository';
 import { AuditLogRepository } from '@/repos/AuditLogRepository';
+import { AnomalyService } from '@/services/AnomalyService';
 
 // ── State types ───────────────────────────────────────────────────────────────
 
@@ -81,8 +82,9 @@ export async function calculatePeriod(
     return { error: 'Error al iniciar el cálculo del periodo' };
   }
 
+  const activityEntryRepo = new ActivityEntryRepository(supabase);
   const evalSvc = new EvaluationService(
-    new ActivityEntryRepository(supabase),
+    activityEntryRepo,
     new EmissionFactorRepository(supabase),
     new UnitConversionRepository(supabase),
     new EmissionResultRepository(supabase),
@@ -96,6 +98,48 @@ export async function calculatePeriod(
     return {
       error: `Error en la evaluación: ${err instanceof Error ? err.message : 'error desconocido'}`,
     };
+  }
+
+  // Anomaly detection using prior-year entries as historical baseline
+  try {
+    const priorYear = period.startDate.getFullYear() - 1;
+    const { data: priorPeriodsRaw } = await supabase
+      .from('reporting_periods')
+      .select('id')
+      .eq('supplier_id', period.supplierId)
+      .gte('start_date', `${priorYear}-01-01`)
+      .lte('start_date', `${priorYear}-12-31`);
+    const priorPeriodIds = (priorPeriodsRaw ?? []).map((p: { id: string }) => p.id);
+
+    const [currentEntries, historicalEntries] = await Promise.all([
+      activityEntryRepo.findByPeriodId(periodId),
+      activityEntryRepo.findByPeriodIds(priorPeriodIds),
+    ]);
+
+    const anomalies = new AnomalyService().detect(currentEntries, historicalEntries);
+
+    if (currentEntries.length > 0) {
+      await supabase
+        .from('anomaly_flags')
+        .delete()
+        .in('activity_entry_id', currentEntries.map((e) => e.id))
+        .eq('is_resolved', false);
+    }
+
+    if (anomalies.length > 0) {
+      await supabase.from('anomaly_flags').insert(
+        anomalies.map((a) => ({
+          activity_entry_id: a.entryId,
+          detector: 'z-score-v1',
+          severity: a.severity,
+          z_score: a.zScore,
+          message: a.message,
+          threshold_used: AnomalyService.Z_THRESHOLD_LOW,
+        })),
+      );
+    }
+  } catch {
+    // Anomaly detection is best-effort — don't block the transition
   }
 
   try {
@@ -333,13 +377,25 @@ export async function calculateYear(
   const periodRepo = new ReportingPeriodRepository(supabase);
   const auditLogRepo = new AuditLogRepository(supabase);
   const auditSvc = new AuditService(periodRepo, auditLogRepo);
+  const activityEntryRepoYear = new ActivityEntryRepository(supabase);
   const evalSvc = new EvaluationService(
-    new ActivityEntryRepository(supabase),
+    activityEntryRepoYear,
     new EmissionFactorRepository(supabase),
     new UnitConversionRepository(supabase),
     new EmissionResultRepository(supabase),
     periodRepo,
   );
+
+  // Fetch prior-year historical entries once for batch anomaly detection
+  const priorYear = year - 1;
+  const { data: priorPeriodsYearRaw } = await supabase
+    .from('reporting_periods')
+    .select('id')
+    .eq('supplier_id', supplier_id)
+    .gte('start_date', `${priorYear}-01-01`)
+    .lte('start_date', `${priorYear}-12-31`);
+  const priorPeriodIdsYear = (priorPeriodsYearRaw ?? []).map((p: { id: string }) => p.id);
+  const historicalEntriesYear = await activityEntryRepoYear.findByPeriodIds(priorPeriodIdsYear);
 
   let calculated = 0;
   let skipped = 0;
@@ -361,6 +417,34 @@ export async function calculateYear(
 
     try {
       await evalSvc.evaluate(p.id);
+
+      // Anomaly detection against prior-year baseline (best-effort)
+      try {
+        const currentEntries = await activityEntryRepoYear.findByPeriodId(p.id);
+        const anomalies = new AnomalyService().detect(currentEntries, historicalEntriesYear);
+        if (currentEntries.length > 0) {
+          await supabase
+            .from('anomaly_flags')
+            .delete()
+            .in('activity_entry_id', currentEntries.map((e) => e.id))
+            .eq('is_resolved', false);
+        }
+        if (anomalies.length > 0) {
+          await supabase.from('anomaly_flags').insert(
+            anomalies.map((a) => ({
+              activity_entry_id: a.entryId,
+              detector: 'z-score-v1',
+              severity: a.severity,
+              z_score: a.zScore,
+              message: a.message,
+              threshold_used: AnomalyService.Z_THRESHOLD_LOW,
+            })),
+          );
+        }
+      } catch {
+        // best-effort
+      }
+
       await auditSvc.transitionStatus(p.id, 'under_review', user.id);
       calculated = calculated + 1;
     } catch (err) {

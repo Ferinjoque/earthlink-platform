@@ -1,141 +1,174 @@
-# EarthLink — ESG Carbon Auditor
-
-> **Automated GHG accounting for Scope 1 & 2 emissions.** Turn spreadsheet chaos into an auditable, immutable carbon ledger.
+# EarthLink - Auditor GHG de Proveedores
 
 [![CI](https://github.com/Ferinjoque/esg-supplier-auditor/actions/workflows/ci.yml/badge.svg)](https://github.com/Ferinjoque/esg-supplier-auditor/actions/workflows/ci.yml)
+![Version](https://img.shields.io/badge/version-0.2.0-blue)
+![Next.js](https://img.shields.io/badge/Next.js-16-black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5%20strict-3178C6)
+![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20RLS-3ECF8E)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+Plataforma SaaS multi-tenant para contabilidad de gases de efecto invernadero (GEI) de Alcance 1 y 2 segun el GHG Protocol. Reemplaza el seguimiento manual en hojas de calculo con un ledger auditado e inmutable: cada tCO2e reportada es trazable hasta el dato bruto, el factor de emision versionado, la version del motor de calculo y el usuario que lo envio.
 
 ---
 
-## What it does
+## Que hace
 
-EarthLink replaces manual Excel-based carbon accounting with a deterministic, fully auditable platform. Suppliers submit activity data (fuel consumption, electricity purchases) through a guided interface; a pure functional calculation engine converts raw inputs to tCO₂e using versioned emission factors; consultants audit the results and lock periods for regulatory reporting.
+- Los proveedores registran datos de consumo (combustibles, electricidad) a traves de un formulario guiado o importacion CSV/Excel.
+- Un motor de calculo funcional puro convierte los datos brutos a tCO2e usando factores de emision versionados y aritmetica de punto fijo.
+- Los consultores y administradores revisan resultados, gestionan anomalias estadisticas y bloquean periodos para registro inmutable.
+- Los periodos bloqueados generan reportes exportables con hash SHA-256 para trazabilidad regulatoria.
 
-Every tCO₂e reported traces back — immutably — to the raw submission, the emission factor version, the calculation engine version, and the user who submitted it.
+---
 
-## Architecture
+## Arquitectura
 
-The system deliberately uses **two programming paradigms** in clearly separated modules:
+El sistema separa deliberadamente dos paradigmas de programacion:
 
 ```
-src/app/           Next.js App Router (thin layer)
-  │
-services/          OOP — orchestration services
-  ├──→ repos/      OOP — abstract Repository<T> + Supabase concretes
-  │     └──→ Supabase (Postgres + RLS + Storage)
-  └──→ calc/       PURE FP — no side effects, no I/O
-domain/            OOP — EmissionSource hierarchy, value objects
+src/app/          Next.js App Router (capa delgada)
+  |
+services/         POO  - servicios de orquestacion
+  +---> repos/    POO  - Repository<T> abstracto + implementaciones Supabase
+  |      +---> Supabase (Postgres + RLS + Storage)
+  +---> calc/     FP puro - sin efectos secundarios, sin I/O
+domain/           POO  - jerarquia EmissionSource, value objects
 ```
 
-### OOP layer (`domain/`, `repos/`, `services/`)
+### Capa POO (`domain/`, `repos/`, `services/`)
 
-- `abstract EmissionSource` with concrete `StationaryCombustionSource`, `MobileCombustionSource`, `PurchasedElectricitySource`, `PurchasedSteamSource`, `FugitiveEmissionSource`
-- `abstract Repository<TEntity, TId>` with `SupabaseRepository<T>` and `InMemoryRepository<T>` (used in tests)
-- Polymorphism: `source.validate(raw)` and `source.factorKey()` called without type switching
+- `abstract EmissionSource` con implementaciones concretas: `StationaryCombustionSource`, `MobileCombustionSource`, `PurchasedElectricitySource`, `PurchasedSteamSource`, `FugitiveEmissionSource`.
+- `abstract Repository<TEntity>` con `SupabaseRepository<T>` e `InMemoryRepository<T>` (para tests).
+- Polimorfismo: `source.validate(raw)` y `source.factorKey()` sin type switching.
 
-### FP engine (`calc/`)
+### Motor FP (`calc/`)
 
-- Discriminated union `ActivityKind` covers all Scope 1 + 2 activity types
-- Pure pipeline: `validateActivity → normalizeUnit → resolveFactor → applyFactor → stampProvenance`
-- Determinism: `big.js` fixed-point arithmetic, single final rounding, `calcHash = sha256(canonical(inputs))`
-- ESLint boundary rule enforces zero I/O imports in `calc/`
+- Union discriminada `ActivityKind` cubre todos los tipos de actividad de Alcance 1 y 2.
+- Pipeline puro: `validateActivity -> normalizeUnit -> resolveFactor -> applyFactor -> stampProvenance`.
+- Determinismo: aritmetica de punto fijo con `big.js`, redondeo unico al final, hash de calculo `sha256(canonical(inputs))`.
+- Regla ESLint de limites arquitecturales: cero imports de I/O en `calc/`.
 
-## Database — 15 tables
+---
 
-| Group | Tables |
+## Base de datos
+
+15 tablas organizadas en 4 grupos:
+
+| Grupo | Tablas |
 |---|---|
-| Reference (5) | `fuel_types`, `refrigerants`, `grid_regions`, `emission_factors`, `unit_conversions` |
-| Auth/Access (3) | `organizations`, `suppliers`, `memberships` |
-| Transactional (5) | `reporting_periods`, `activity_entries`, `emission_results`*, `evidence_files`, `anomaly_flags` |
-| Audit (2) | `audit_log`*, `report_exports`* |
+| Referencia (5) | fuel_types, refrigerants, grid_regions, emission_factors, unit_conversions |
+| Acceso (3) | organizations, suppliers, memberships |
+| Transaccional (5) | reporting_periods, activity_entries, emission_results*, evidence_files, anomaly_flags |
+| Auditoria (2) | audit_log*, report_exports* |
 
-\* Append-only — `UPDATE` / `DELETE` blocked by DB triggers. Audit log is trigger-populated.
+*Append-only: triggers de base de datos bloquean UPDATE y DELETE para garantizar la inmutabilidad del registro auditado.
 
-## Tech stack
+---
 
-| Concern | Choice |
+## Stack tecnico
+
+| Componente | Tecnologia |
 |---|---|
 | Framework | Next.js 16 (App Router) + React 19 |
-| Language | TypeScript 5 (strict + noUncheckedIndexedAccess) |
-| Database | Supabase (Postgres + Auth + RLS) |
-| Styling | CSS custom properties (OKLCH tokens) — no Tailwind classes for layout/color |
-| Animation | Framer Motion + canvas requestAnimationFrame |
-| Validation | Zod (in Server Actions) |
-| Arithmetic | big.js (fixed-point, 6 dp) |
-| Unit tests | Vitest + fast-check (property-based) |
-| E2E tests | Playwright (chromium + firefox + webkit) |
+| Lenguaje | TypeScript 5 (strict + noUncheckedIndexedAccess) |
+| Base de datos | Supabase (Postgres + Auth + RLS) |
+| Estilos | CSS custom properties con tokens OKLCH (sin clases Tailwind para layout/color) |
+| Animaciones | Framer Motion + canvas requestAnimationFrame |
+| Validacion | Zod (en Server Actions) |
+| Aritmetica | big.js (punto fijo, 6 decimales) |
+| Tests unitarios | Vitest + fast-check (property-based) |
+| Tests E2E | Playwright (chromium + firefox + webkit) |
 | CI | GitHub Actions |
-| Deploy | Vercel (free) + Supabase (free) |
+| Deploy | Vercel + Supabase |
 
-## Getting started
+---
+
+## Configuracion rapida
 
 ```bash
-# Prerequisites: Node 22+, pnpm 9+
+# Requisitos: Node 20+, pnpm 9+
 
 pnpm install
-cp .env.local.example .env.local
-# Fill in NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
+cp .env.example .env.local
+# Completar NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
 
-pnpm dev        # http://localhost:3002 (3000 reserved for other project)
-pnpm test       # unit tests
-pnpm test:e2e   # playwright (starts dev server automatically)
+# Aplicar migraciones
+npx supabase db push
+
+# Cargar datos de demostracion
+npx tsx scripts/seed.ts
+
+# Servidor de desarrollo
+pnpm dev   # http://localhost:3002
 ```
 
-### Demo credentials
+### Credenciales de demo
 
 ```
 email:    admin@earthlink.test
-password: Earthlink2025!
+contrasena: Earthlink2025!
 ```
 
-Admin role in both seeded organizations (EcoGroup SAC + Andean Mining Corp).
+Rol admin en ambas organizaciones de ejemplo (EcoGroup SAC y Andean Mining Corp).
 
-### Supabase setup
+### Scripts disponibles
 
 ```bash
-# Apply all migrations to remote project
-supabase db push
-
-# Or reset local stack
-supabase db reset
+pnpm dev            # Servidor de desarrollo
+pnpm build          # Build de produccion
+pnpm test           # Tests unitarios
+pnpm test:coverage  # Tests con cobertura (objetivo: 80%)
+pnpm test:e2e       # Tests E2E con Playwright
+pnpm typecheck      # Verificacion de tipos
+pnpm lint           # ESLint (zero warnings)
+pnpm ci             # lint + typecheck + test:coverage + build
 ```
 
-## Project structure
+---
+
+## Estructura del proyecto
 
 ```
 src/
-├── calc/          Pure FP engine — zero I/O
-├── domain/        OOP entities + value objects
-├── repos/         OOP repositories (Supabase + InMemory)
-├── services/      Orchestration services (EvaluationService, AuditService, AnomalyService)
-├── actions/       Server Actions (auth, activity, audit)
-├── components/
-│   ├── shell/     Sidebar, TopBar
-│   ├── activity/  ActivityForm, ActivityList, CsvImportPanel, AnomalyBadge
-│   ├── audit/     PeriodActions
-│   └── ui/        Button, Card, Badge
-├── lib/           csv.ts, auth utils
-├── styles/        tokens.css, typography.css, globals.css
-└── types/         database.ts (Supabase generated)
-app/               Next.js App Router (src/app/)
+  calc/           Motor de calculo GEI - FP puro, sin I/O
+  domain/         Entidades de dominio OOP
+  repos/          Repositorios Supabase e InMemory
+  services/       EvaluationService, AuditService, AnomalyService
+  actions/        Server Actions con validacion Zod
+  components/
+    shell/        Sidebar, TopBar
+    activity/     Formulario, lista, importador CSV, badge de anomalia
+    audit/        Acciones de periodo, tabla de periodos bloqueados
+    ui/           Button, Card, Badge, YearSelector
+  lib/            Utilidades (CSV, formato, periodos)
+  styles/         tokens.css, typography.css, globals.css
+  types/          database.ts (generado por CLI de Supabase)
 supabase/
-└── migrations/    Forward-only SQL — 10 migrations applied
-tests/
-├── unit/          Vitest
-└── e2e/           Playwright
+  migrations/     SQL progresivo (001-010+)
+scripts/
+  seed.ts         Carga de datos de demostracion
 docs/
-├── DESIGN.md      Living design system reference
-├── adr/           Architecture Decision Records
-└── uml/           Class + sequence diagrams
-CLAUDE.md          AI agent context — read before any session
+  DESIGN.md       Sistema de diseno y tokens
+  CLAUDE.md       Contexto para agentes de IA
 ```
 
-## GHG Protocol scope
+---
 
-- **Scope 1**: Stationary combustion (natural gas, diesel, LPG), mobile combustion (fleet fuel), fugitive emissions (refrigerants)
-- **Scope 2**: Purchased electricity (location-based), purchased steam
-- **Scope 3**: Explicitly out of scope
+## Alcance GHG Protocol
 
-## License
+- **Alcance 1**: Combustion estacionaria (gas natural, diesel, GLP), combustion movil (flota), emisiones fugitivas (refrigerantes).
+- **Alcance 2**: Electricidad comprada (base de ubicacion), vapor comprado.
+- **Alcance 3**: Explicitamente fuera del alcance.
 
-MIT — see [LICENSE](LICENSE)
+---
+
+## Despliegue en Vercel
+
+1. Conecta el repositorio en el dashboard de Vercel.
+2. Configura las variables de entorno (las mismas que en `.env.local`).
+3. Vercel detecta Next.js automaticamente. Las cabeceras de seguridad estan definidas en `vercel.json`.
+
+---
+
+## Licencia
+
+MIT - ver [LICENSE](LICENSE)

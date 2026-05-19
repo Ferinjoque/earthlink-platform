@@ -36,9 +36,17 @@ interface PeriodoOption {
   label: string;
 }
 
+export interface PaginationInfo {
+  page: number;
+  pageSize: number;
+  total: number;
+  basePath: string;
+}
+
 interface ActivityListProps {
   entries: ActivityEntryView[];
   periodos: PeriodoOption[];
+  pagination?: PaginationInfo;
 }
 
 const ETIQUETAS_ESTADO: Record<ActivityEntryStatus, string> = {
@@ -457,7 +465,7 @@ function EntradaFila({
 
 // ── ActivityList ──────────────────────────────────────────────────────────────
 
-export function ActivityList({ entries, periodos }: ActivityListProps) {
+export function ActivityList({ entries, periodos, pagination }: ActivityListProps) {
   const [filtroEstado, setFiltroEstado] = useState<ActivityEntryStatus | 'todos'>('todos');
   const [filtroFuente, setFiltroFuente] = useState<EmissionSourceType | 'todos'>('todos');
   const [filtroPeriodo, setFiltroPeriodo] = useState<string>('todos');
@@ -717,6 +725,71 @@ export function ActivityList({ entries, periodos }: ActivityListProps) {
                 ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* ── Paginación server-side ── */}
+      {pagination && pagination.total > pagination.pageSize && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: 'var(--space-3) var(--space-4)',
+            borderTop: '1px solid var(--color-border)',
+            flexWrap: 'wrap',
+            gap: 'var(--space-3)',
+          }}
+        >
+          <span
+            style={{
+              fontSize: 'var(--text-xs)',
+              fontFamily: 'var(--font-mono)',
+              color: 'var(--color-ink-3)',
+            }}
+          >
+            {((pagination.page - 1) * pagination.pageSize) + 1}
+            {' – '}
+            {Math.min(pagination.page * pagination.pageSize, pagination.total)}
+            {' de '}
+            {pagination.total}
+          </span>
+          <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+            {pagination.page > 1 && (
+              <a
+                href={`${pagination.basePath}?page=${pagination.page - 1}`}
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--color-ink-2)',
+                  background: 'var(--color-surface-2)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '3px var(--space-3)',
+                  textDecoration: 'none',
+                }}
+              >
+                Anterior
+              </a>
+            )}
+            {pagination.page * pagination.pageSize < pagination.total && (
+              <a
+                href={`${pagination.basePath}?page=${pagination.page + 1}`}
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--color-ink-2)',
+                  background: 'var(--color-surface-2)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '3px var(--space-3)',
+                  textDecoration: 'none',
+                }}
+              >
+                Siguiente
+              </a>
+            )}
+          </div>
         </div>
       )}
     </div>
