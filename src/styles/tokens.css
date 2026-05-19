@@ -1,0 +1,187 @@
+/* ============================================================
+   EarthLink Design Tokens
+   Dirección: Editorial Climate Tech — Persefoni × Perplexity Hub
+   ============================================================ */
+
+:root {
+  /* ── Paleta base — claro cálido editorial ── */
+  --color-surface-0: #FAF7F0;        /* papel crema */
+  --color-surface-1: #FFFFFF;        /* tarjeta elevada */
+  --color-surface-2: #F2EDE2;        /* hundido / input */
+  --color-surface-3: #E9E2D2;        /* panel acento */
+  --color-border:    #E5DFD3;        /* divisores */
+  --color-border-strong: #CFC6B0;    /* divisores prominentes */
+
+  --color-ink-1:     #0F1F1B;        /* texto primario forest */
+  --color-ink-2:     #4A5854;        /* texto secundario */
+  --color-ink-3:     #8B9591;        /* placeholder / deshabilitado */
+  --color-ink-inverse: #FAF7F0;      /* texto sobre fondos oscuros */
+
+  /* ── Acentos ── */
+  --color-accent:        #1F5C45;    /* verde musgo profundo — primario */
+  --color-accent-2:      #2E7D5B;    /* verde medio */
+  --color-accent-soft:   #E3EBE5;    /* fondo acento sutil */
+  --color-accent-dim:    #4A8A6F;    /* hover/inactivo */
+
+  --color-warm:          #D97757;    /* terracota — pop cálido */
+  --color-warm-soft:     #F8E8DD;    /* fondo terracota sutil */
+
+  --color-gold:          #C9A14A;    /* mostaza editorial — destacar */
+  --color-gold-soft:     #F5EBD3;
+
+  --color-scope2:        oklch(56% 0.19 295);   /* violeta editorial — Alcance 2 */
+  --color-scope2-soft:   oklch(95% 0.04 295);   /* fondo Alcance 2 sutil */
+
+  /* ── Señales ── */
+  --color-signal-hi:     #C0392B;    /* anomalía / alto riesgo */
+  --color-signal-md:     #C9A14A;    /* precaución / medio */
+  --color-signal-ok:     #1F5C45;    /* validado / bajo */
+  --color-signal-hi-bg:  #F8E5E1;
+  --color-signal-md-bg:  #F5EBD3;
+  --color-signal-ok-bg:  #E3EBE5;
+
+  --color-overlay: rgba(15, 31, 27, 0.6);
+
+  /* ── Tipografía ── */
+  --font-sans:    var(--font-inter), 'Inter', system-ui, -apple-system, sans-serif;
+  --font-serif:   var(--font-instrument), 'Instrument Serif', 'Cormorant Garamond', Georgia, serif;
+  --font-mono:    var(--font-mono-stack), 'JetBrains Mono', 'IBM Plex Mono', 'Courier New', monospace;
+
+  --text-xs:   clamp(0.72rem, 0.69rem + 0.15vw, 0.78rem);
+  --text-sm:   clamp(0.82rem, 0.78rem + 0.18vw, 0.9rem);
+  --text-base: clamp(0.95rem, 0.92rem + 0.20vw, 1.02rem);
+  --text-lg:   clamp(1.08rem, 1.02rem + 0.30vw, 1.18rem);
+  --text-xl:   clamp(1.22rem, 1.10rem + 0.55vw, 1.4rem);
+  --text-2xl:  clamp(1.50rem, 1.30rem + 1.00vw, 1.85rem);
+  --text-3xl:  clamp(1.95rem, 1.55rem + 1.80vw, 2.6rem);
+  --text-4xl:  clamp(2.50rem, 1.90rem + 2.80vw, 3.6rem);
+  --text-display: clamp(3.20rem, 2.00rem + 5.50vw, 5.5rem);
+  --text-hero: clamp(3.80rem, 2.20rem + 7.50vw, 7.5rem);
+
+  --leading-tight:   1.08;
+  --leading-snug:    1.22;
+  --leading-normal:  1.5;
+  --leading-relaxed: 1.65;
+
+  --tracking-tightest: -0.04em;
+  --tracking-tight:    -0.022em;
+  --tracking-normal:   0em;
+  --tracking-wide:     0.04em;
+  --tracking-widest:   0.14em;
+
+  --fw-light:    300;
+  --fw-normal:   400;
+  --fw-medium:   500;
+  --fw-semibold: 600;
+  --fw-bold:     700;
+
+  /* ── Espaciado ── */
+  --space-1:  0.25rem;
+  --space-2:  0.5rem;
+  --space-3:  0.75rem;
+  --space-4:  1rem;
+  --space-5:  1.25rem;
+  --space-6:  1.5rem;
+  --space-8:  2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+  --space-32: 8rem;
+  --space-section: clamp(4rem, 3rem + 5vw, 9rem);
+
+  /* ── Radio ── */
+  --radius-xs:   0.1875rem;
+  --radius-sm:   0.3125rem;
+  --radius-md:   0.5rem;
+  --radius-lg:   0.875rem;
+  --radius-xl:   1.25rem;
+  --radius-2xl:  1.75rem;
+  --radius-pill: 9999px;
+
+  /* ── Sombras (cálidas, no negras) ── */
+  --shadow-xs: 0 1px 2px rgba(15, 31, 27, 0.04);
+  --shadow-sm: 0 1px 3px rgba(15, 31, 27, 0.06), 0 1px 2px rgba(15, 31, 27, 0.04);
+  --shadow-md: 0 4px 16px rgba(15, 31, 27, 0.06), 0 2px 4px rgba(15, 31, 27, 0.04);
+  --shadow-lg: 0 16px 40px rgba(15, 31, 27, 0.08), 0 4px 12px rgba(15, 31, 27, 0.05);
+  --shadow-xl: 0 32px 80px rgba(15, 31, 27, 0.12), 0 8px 20px rgba(15, 31, 27, 0.06);
+  --shadow-glow: 0 0 0 1px rgba(31, 92, 69, 0.12), 0 16px 48px rgba(31, 92, 69, 0.18);
+
+  /* ── Movimiento ── */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-quad:  cubic-bezier(0.40, 0, 1, 1);
+  --ease-in-out:   cubic-bezier(0.45, 0, 0.55, 1);
+  --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --duration-micro:     90ms;
+  --duration-fast:      180ms;
+  --duration-normal:    280ms;
+  --duration-editorial: 520ms;
+  --duration-slow:      900ms;
+
+  /* ── Layout ── */
+  --max-w-prose:   68ch;
+  --max-w-content: 1240px;
+  --max-w-wide:    1480px;
+  --sidebar-w:     260px;
+  --topbar-h:      64px;
+
+  /* ── Z ── */
+  --z-base:    0;
+  --z-raised:  10;
+  --z-sticky:  100;
+  --z-overlay: 200;
+  --z-modal:   300;
+  --z-toast:   400;
+}
+
+/* ── Modo oscuro — Persefoni dusk ── */
+[data-theme='dark'] {
+  --color-surface-0: #0E1916;
+  --color-surface-1: #15211D;
+  --color-surface-2: #1B2825;
+  --color-surface-3: #233330;
+  --color-border:    #233330;
+  --color-border-strong: #34453F;
+
+  --color-ink-1:     #F4F1EA;
+  --color-ink-2:     #B8B0A0;
+  --color-ink-3:     #7D7669;
+  --color-ink-inverse: #0E1916;
+
+  --color-accent:      #4DD0A8;
+  --color-accent-2:    #76E0BD;
+  --color-accent-soft: #1B3A2F;
+  --color-accent-dim:  #2E7D5B;
+
+  --color-warm:      #E89570;
+  --color-warm-soft: #3A2419;
+  --color-gold-soft: #2F2719;
+  --color-scope2:        oklch(68% 0.17 295);   /* violeta claro en oscuro */
+  --color-scope2-soft:   oklch(20% 0.06 295);   /* fondo Alcance 2 en oscuro */
+
+  --color-signal-ok: #4DD0A8;
+  --color-signal-ok-bg: #1B3A2F;
+  --color-signal-hi-bg: #3A1F1B;
+  --color-signal-md-bg: #2F2719;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-xl: 0 32px 80px rgba(0, 0, 0, 0.65), 0 8px 20px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 0 1px rgba(77, 208, 168, 0.2), 0 16px 48px rgba(77, 208, 168, 0.25);
+}
+
+/* ── Movimiento reducido ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

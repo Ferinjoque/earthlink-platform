@@ -1,0 +1,37 @@
+/* Tipografía cargada vía next/font en app/layout.tsx
+   Variables CSS expuestas: --font-inter, --font-instrument, --font-mono-stack
+   Aquí solo declaramos clases utilitarias editoriales. */
+
+.font-display {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: var(--tracking-tightest);
+  line-height: var(--leading-tight);
+}
+
+.font-editorial {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-snug);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+  font-feature-settings: 'tnum' 1, 'ss01' 1;
+}
+
+.numeric-tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.eyebrow {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  color: var(--color-ink-2);
+}

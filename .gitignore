@@ -10,6 +10,10 @@
 
 # testing
 /coverage
+/playwright-report
+/test-results
+/blob-report
+/tests/e2e/.auth
 
 # next.js
 /.next/
@@ -34,6 +38,18 @@ yarn-error.log*
 
 # vercel
 .vercel
+
+# supabase temp (contiene datos de conexión sensibles)
+supabase/.temp/
+
+# documentación interna (solo uso local, no subir a GitHub)
+CLAUDE.md
+docs/
+
+# logs de desarrollo y lighthouse
+*.log
+lh-*.json
+lighthouse-*.json
 
 # typescript
 *.tsbuildinfo

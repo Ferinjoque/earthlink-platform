@@ -1,36 +1,174 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# EarthLink - Auditor GHG de Proveedores
 
-## Getting Started
+[![CI](https://github.com/Ferinjoque/esg-supplier-auditor/actions/workflows/ci.yml/badge.svg)](https://github.com/Ferinjoque/esg-supplier-auditor/actions/workflows/ci.yml)
+![Version](https://img.shields.io/badge/version-0.2.0-blue)
+![Next.js](https://img.shields.io/badge/Next.js-16-black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5%20strict-3178C6)
+![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20RLS-3ECF8E)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-First, run the development server:
+Plataforma SaaS multi-tenant para contabilidad de gases de efecto invernadero (GEI) de Alcance 1 y 2 segun el GHG Protocol. Reemplaza el seguimiento manual en hojas de calculo con un ledger auditado e inmutable: cada tCO2e reportada es trazable hasta el dato bruto, el factor de emision versionado, la version del motor de calculo y el usuario que lo envio.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## Que hace
+
+- Los proveedores registran datos de consumo (combustibles, electricidad) a traves de un formulario guiado o importacion CSV/Excel.
+- Un motor de calculo funcional puro convierte los datos brutos a tCO2e usando factores de emision versionados y aritmetica de punto fijo.
+- Los consultores y administradores revisan resultados, gestionan anomalias estadisticas y bloquean periodos para registro inmutable.
+- Los periodos bloqueados generan reportes exportables con hash SHA-256 para trazabilidad regulatoria.
+
+---
+
+## Arquitectura
+
+El sistema separa deliberadamente dos paradigmas de programacion:
+
+```
+src/app/          Next.js App Router (capa delgada)
+  |
+services/         POO  - servicios de orquestacion
+  +---> repos/    POO  - Repository<T> abstracto + implementaciones Supabase
+  |      +---> Supabase (Postgres + RLS + Storage)
+  +---> calc/     FP puro - sin efectos secundarios, sin I/O
+domain/           POO  - jerarquia EmissionSource, value objects
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Capa POO (`domain/`, `repos/`, `services/`)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `abstract EmissionSource` con implementaciones concretas: `StationaryCombustionSource`, `MobileCombustionSource`, `PurchasedElectricitySource`, `PurchasedSteamSource`, `FugitiveEmissionSource`.
+- `abstract Repository<TEntity>` con `SupabaseRepository<T>` e `InMemoryRepository<T>` (para tests).
+- Polimorfismo: `source.validate(raw)` y `source.factorKey()` sin type switching.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Motor FP (`calc/`)
 
-## Learn More
+- Union discriminada `ActivityKind` cubre todos los tipos de actividad de Alcance 1 y 2.
+- Pipeline puro: `validateActivity -> normalizeUnit -> resolveFactor -> applyFactor -> stampProvenance`.
+- Determinismo: aritmetica de punto fijo con `big.js`, redondeo unico al final, hash de calculo `sha256(canonical(inputs))`.
+- Regla ESLint de limites arquitecturales: cero imports de I/O en `calc/`.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Base de datos
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+15 tablas organizadas en 4 grupos:
 
-## Deploy on Vercel
+| Grupo | Tablas |
+|---|---|
+| Referencia (5) | fuel_types, refrigerants, grid_regions, emission_factors, unit_conversions |
+| Acceso (3) | organizations, suppliers, memberships |
+| Transaccional (5) | reporting_periods, activity_entries, emission_results*, evidence_files, anomaly_flags |
+| Auditoria (2) | audit_log*, report_exports* |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+*Append-only: triggers de base de datos bloquean UPDATE y DELETE para garantizar la inmutabilidad del registro auditado.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Stack tecnico
+
+| Componente | Tecnologia |
+|---|---|
+| Framework | Next.js 16 (App Router) + React 19 |
+| Lenguaje | TypeScript 5 (strict + noUncheckedIndexedAccess) |
+| Base de datos | Supabase (Postgres + Auth + RLS) |
+| Estilos | CSS custom properties con tokens OKLCH (sin clases Tailwind para layout/color) |
+| Animaciones | Framer Motion + canvas requestAnimationFrame |
+| Validacion | Zod (en Server Actions) |
+| Aritmetica | big.js (punto fijo, 6 decimales) |
+| Tests unitarios | Vitest + fast-check (property-based) |
+| Tests E2E | Playwright (chromium + firefox + webkit) |
+| CI | GitHub Actions |
+| Deploy | Vercel + Supabase |
+
+---
+
+## Configuracion rapida
+
+```bash
+# Requisitos: Node 20+, pnpm 9+
+
+pnpm install
+cp .env.example .env.local
+# Completar NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
+
+# Aplicar migraciones
+npx supabase db push
+
+# Cargar datos de demostracion
+npx tsx scripts/seed.ts
+
+# Servidor de desarrollo
+pnpm dev   # http://localhost:3002
+```
+
+### Credenciales de demo
+
+```
+email:    admin@earthlink.test
+contrasena: Earthlink2025!
+```
+
+Rol admin en ambas organizaciones de ejemplo (EcoGroup SAC y Andean Mining Corp).
+
+### Scripts disponibles
+
+```bash
+pnpm dev            # Servidor de desarrollo
+pnpm build          # Build de produccion
+pnpm test           # Tests unitarios
+pnpm test:coverage  # Tests con cobertura (objetivo: 80%)
+pnpm test:e2e       # Tests E2E con Playwright
+pnpm typecheck      # Verificacion de tipos
+pnpm lint           # ESLint (zero warnings)
+pnpm ci             # lint + typecheck + test:coverage + build
+```
+
+---
+
+## Estructura del proyecto
+
+```
+src/
+  calc/           Motor de calculo GEI - FP puro, sin I/O
+  domain/         Entidades de dominio OOP
+  repos/          Repositorios Supabase e InMemory
+  services/       EvaluationService, AuditService, AnomalyService
+  actions/        Server Actions con validacion Zod
+  components/
+    shell/        Sidebar, TopBar
+    activity/     Formulario, lista, importador CSV, badge de anomalia
+    audit/        Acciones de periodo, tabla de periodos bloqueados
+    ui/           Button, Card, Badge, YearSelector
+  lib/            Utilidades (CSV, formato, periodos)
+  styles/         tokens.css, typography.css, globals.css
+  types/          database.ts (generado por CLI de Supabase)
+supabase/
+  migrations/     SQL progresivo (001-010+)
+scripts/
+  seed.ts         Carga de datos de demostracion
+docs/
+  DESIGN.md       Sistema de diseno y tokens
+  CLAUDE.md       Contexto para agentes de IA
+```
+
+---
+
+## Alcance GHG Protocol
+
+- **Alcance 1**: Combustion estacionaria (gas natural, diesel, GLP), combustion movil (flota), emisiones fugitivas (refrigerantes).
+- **Alcance 2**: Electricidad comprada (base de ubicacion), vapor comprado.
+- **Alcance 3**: Explicitamente fuera del alcance.
+
+---
+
+## Despliegue en Vercel
+
+1. Conecta el repositorio en el dashboard de Vercel.
+2. Configura las variables de entorno (las mismas que en `.env.local`).
+3. Vercel detecta Next.js automaticamente. Las cabeceras de seguridad estan definidas en `vercel.json`.
+
+---
+
+## Licencia
+
+MIT - ver [LICENSE](LICENSE)
