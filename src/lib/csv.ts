@@ -206,7 +206,20 @@ function parseRow(
       secondary: get('secondary') || '',
       raw_quantity: get('raw_quantity'),
       raw_unit: get('raw_unit'),
+      data_quality: get('data_quality') || 'measured',
       notes: get('notes') || '',
+    };
+  } else if (cols.length >= 8) {
+    const [supplier_id, year_month, source_type, secondary, raw_quantity, raw_unit, data_quality, notes] = cols;
+    raw = {
+      supplier_id: supplier_id ?? '',
+      year_month: year_month ?? '',
+      source_type: source_type ?? '',
+      secondary: secondary ?? '',
+      raw_quantity: raw_quantity ?? '',
+      raw_unit: raw_unit ?? '',
+      data_quality: data_quality || 'measured',
+      notes: notes ?? '',
     };
   } else {
     const [supplier_id, year_month, source_type, secondary, raw_quantity, raw_unit, notes] = cols;
@@ -217,6 +230,7 @@ function parseRow(
       secondary: secondary ?? '',
       raw_quantity: raw_quantity ?? '',
       raw_unit: raw_unit ?? '',
+      data_quality: 'measured',
       notes: notes ?? '',
     };
   }
@@ -236,7 +250,7 @@ export function parseCsvText(text: string): ParsedCsvRow[] {
   const lines = text
     .split('\n')
     .map((l) => l.replace(/\r$/, '').trim())
-    .filter(Boolean);
+    .filter((l) => l.length > 0 && !l.startsWith('#'));
 
   if (lines.length === 0) return [];
 
@@ -258,15 +272,37 @@ export function parseCsvText(text: string): ParsedCsvRow[] {
 export function getCsvTemplate(): string {
   return [
     'supplier_id,year_month,source_type,secondary,raw_quantity,raw_unit,data_quality,notes',
+    '# --- Combustion estacionaria (Alcance 1) | secondary: natural_gas | diesel | lpg | fuel_oil_no2 | propane',
+    '# --- Unidades: m3_ng | ft3_ng | L | gallon | kBtu | therms | MMBtu | MBtu | MJ | GJ | kWh',
     '<UUID-del-proveedor>,2026-01,stationary_combustion,natural_gas,1000,m3_ng,measured,Caldera A',
-    '<UUID-del-proveedor>,2026-01,stationary_combustion,fuel_oil_no2,500,kBtu,measured,Generador de emergencia',
-    '<UUID-del-proveedor>,2026-01,stationary_combustion,propane,200,L,estimated,Calefaccion exterior',
-    '<UUID-del-proveedor>,2026-01,purchased_electricity,SEIN_PERU,5000,kWh,measured,Piso 2 oficinas',
+    '<UUID-del-proveedor>,2026-01,stationary_combustion,diesel,500,L,measured,Generador de emergencia',
+    '<UUID-del-proveedor>,2026-01,stationary_combustion,lpg,200,L,estimated,Cocina industrial',
+    '<UUID-del-proveedor>,2026-01,stationary_combustion,fuel_oil_no2,300,kBtu,measured,Caldera auxiliar',
+    '<UUID-del-proveedor>,2026-01,stationary_combustion,propane,100,L,estimated,Calefaccion exterior',
+    '# --- Combustion movil (Alcance 1) | secondary: diesel | gasoline | lpg',
+    '# --- Unidades: L | gallon | imp_gallon',
     '<UUID-del-proveedor>,2026-01,mobile_combustion,diesel,200,L,measured,Flota de vehiculos',
-    '<UUID-del-proveedor>,2026-01,fugitive,R410A,5,kg,measured,Mantenimiento HVAC',
+    '<UUID-del-proveedor>,2026-01,mobile_combustion,gasoline,150,L,measured,Vehiculos livianos',
+    '<UUID-del-proveedor>,2026-01,mobile_combustion,lpg,80,L,estimated,Montacargas',
+    '# --- Electricidad comprada (Alcance 2) | secondary: SEIN_PERU | LATAM_AVG | US_AVERAGE | EU_AVERAGE',
+    '# --- Unidades: kWh | MWh | GJ',
+    '<UUID-del-proveedor>,2026-01,purchased_electricity,SEIN_PERU,5000,kWh,measured,Piso 2 oficinas',
+    '<UUID-del-proveedor>,2026-01,purchased_electricity,LATAM_AVG,1200,kWh,measured,Sede regional',
+    '# --- Vapor comprado (Alcance 2) | secondary: (vacio)',
+    '# --- Unidades: kWh | MWh | GJ',
     '<UUID-del-proveedor>,2026-01,purchased_steam,,100,GJ,calculated,',
+    '# --- Emisiones fugitivas (Alcance 1) | secondary: R410A | R134A | R32',
+    '# --- Unidades: kg | lb | tonne',
+    '<UUID-del-proveedor>,2026-01,fugitive,R410A,5,kg,measured,Mantenimiento HVAC',
+    '<UUID-del-proveedor>,2026-01,fugitive,R134A,2,kg,measured,Camara frigorifica',
+    '<UUID-del-proveedor>,2026-01,fugitive,R32,1.5,kg,measured,Minisplit oficina',
+    '# --- Agua (GRESB) | secondary: all_sources | potable_mixed | potable_indoor | reclaimed_mixed | well_outdoor | other_mixed',
+    '# --- Unidades: kgal_us | megaliter | m3 | L | gallon',
     '<UUID-del-proveedor>,2026-01,water_use,potable_mixed,150,kgal_us,measured,Medidor principal',
     '<UUID-del-proveedor>,2026-01,water_use,reclaimed_mixed,30,kgal_us,estimated,Riego exterior',
+    '<UUID-del-proveedor>,2026-01,water_use,well_outdoor,20,m3,estimated,Pozo norte',
+    '# --- Residuos (GRESB) | secondary: disposed_trash | recycled | composted',
+    '# --- Unidades: ton_us | tonne | kg | lb',
     '<UUID-del-proveedor>,2026-01,waste,disposed_trash,2.5,ton_us,measured,Contenedor general',
     '<UUID-del-proveedor>,2026-01,waste,recycled,1.2,ton_us,measured,Reciclaje papel/carton',
     '<UUID-del-proveedor>,2026-01,waste,composted,0.8,tonne,measured,Compost residuos organicos',
