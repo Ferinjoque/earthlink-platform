@@ -133,13 +133,15 @@ export default async function ConsumoPage() {
           gap: 'var(--space-8)',
         }}
       >
-        <ConsumoPanel
-          entries={entries}
-          suppliers={suppliersData}
-          toKwh={toKwh}
-          toM3={toM3}
-          toKg={toKg}
-        />
+        <div className="animate-fade-up stagger-1">
+          <ConsumoPanel
+            entries={entries}
+            suppliers={suppliersData}
+            toKwh={toKwh}
+            toM3={toM3}
+            toKg={toKg}
+          />
+        </div>
       </main>
     </>
   );

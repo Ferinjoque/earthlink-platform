@@ -73,7 +73,7 @@ export default async function ConfiguracionPage() {
         }}
       >
         {/* Titular */}
-        <section>
+        <section className="animate-fade-up stagger-1">
           <p className="eyebrow" style={{ marginBottom: 'var(--space-3)' }}>
             Cuenta y organización
           </p>
@@ -98,6 +98,7 @@ export default async function ConfiguracionPage() {
 
         {/* Sección Cuenta */}
         <section
+          className="animate-fade-up stagger-2"
           style={{
             background: 'var(--color-surface-1)',
             border: '1px solid var(--color-border)',
@@ -147,6 +148,7 @@ export default async function ConfiguracionPage() {
 
         {/* Sección Organización */}
         <section
+          className="animate-fade-up stagger-3"
           style={{
             background: 'var(--color-surface-1)',
             border: '1px solid var(--color-border)',
@@ -197,6 +199,7 @@ export default async function ConfiguracionPage() {
 
         {/* Sección Rol */}
         <section
+          className="animate-fade-up stagger-4"
           style={{
             background: 'var(--color-surface-1)',
             border: '1px solid var(--color-border)',

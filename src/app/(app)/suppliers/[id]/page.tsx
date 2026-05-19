@@ -170,7 +170,7 @@ export default async function DetalleProveedorPage({
         </div>
 
         {/* Header proveedor */}
-        <section>
+        <section className="animate-fade-up stagger-1">
           <p className="eyebrow" style={{ marginBottom: 'var(--space-3)' }}>
             {supplier.category}
           </p>
@@ -209,7 +209,7 @@ export default async function DetalleProveedorPage({
         </section>
 
         {/* Periodos de reporte */}
-        <section>
+        <section className="animate-fade-up stagger-2">
           <p className="eyebrow" style={{ marginBottom: 'var(--space-4)' }}>Periodos de reporte</p>
 
           {periods.length === 0 ? (
@@ -323,7 +323,7 @@ export default async function DetalleProveedorPage({
         </section>
 
         {/* Últimas actividades */}
-        <section>
+        <section className="animate-fade-up stagger-3">
           <p className="eyebrow" style={{ marginBottom: 'var(--space-4)' }}>
             Últimas entradas de actividad
           </p>

@@ -64,7 +64,7 @@ export default async function ProveedoresPage() {
         }}
       >
         {/* Titular */}
-        <section>
+        <section className="animate-fade-up stagger-1">
           <p className="eyebrow" style={{ marginBottom: 'var(--space-3)' }}>
             Cadena de suministro
           </p>
@@ -88,9 +88,10 @@ export default async function ProveedoresPage() {
           </p>
         </section>
 
-        {/* Estado vacío global */}
+        {/* Tabla / estado vacío */}
         {orgIds.length === 0 ? (
           <div
+            className="animate-fade-up stagger-2"
             style={{
               display: 'flex',
               flexDirection: 'column',
@@ -140,11 +141,13 @@ export default async function ProveedoresPage() {
             </div>
           </div>
         ) : (
-          <SupplierTable
-            suppliers={suppliersData}
-            organizationId={primaryOrgId}
-            {...(orgsData.length > 1 ? { organizations: orgsData } : {})}
-          />
+          <div className="animate-fade-up stagger-2">
+            <SupplierTable
+              suppliers={suppliersData}
+              organizationId={primaryOrgId}
+              {...(orgsData.length > 1 ? { organizations: orgsData } : {})}
+            />
+          </div>
         )}
       </main>
     </>
