@@ -201,6 +201,7 @@ function VoidResultButton({ activityEntryId }: { activityEntryId: string }) {
   useEffect(() => {
     if (state?.success) {
       toast('Entrada anulada', 'success');
+      setOpen(false);
       router.refresh();
     }
     if (state?.error) {
@@ -209,85 +210,101 @@ function VoidResultButton({ activityEntryId }: { activityEntryId: string }) {
     }
   }, [state?.success, state?.error, toast, router]);
 
-  if (open) {
-    return (
-      <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <input type="hidden" name="entry_id" value={activityEntryId} />
-        <input
-          name="void_reason"
-          required
-          placeholder="Motivo de anulación"
-          autoFocus
+  return (
+    <div style={{ position: 'relative', display: 'inline-block' }}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          fontSize: '10px',
+          fontFamily: 'var(--font-mono)',
+          color: 'var(--color-signal-hi)',
+          background: 'color-mix(in oklch, var(--color-signal-hi) 10%, transparent)',
+          border: '1px solid color-mix(in oklch, var(--color-signal-hi) 22%, transparent)',
+          borderRadius: 'var(--radius-md)',
+          padding: '2px 7px',
+          cursor: 'pointer',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        Anular
+      </button>
+      {open && (
+        <div
           style={{
-            fontSize: '10px',
-            fontFamily: 'var(--font-mono)',
-            color: 'var(--color-ink-2)',
+            position: 'absolute',
+            right: 0,
+            top: 'calc(100% + 4px)',
+            zIndex: 30,
             background: 'var(--color-surface-1)',
             border: '1px solid var(--color-border)',
             borderRadius: 'var(--radius-md)',
-            padding: '2px var(--space-2)',
-            outline: 'none',
-            width: '130px',
+            padding: '8px',
+            boxShadow: 'var(--shadow-md)',
+            minWidth: '200px',
           }}
-        />
-        <div style={{ display: 'flex', gap: '4px' }}>
-          <button
-            type="submit"
-            disabled={isPending}
-            style={{
-              fontSize: '10px',
-              fontFamily: 'var(--font-mono)',
-              color: 'var(--color-signal-hi)',
-              background: 'color-mix(in oklch, var(--color-signal-hi) 10%, transparent)',
-              border: '1px solid color-mix(in oklch, var(--color-signal-hi) 25%, transparent)',
-              borderRadius: 'var(--radius-md)',
-              padding: '2px 6px',
-              cursor: isPending ? 'default' : 'pointer',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {isPending ? '…' : 'Confirmar'}
-          </button>
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            style={{
-              fontSize: '10px',
-              fontFamily: 'var(--font-mono)',
-              color: 'var(--color-ink-3)',
-              background: 'transparent',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-md)',
-              padding: '2px 4px',
-              cursor: 'pointer',
-            }}
-          >
-            ✕
-          </button>
+        >
+          <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <input type="hidden" name="entry_id" value={activityEntryId} />
+            <input
+              name="void_reason"
+              required
+              placeholder="Motivo de anulación"
+              autoFocus
+              style={{
+                fontSize: '11px',
+                fontFamily: 'var(--font-mono)',
+                color: 'var(--color-ink-1)',
+                background: 'var(--color-surface-2)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-md)',
+                padding: '4px var(--space-2)',
+                outline: 'none',
+                width: '100%',
+                boxSizing: 'border-box',
+              }}
+            />
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <button
+                type="submit"
+                disabled={isPending}
+                style={{
+                  flex: 1,
+                  fontSize: '10px',
+                  fontFamily: 'var(--font-mono)',
+                  fontWeight: 600,
+                  color: isPending ? 'var(--color-ink-3)' : 'var(--color-signal-hi)',
+                  background: 'color-mix(in oklch, var(--color-signal-hi) 10%, transparent)',
+                  border: '1px solid color-mix(in oklch, var(--color-signal-hi) 25%, transparent)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '3px 6px',
+                  cursor: isPending ? 'default' : 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {isPending ? 'Anulando…' : 'Confirmar anulación'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                style={{
+                  fontSize: '10px',
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--color-ink-3)',
+                  background: 'transparent',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '3px 6px',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
         </div>
-      </form>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={() => setOpen(true)}
-      style={{
-        fontSize: '10px',
-        fontFamily: 'var(--font-mono)',
-        color: 'var(--color-ink-3)',
-        background: 'transparent',
-        border: 'none',
-        borderRadius: 'var(--radius-md)',
-        padding: '2px 6px',
-        cursor: 'pointer',
-        whiteSpace: 'nowrap',
-        opacity: 0.5,
-      }}
-    >
-      Anular
-    </button>
+      )}
+    </div>
   );
 }
 
