@@ -659,17 +659,7 @@ function TableMode({
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {h === null ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        Fuente
-                        <HelpTooltip
-                          content="Fuente de emisión según GHG Protocol. Alcance 1: combustión, fugitivas. Alcance 2: electricidad, vapor. GRESB: agua, residuos."
-                          title="Fuentes de emisión"
-                        />
-                      </span>
-                    ) : (
-                      h
-                    )}
+                    {h ?? 'Fuente'}
                   </th>
                 ),
               )}

@@ -244,9 +244,9 @@ describe('getCsvTemplate', () => {
     expect(lines[0]).toContain('year_month');
   });
 
-  it('each example row has 8 comma-separated fields', () => {
+  it('each non-comment data row has 8 comma-separated fields', () => {
     const template = getCsvTemplate();
-    const lines = template.split('\n').filter(Boolean);
+    const lines = template.split('\n').filter((l) => l.length > 0 && !l.startsWith('#'));
     for (const line of lines) {
       expect(line.split(',').length).toBe(8);
     }
@@ -265,13 +265,13 @@ describe('getCsvTemplate', () => {
 
   // ── Template-as-input tests ──────────────────────────────────────────────
 
-  it('header line is skipped — parseCsvText returns only data rows', () => {
+  it('header and comment lines are skipped — parseCsvText returns only data rows', () => {
     const template = getCsvTemplate();
-    const lines = template.split('\n').filter(Boolean);
-    // line[0] is the header, the rest are data rows
-    const expectedDataRows = lines.length - 1;
+    const dataLines = template
+      .split('\n')
+      .filter((l) => l.length > 0 && !l.startsWith('#') && !l.startsWith('supplier_id'));
     const rows = parseCsvText(template);
-    expect(rows).toHaveLength(expectedDataRows);
+    expect(rows).toHaveLength(dataLines.length);
   });
 
   it('example rows fail UUID validation because <UUID-del-proveedor> is not a UUID', () => {
