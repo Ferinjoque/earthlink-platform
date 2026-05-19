@@ -88,12 +88,14 @@ export default async function ActividadPage() {
     | 'status'
     | 'submitted_at'
     | 'notes'
+    | 'voided_at'
+    | 'void_reason'
   >[] = [];
   if (periodIds.length) {
     const { data } = await supabase
       .from('activity_entries')
       .select(
-        'id, reporting_period_id, source_type, raw_quantity, raw_unit, status, submitted_at, notes',
+        'id, reporting_period_id, source_type, raw_quantity, raw_unit, status, submitted_at, notes, voided_at, void_reason',
       )
       .in('reporting_period_id', periodIds)
       .order('created_at', { ascending: false })
@@ -105,6 +107,7 @@ export default async function ActividadPage() {
 
   // Build a map: period_id → label (for entries list)
   const periodLabelMap = new Map(periodsData.map((p) => [p.id, p.label]));
+  const periodStatusMap = new Map(periodsData.map((p) => [p.id, p.status]));
 
   const flagsData: Pick<
     AnomalyFlagRow,
@@ -138,12 +141,15 @@ export default async function ActividadPage() {
     id: e.id,
     period_id: e.reporting_period_id,
     period_label: periodLabelMap.get(e.reporting_period_id) ?? '—',
+    period_status: periodStatusMap.get(e.reporting_period_id),
     source_type: e.source_type,
     raw_quantity: e.raw_quantity,
     raw_unit: e.raw_unit,
     status: e.status as ActivityEntryStatus,
     submitted_at: e.submitted_at,
     notes: e.notes,
+    voided_at: e.voided_at,
+    void_reason: e.void_reason,
     anomaly: flagMap.get(e.id),
   }));
 

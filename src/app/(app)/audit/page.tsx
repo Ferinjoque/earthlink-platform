@@ -33,13 +33,14 @@ export default async function AuditoriaPage() {
 
   const { data: rawMemberships } = await supabase
     .from('memberships')
-    .select('organization_id, supplier_id')
+    .select('organization_id, supplier_id, role')
     .eq('user_id', user.id);
   const memberships = (rawMemberships ?? []) as Pick<
     MembershipRow,
-    'organization_id' | 'supplier_id'
+    'organization_id' | 'supplier_id' | 'role'
   >[];
 
+  const isAdmin = memberships.some((m) => m.role === 'admin');
   const orgIds = [
     ...new Set(memberships.map((m) => m.organization_id).filter((x): x is string => x !== null)),
   ];
@@ -171,6 +172,7 @@ export default async function AuditoriaPage() {
     if (entrada) {
       const detalle: ResultadoDetalle = {
         id: r.id,
+        activity_entry_id: r.activity_entry_id,
         source_type: entrada.source_type,
         raw_quantity: entrada.raw_quantity,
         raw_unit: entrada.raw_unit,
@@ -297,7 +299,7 @@ export default async function AuditoriaPage() {
 
         {/* Tabla de periodos con filtro y paneles expandibles */}
         <section>
-          <AuditTable periodos={periodos} />
+          <AuditTable periodos={periodos} isAdmin={isAdmin} />
         </section>
 
         {/* Tarjetas de periodos bloqueados */}

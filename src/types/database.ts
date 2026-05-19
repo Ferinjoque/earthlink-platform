@@ -36,6 +36,7 @@ export type Database = {
       activity_entries: {
         Row: {
           activity_kind: Json;
+          corrects_entry_id: string | null;
           created_at: string;
           fuel_type_id: string | null;
           grid_region_id: string | null;
@@ -50,9 +51,13 @@ export type Database = {
           submitted_at: string | null;
           submitted_by: string | null;
           updated_at: string;
+          void_reason: string | null;
+          voided_at: string | null;
+          voided_by: string | null;
         };
         Insert: {
           activity_kind: Json;
+          corrects_entry_id?: string | null;
           created_at?: string;
           fuel_type_id?: string | null;
           grid_region_id?: string | null;
@@ -67,9 +72,13 @@ export type Database = {
           submitted_at?: string | null;
           submitted_by?: string | null;
           updated_at?: string;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
         };
         Update: {
           activity_kind?: Json;
+          corrects_entry_id?: string | null;
           created_at?: string;
           fuel_type_id?: string | null;
           grid_region_id?: string | null;
@@ -84,6 +93,9 @@ export type Database = {
           submitted_at?: string | null;
           submitted_by?: string | null;
           updated_at?: string;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
         };
         Relationships: [
           {
@@ -607,6 +619,9 @@ export type Database = {
           start_date: string;
           status: string;
           supplier_id: string;
+          unlock_reason: string | null;
+          unlocked_at: string | null;
+          unlocked_by: string | null;
           updated_at: string;
         };
         Insert: {
@@ -617,6 +632,9 @@ export type Database = {
           start_date: string;
           status?: string;
           supplier_id: string;
+          unlock_reason?: string | null;
+          unlocked_at?: string | null;
+          unlocked_by?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -627,6 +645,9 @@ export type Database = {
           start_date?: string;
           status?: string;
           supplier_id?: string;
+          unlock_reason?: string | null;
+          unlocked_at?: string | null;
+          unlocked_by?: string | null;
           updated_at?: string;
         };
         Relationships: [
