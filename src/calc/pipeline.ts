@@ -3,6 +3,9 @@
  * All inputs injected; outputs are deterministic given the same inputs.
  *
  * Pipeline: validateActivity → normalizeUnit → resolveFactor → applyFactor → stampProvenance
+ *
+ * Special handling:
+ *   - water_use / waste → 'none' scope, zero CO2e (consumption tracked, no GHG factor required)
  */
 import { createHash } from 'node:crypto';
 import Big from 'big.js';
@@ -31,6 +34,9 @@ function ok<T>(value: T): CalcResult<T> {
 function err<T>(error: CalcError): CalcResult<T> {
   return { ok: false, error };
 }
+
+// Kinds that have no direct GHG emissions — CO2e = 0, scope = 'none'
+const NO_GHG_KINDS: ReadonlySet<ActivityKind['kind']> = new Set(['water_use', 'waste']);
 
 // ── Step 1: Validate ──────────────────────────────────────────────────────────
 
@@ -81,6 +87,10 @@ function resolveFactorKey(activity: ActivityKind): string {
       return 'purchased_steam.default';
     case 'fugitive':
       return `fugitive.${activity.refrigerant}`;
+    case 'water_use':
+      return `water_use.${activity.subtype}`;
+    case 'waste':
+      return `waste.${activity.subtype}`;
   }
 }
 
@@ -93,6 +103,9 @@ function resolveScope(activity: ActivityKind): GhgScope {
     case 'purchased_electricity':
     case 'purchased_steam':
       return 'scope2';
+    case 'water_use':
+    case 'waste':
+      return 'none';
   }
 }
 
@@ -135,6 +148,20 @@ function stampProvenance(
   return createHash('sha256').update(canonical, 'utf8').digest('hex');
 }
 
+// Provenance hash for zero-CO2e records (water, waste) — no factor involved
+function stampProvenanceZero(record: ActivityRecord): string {
+  const canonical = JSON.stringify({
+    id: record.id,
+    activity: record.activity,
+    rawValue: record.rawValue,
+    rawUnit: record.rawUnit,
+    co2eKg: 0,
+    scope: 'none',
+    engineVersion: ENGINE_VERSION,
+  });
+  return createHash('sha256').update(canonical, 'utf8').digest('hex');
+}
+
 // ── Public: calculate ─────────────────────────────────────────────────────────
 
 export function calculate(
@@ -144,6 +171,22 @@ export function calculate(
 ): CalcResult<EmissionResult> {
   const validatedResult = validateActivity(record);
   if (!validatedResult.ok) return validatedResult;
+
+  // Water and waste: track consumption, skip GHG factor lookup
+  if (NO_GHG_KINDS.has(record.activity.kind)) {
+    return ok({
+      activityRecordId: record.id,
+      factorId: 'none',
+      factorSetId: 'none',
+      factorSetVersion: '0',
+      normalizedValue: record.rawValue,
+      normalizedUnit: record.rawUnit,
+      co2eKg: 0,
+      scope: 'none',
+      engineVersion: ENGINE_VERSION,
+      calcHash: stampProvenanceZero(record),
+    });
+  }
 
   const factorResult = resolveFactor(record.activity, factors);
   if (!factorResult.ok) return factorResult;
@@ -180,7 +223,7 @@ export function calculate(
 
 export function aggregate(results: readonly EmissionResult[]): EvaluationTotals {
   let totalBig = Big(0);
-  const byScopeAcc: Record<GhgScope, Big> = { scope1: Big(0), scope2: Big(0) };
+  const byScopeAcc: Record<GhgScope, Big> = { scope1: Big(0), scope2: Big(0), none: Big(0) };
   const byActivityAcc: Map<string, Big> = new Map();
 
   for (const r of results) {
@@ -194,6 +237,7 @@ export function aggregate(results: readonly EmissionResult[]): EvaluationTotals 
   const byScope: Record<GhgScope, number> = {
     scope1: byScopeAcc.scope1.toNumber(),
     scope2: byScopeAcc.scope2.toNumber(),
+    none: byScopeAcc.none.toNumber(),
   };
 
   const byActivity: Record<string, number> = {};

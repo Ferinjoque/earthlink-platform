@@ -29,7 +29,7 @@ const estiloInput = (error?: boolean): React.CSSProperties => ({
   padding: 'var(--space-2) var(--space-3)',
   borderRadius: 'var(--radius-md)',
   border: `1px solid ${error ? 'var(--color-signal-hi)' : 'var(--color-border)'}`,
-  background: 'var(--color-surface-2)',
+  background: 'var(--color-surface-0)',
   fontSize: 'var(--text-sm)',
   color: 'var(--color-ink-1)',
   outline: 'none',
@@ -97,7 +97,7 @@ function FormProveedor({
         gridTemplateColumns: '1fr 1fr',
         gap: 'var(--space-4)',
         padding: 'var(--space-6)',
-        background: 'var(--color-accent-soft)',
+        background: 'var(--color-surface-1)',
         borderBottom: '1px solid var(--color-border)',
       }}
     >
@@ -259,22 +259,6 @@ function FormProveedor({
           }}
         >
           {state.error}
-        </div>
-      )}
-
-      {state?.success && (
-        <div
-          style={{
-            gridColumn: '1 / -1',
-            fontSize: 'var(--text-xs)',
-            color: 'var(--color-signal-ok)',
-            background: 'var(--color-signal-ok-bg)',
-            padding: 'var(--space-2) var(--space-3)',
-            borderRadius: 'var(--radius-md)',
-            fontFamily: 'var(--font-mono)',
-          }}
-        >
-          {mode === 'create' ? 'Proveedor creado correctamente.' : 'Cambios guardados.'}
         </div>
       )}
 

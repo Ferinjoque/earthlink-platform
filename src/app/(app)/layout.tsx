@@ -53,9 +53,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <SearchProvider suppliers={searchSuppliers}>
       <ToastProvider>
-        <div style={{ display: 'flex', height: '100dvh', overflow: 'hidden' }}>
+        <div data-app-root style={{ display: 'flex', height: '100dvh', overflow: 'hidden' }}>
           <Sidebar anomaliaCount={anomaliaCount} />
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
+          <div data-app-main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
             {children}
           </div>
         </div>

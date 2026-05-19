@@ -9,12 +9,19 @@ interface Props {
   supplierId: string;
 }
 
+const MESES_CORTO = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+function finDeMes(year: number, month: number): string {
+  const lastDay = new Date(year, month, 0).getDate();
+  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+}
+
 const estiloInput: React.CSSProperties = {
   width: '100%',
   padding: 'var(--space-2) var(--space-3)',
   borderRadius: 'var(--radius-md)',
   border: '1px solid var(--color-border)',
-  background: 'var(--color-surface-2)',
+  background: 'var(--color-surface-0)',
   fontSize: 'var(--text-sm)',
   color: 'var(--color-ink-1)',
   outline: 'none',
@@ -23,6 +30,10 @@ const estiloInput: React.CSSProperties = {
 
 export function NuevoPeriodoForm({ supplierId }: Props) {
   const [abierto, setAbierto] = useState(false);
+  const [fechaInicio, setFechaInicio] = useState('');
+  const [fechaFin, setFechaFin] = useState('');
+  const [label, setLabel] = useState('');
+
   const [state, formAction, isPending] = useActionState<PeriodActionState | null, FormData>(
     createPeriod,
     null,
@@ -32,9 +43,31 @@ export function NuevoPeriodoForm({ supplierId }: Props) {
   useEffect(() => {
     if (state?.success) {
       setAbierto(false);
+      setFechaInicio('');
+      setFechaFin('');
+      setLabel('');
       toast('Periodo creado correctamente', 'success');
     }
   }, [state?.success, toast]);
+
+  function handleFechaInicio(val: string) {
+    setFechaInicio(val);
+    if (val) {
+      const parts = val.split('-');
+      const y = Number(parts[0]);
+      const m = Number(parts[1]);
+      if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) return;
+      setFechaFin(finDeMes(y, m));
+      setLabel(`${MESES_CORTO[m - 1] ?? ''} ${y}`);
+    }
+  }
+
+  function cerrar() {
+    setAbierto(false);
+    setFechaInicio('');
+    setFechaFin('');
+    setLabel('');
+  }
 
   if (!abierto) {
     return (
@@ -70,7 +103,7 @@ export function NuevoPeriodoForm({ supplierId }: Props) {
         gap: 'var(--space-3)',
         alignItems: 'flex-end',
         padding: 'var(--space-4)',
-        background: 'var(--color-accent-soft)',
+        background: 'var(--color-surface-1)',
         borderRadius: 'var(--radius-lg)',
         border: '1px solid var(--color-border)',
       }}
@@ -86,23 +119,16 @@ export function NuevoPeriodoForm({ supplierId }: Props) {
             marginBottom: 'var(--space-1)',
           }}
         >
-          Label *
-        </label>
-        <input name="label" required placeholder="Ej. Q2-2026" style={estiloInput} />
-      </div>
-
-      <div style={{ minWidth: '140px' }}>
-        <label
-          style={{
-            fontSize: 'var(--text-xs)',
-            color: 'var(--color-ink-2)',
-            display: 'block',
-            marginBottom: 'var(--space-1)',
-          }}
-        >
           Fecha inicio *
         </label>
-        <input name="fecha_inicio" type="date" required style={estiloInput} />
+        <input
+          name="fecha_inicio"
+          type="date"
+          required
+          value={fechaInicio}
+          onChange={(e) => handleFechaInicio(e.target.value)}
+          style={estiloInput}
+        />
       </div>
 
       <div style={{ minWidth: '140px' }}>
@@ -116,7 +142,35 @@ export function NuevoPeriodoForm({ supplierId }: Props) {
         >
           Fecha fin *
         </label>
-        <input name="fecha_fin" type="date" required style={estiloInput} />
+        <input
+          name="fecha_fin"
+          type="date"
+          required
+          value={fechaFin}
+          onChange={(e) => setFechaFin(e.target.value)}
+          style={estiloInput}
+        />
+      </div>
+
+      <div style={{ minWidth: '120px' }}>
+        <label
+          style={{
+            fontSize: 'var(--text-xs)',
+            color: 'var(--color-ink-2)',
+            display: 'block',
+            marginBottom: 'var(--space-1)',
+          }}
+        >
+          Etiqueta *
+        </label>
+        <input
+          name="label"
+          required
+          placeholder="Ene 2026"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          style={estiloInput}
+        />
       </div>
 
       {state?.error && (
@@ -138,7 +192,7 @@ export function NuevoPeriodoForm({ supplierId }: Props) {
       <div style={{ display: 'flex', gap: 'var(--space-2)', marginLeft: 'auto' }}>
         <button
           type="button"
-          onClick={() => setAbierto(false)}
+          onClick={cerrar}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -176,6 +230,17 @@ export function NuevoPeriodoForm({ supplierId }: Props) {
           {isPending ? 'Creando…' : 'Crear periodo'}
         </button>
       </div>
+
+      <p
+        style={{
+          width: '100%',
+          margin: 0,
+          fontSize: 'var(--text-xs)',
+          color: 'var(--color-ink-3)',
+        }}
+      >
+        Al elegir la fecha de inicio se auto-completan la fecha fin y etiqueta. Puedes ajustarlas manualmente.
+      </p>
     </form>
   );
 }

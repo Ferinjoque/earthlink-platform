@@ -253,6 +253,12 @@ export default async function PanelPage() {
   return (
     <>
       <TopBar title="Panel" email={user?.email} section="Visión general" />
+      <style>{`
+        .anomaly-item { transition: box-shadow 160ms var(--ease-out-expo), transform 160ms var(--ease-out-expo); }
+        .anomaly-item:hover { box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+        .feed-row { transition: background 140ms; }
+        .feed-row:hover { background: var(--color-surface-2) !important; }
+      `}</style>
 
       <div style={{ position: 'relative' }}>
         <AmbientBackground />
@@ -666,6 +672,7 @@ export default async function PanelPage() {
               {top3Anomalias.map((a) => (
                 <div
                   key={a.id}
+                  className="anomaly-item"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -727,6 +734,7 @@ export default async function PanelPage() {
                 return (
                   <div
                     key={e.id}
+                    className="feed-row"
                     style={{
                       display: 'grid',
                       gridTemplateColumns: '1fr auto',

@@ -21,7 +21,7 @@ export interface PeriodActionState {
   success?: boolean;
 }
 
-export type { PeriodActionState as CreatePeriodState };
+export type CreatePeriodState = PeriodActionState;
 
 type SupplierData = { organization_id: string };
 type MembershipData = { role: string };

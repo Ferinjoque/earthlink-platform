@@ -175,7 +175,6 @@ export default async function DetallePeriodoPage({
     else scope2Co2e += r.co2e_kg;
   }
 
-  const calcVersion = results[0]?.calc_version ?? '—';
   const inicioFmt = new Date(period.start_date).toLocaleDateString('es-PE', {
     day: '2-digit',
     month: 'long',
@@ -281,21 +280,6 @@ export default async function DetallePeriodoPage({
             <Badge variant={variantEstadoPeriodo(period.status as PeriodStatus)}>
               {etiquetaEstadoPeriodo(period.status as PeriodStatus)}
             </Badge>
-            {membership.role === 'admin' && (
-              <span
-                style={{
-                  fontSize: 'var(--text-xs)',
-                  fontFamily: 'var(--font-mono)',
-                  color: 'var(--color-ink-3)',
-                  background: 'var(--color-surface-2)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '2px var(--space-3)',
-                }}
-              >
-                Motor v{calcVersion}
-              </span>
-            )}
           </div>
           <p
             style={{

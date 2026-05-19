@@ -27,6 +27,7 @@ export default defineConfig({
         'src/actions/reports.ts',
         'src/lib/csv.ts',
         'src/lib/anomaly.ts',
+        'src/lib/format.ts',
         'src/lib/reporting-period.ts',
         'src/proxy.ts',
         'src/services/AuditService.ts',

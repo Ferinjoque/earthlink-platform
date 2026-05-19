@@ -3,9 +3,8 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createServerClient } from '@/services/supabase/server';
 import { TopBar } from '@/components/shell/TopBar';
-import { ActivityForm } from '@/components/activity/ActivityForm';
 import { ActivityList } from '@/components/activity/ActivityList';
-import { CsvImportPanel } from '@/components/activity/CsvImportPanel';
+import { BulkImportPanel } from '@/components/activity/BulkImportPanel';
 import { ClipboardList } from 'lucide-react';
 import type { ActivityEntryView } from '@/components/activity/ActivityList';
 import type {
@@ -62,23 +61,19 @@ export default async function ActividadPage() {
     const { data } = await supabase.from('suppliers').select('id, name').in('id', supplierIds);
     if (data) suppliersData.push(...data);
   }
-  const supplierMap = new Map(suppliersData.map((s) => [s.id, s.name]));
-
-  const periodsData: Pick<ReportingPeriodRow, 'id' | 'label' | 'supplier_id' | 'status'>[] = [];
+  const periodsData: Pick<ReportingPeriodRow, 'id' | 'label' | 'supplier_id' | 'status' | 'start_date'>[] = [];
   if (supplierIds.length) {
     const { data } = await supabase
       .from('reporting_periods')
-      .select('id, label, supplier_id, status')
+      .select('id, label, supplier_id, status, start_date')
       .in('supplier_id', supplierIds)
-      .eq('status', 'open')
-      .order('label', { ascending: true });
+      .order('start_date', { ascending: false });
     if (data) periodsData.push(...data);
   }
 
   const periods = periodsData.map((p) => ({
     id: p.id,
     label: p.label,
-    supplier_name: supplierMap.get(p.supplier_id) ?? 'Proveedor desconocido',
   }));
 
   const periodIds = periodsData.map((p) => p.id);
@@ -108,6 +103,9 @@ export default async function ActividadPage() {
 
   const entryIds = entriesData.map((e) => e.id);
 
+  // Build a map: period_id → label (for entries list)
+  const periodLabelMap = new Map(periodsData.map((p) => [p.id, p.label]));
+
   const flagsData: Pick<
     AnomalyFlagRow,
     'activity_entry_id' | 'severity' | 'z_score' | 'message'
@@ -136,8 +134,6 @@ export default async function ActividadPage() {
     }
   }
 
-  const periodLabelMap = new Map(periodsData.map((p) => [p.id, p.label]));
-
   const entries: ActivityEntryView[] = entriesData.map((e) => ({
     id: e.id,
     period_id: e.reporting_period_id,
@@ -153,8 +149,8 @@ export default async function ActividadPage() {
 
   const nEntradas = entries.length;
 
-  // Empty state: no open periods at all
-  if (periods.length === 0) {
+  // Empty state: no suppliers accessible
+  if (suppliersData.length === 0) {
     return (
       <>
         <TopBar title="Registros de actividad" email={user?.email} section="Alcance 1 y 2" />
@@ -194,15 +190,15 @@ export default async function ActividadPage() {
                   margin: '0 0 var(--space-2)',
                 }}
               >
-                Sin periodos abiertos
+                Sin proveedores disponibles
               </h2>
               <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-3)', margin: 0 }}>
-                No hay periodos de reporte abiertos asignados a tu cuenta. Crea un periodo desde la
-                consola de auditoría para poder registrar actividad.
+                No hay proveedores asignados a tu cuenta. Crea un proveedor desde la sección de
+                proveedores para poder registrar actividad.
               </p>
             </div>
             <Link
-              href="/audit"
+              href="/suppliers"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -216,7 +212,7 @@ export default async function ActividadPage() {
                 borderRadius: 'var(--radius-md)',
               }}
             >
-              Ir a auditoría
+              Ir a proveedores
             </Link>
           </div>
         </main>
@@ -235,41 +231,22 @@ export default async function ActividadPage() {
           gap: 'var(--space-8)',
         }}
       >
-        {/* Enviar registro */}
+        {/* Registro de consumo — unified panel */}
         <section>
           <CabeceraSección
-            titulo="Enviar registro"
-            subtitulo="Registra un único dato de consumo para un periodo abierto."
+            titulo="Registro de consumo"
+            subtitulo="Un registro individual, constructor visual por lote, o importa desde CSV / Excel."
           />
           <div
             style={{
               background: 'var(--color-surface-1)',
               border: '1px solid var(--color-border)',
               borderRadius: 'var(--radius-lg)',
-              padding: 'var(--space-6)',
-              maxWidth: '560px',
+              overflow: 'hidden',
+              maxWidth: '960px',
             }}
           >
-            <ActivityForm periods={periods} />
-          </div>
-        </section>
-
-        {/* Importación masiva */}
-        <section>
-          <CabeceraSección
-            titulo="Importación masiva"
-            subtitulo="Sube o pega un CSV para importar múltiples registros de una vez."
-          />
-          <div
-            style={{
-              background: 'var(--color-surface-1)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-lg)',
-              padding: 'var(--space-6)',
-              maxWidth: '800px',
-            }}
-          >
-            <CsvImportPanel />
+            <BulkImportPanel suppliers={suppliersData} defaultSupplierId={suppliersData[0]?.id} />
           </div>
         </section>
 
@@ -279,8 +256,8 @@ export default async function ActividadPage() {
             titulo="Registros recientes"
             subtitulo={
               nEntradas === 0
-                ? 'Sin registros en periodos abiertos aún.'
-                : `${nEntradas} ${nEntradas === 1 ? 'registro' : 'registros'} en periodos abiertos.`
+                ? 'Sin registros aún.'
+                : `${nEntradas} ${nEntradas === 1 ? 'registro' : 'registros'} recientes.`
             }
           />
           <div

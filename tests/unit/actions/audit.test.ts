@@ -83,7 +83,8 @@ vi.mock('../../../src/repos/EmissionResultRepository', () => ({
 }));
 
 import { createServerClient } from '../../../src/services/supabase/server';
-import { calculatePeriod, lockPeriod, resolveAnomaly, createPeriod as createPeriodAudit } from '../../../src/actions/audit';
+import { calculatePeriod, lockPeriod, resolveAnomaly, recalculatePeriod } from '../../../src/actions/audit';
+import { createPeriod as createPeriodAudit } from '../../../src/actions/periods';
 
 type MockClient = Awaited<ReturnType<typeof createServerClient>>;
 
@@ -129,7 +130,7 @@ function makeFormData(fields: Record<string, string>): FormData {
 const GOOD_EVAL_OUTCOME = {
   totals: {
     totalCo2eKg: 2500,
-    byScope: { scope1: 1800, scope2: 700 },
+    byScope: { scope1: 1800, scope2: 700, none: 0 },
     byActivity: {},
     recordCount: 5,
   },
@@ -544,5 +545,147 @@ describe('createPeriod (audit.ts)', () => {
     mockCreatePeriodAuditClient();
     const result = await createPeriodAudit(null, makeFormData(validAuditPeriodFields));
     expect(result.success).toBe(true);
+  });
+});
+
+// ── recalculatePeriod ─────────────────────────────────────────────────────────
+
+function makeDeleteChain(error: { message: string } | null) {
+  return { delete: () => ({ eq: () => Promise.resolve({ error }) }) };
+}
+
+function mockRecalculateClient({
+  hasSupplier = true,
+  isAdmin = true,
+  deleteError = null as { message: string } | null,
+} = {}) {
+  const client = {
+    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: VALID_UUID } } }) },
+    from: vi.fn()
+      .mockReturnValueOnce(makeSelectChain(hasSupplier ? { organization_id: VALID_ORG_ID } : null))
+      .mockReturnValueOnce(makeSelectChain(isAdmin ? { role: 'admin' } : null))
+      .mockReturnValueOnce(makeDeleteChain(deleteError)),
+  };
+  vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
+  return client;
+}
+
+describe('recalculatePeriod', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns error when not authenticated', async () => {
+    mockNoAuth();
+    const result = await recalculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
+    expect(result.error).toMatch(/autenticado/i);
+  });
+
+  it('returns error when period_id is missing', async () => {
+    mockAuth();
+    const result = await recalculatePeriod(null, makeFormData({}));
+    expect(result.error).toMatch(/falta el id/i);
+  });
+
+  it('returns error when period not found', async () => {
+    mockAuth();
+    mocks.findById.mockResolvedValueOnce(null);
+    const result = await recalculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
+    expect(result.error).toMatch(/no encontrado/i);
+  });
+
+  it('returns error when caller is not admin', async () => {
+    mocks.findById.mockResolvedValueOnce(makePeriod('locked'));
+    mockRecalculateClient({ isAdmin: false });
+    const result = await recalculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
+    expect(result.error).toMatch(/administrador/i);
+  });
+
+  it('returns error when supplier not found', async () => {
+    mocks.findById.mockResolvedValueOnce(makePeriod('locked'));
+    mockRecalculateClient({ hasSupplier: false });
+    const result = await recalculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
+    expect(result.error).toMatch(/proveedor/i);
+  });
+
+  it('returns error when delete of existing results fails', async () => {
+    mocks.findById.mockResolvedValueOnce(makePeriod('locked'));
+    mockRecalculateClient({ deleteError: { message: 'constraint violation' } });
+    const result = await recalculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
+    expect(result.error).toMatch(/limpiar/i);
+  });
+
+  it('returns error when re-evaluation throws', async () => {
+    mocks.findById.mockResolvedValueOnce(makePeriod('locked'));
+    mockRecalculateClient();
+    mocks.evaluate.mockRejectedValueOnce(new Error('factor not found'));
+    const result = await recalculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
+    expect(result.error).toMatch(/evaluación/i);
+  });
+
+  it('returns success with updated totals', async () => {
+    mocks.findById.mockResolvedValueOnce(makePeriod('locked'));
+    mockRecalculateClient();
+    mocks.evaluate.mockResolvedValueOnce(GOOD_EVAL_OUTCOME);
+    const result = await recalculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
+    expect(result.success).toBe(true);
+    expect(result.totals?.totalCo2eKg).toBe(2500);
+    expect(result.totals?.scope1Co2eKg).toBe(1800);
+    expect(result.totals?.scope2Co2eKg).toBe(700);
+    expect(result.totals?.entryCount).toBe(5);
+  });
+});
+
+// ── resolveAnomaly — resolution_note ─────────────────────────────────────────
+
+describe('resolveAnomaly — resolution_note', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('passes resolution_note to DB update when provided', async () => {
+    const flagData = {
+      activity_entries: { reporting_periods: { suppliers: { organization_id: VALID_ORG_ID } } },
+    };
+    const updateSpy = vi.fn().mockReturnValue({
+      eq: () => Promise.resolve({ error: null }),
+    });
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: VALID_UUID } } }) },
+      from: vi.fn()
+        .mockReturnValueOnce(makeSelectChain(flagData))
+        .mockReturnValueOnce(makeSelectChain({ role: 'admin' }))
+        .mockReturnValueOnce({ update: updateSpy }),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
+
+    const result = await resolveAnomaly(
+      null,
+      makeFormData({ flag_id: FLAG_ID, resolution_note: 'Valor corregido manualmente' }),
+    );
+
+    expect(result.success).toBe(true);
+    expect(updateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ resolution_note: 'Valor corregido manualmente' }),
+    );
+  });
+
+  it('saves null resolution_note when input is blank', async () => {
+    const flagData = {
+      activity_entries: { reporting_periods: { suppliers: { organization_id: VALID_ORG_ID } } },
+    };
+    const updateSpy = vi.fn().mockReturnValue({
+      eq: () => Promise.resolve({ error: null }),
+    });
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: VALID_UUID } } }) },
+      from: vi.fn()
+        .mockReturnValueOnce(makeSelectChain(flagData))
+        .mockReturnValueOnce(makeSelectChain({ role: 'admin' }))
+        .mockReturnValueOnce({ update: updateSpy }),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
+
+    await resolveAnomaly(null, makeFormData({ flag_id: FLAG_ID, resolution_note: '   ' }));
+
+    expect(updateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ resolution_note: null }),
+    );
   });
 });

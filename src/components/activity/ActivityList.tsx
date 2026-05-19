@@ -1,9 +1,11 @@
 'use client';
 
-import { Fragment, useState } from 'react';
+import { Fragment, useState, useActionState, useEffect } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { AnomalyBadge } from '@/components/activity/AnomalyBadge';
 import { traducirMensajeAnomalia } from '@/lib/anomaly';
+import { deleteActivityEntry, type DeleteEntryState } from '@/actions/activity';
+import { useToast } from '@/components/ui/Toast';
 import type { ActivityEntryStatus, AnomalySeverity, EmissionSourceType } from '@/types/database';
 
 export interface ActivityEntryView {
@@ -62,13 +64,13 @@ const COLOR_SEVERIDAD: Record<AnomalySeverity, string> = {
   high: 'var(--color-signal-hi)',
 };
 
-const CABECERAS = ['Periodo', 'Fuente', 'Cantidad', 'Estado', 'Anomalía', 'Enviado'];
+const CABECERAS = ['Periodo', 'Fuente', 'Cantidad', 'Estado', 'Anomalía', 'Enviado', ''];
 
 const estiloSelect: React.CSSProperties = {
   fontSize: 'var(--text-xs)',
   fontFamily: 'var(--font-mono)',
   color: 'var(--color-ink-2)',
-  background: 'var(--color-surface-2)',
+  background: 'var(--color-surface-0)',
   border: '1px solid var(--color-border)',
   borderRadius: 'var(--radius-md)',
   padding: '4px var(--space-3)',
@@ -78,6 +80,97 @@ const estiloSelect: React.CSSProperties = {
   WebkitAppearance: 'none',
   paddingRight: 'var(--space-6)',
 };
+
+// ── DeleteEntryButton ─────────────────────────────────────────────────────────
+
+function DeleteEntryButton({ entryId }: { entryId: string }) {
+  const { toast } = useToast();
+  const [confirm, setConfirm] = useState(false);
+  const [state, formAction, isPending] = useActionState<DeleteEntryState | null, FormData>(
+    deleteActivityEntry,
+    null,
+  );
+
+  useEffect(() => {
+    if (state?.success) {
+      toast('Registro eliminado', 'success');
+    }
+    if (state?.error) {
+      toast(state.error, 'error');
+      setConfirm(false);
+    }
+  }, [state?.success, state?.error, toast]);
+
+  if (state?.success) return null;
+
+  if (confirm) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexShrink: 0 }}>
+        <form action={formAction}>
+          <input type="hidden" name="entry_id" value={entryId} />
+          <button
+            type="submit"
+            disabled={isPending}
+            style={{
+              fontSize: 'var(--text-xs)',
+              fontFamily: 'var(--font-mono)',
+              color: 'var(--color-signal-hi)',
+              background: 'color-mix(in oklch, var(--color-signal-hi) 10%, transparent)',
+              border: '1px solid color-mix(in oklch, var(--color-signal-hi) 30%, transparent)',
+              borderRadius: 'var(--radius-md)',
+              padding: '2px var(--space-2)',
+              cursor: isPending ? 'default' : 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {isPending ? '…' : 'Sí'}
+          </button>
+        </form>
+        <button
+          type="button"
+          onClick={() => setConfirm(false)}
+          style={{
+            fontSize: 'var(--text-xs)',
+            fontFamily: 'var(--font-mono)',
+            color: 'var(--color-ink-3)',
+            background: 'transparent',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-md)',
+            padding: '2px var(--space-2)',
+            cursor: 'pointer',
+          }}
+        >
+          No
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setConfirm(true)}
+      className="activity-delete-btn"
+      aria-label="Eliminar registro"
+      style={{
+        fontSize: 'var(--text-xs)',
+        fontFamily: 'var(--font-mono)',
+        color: 'var(--color-ink-3)',
+        background: 'transparent',
+        border: 'none',
+        cursor: 'pointer',
+        padding: '2px var(--space-2)',
+        opacity: 0,
+        transition: 'opacity 150ms',
+        lineHeight: 1,
+      }}
+    >
+      ×
+    </button>
+  );
+}
+
+// ── ActivityList ──────────────────────────────────────────────────────────────
 
 export function ActivityList({ entries, periodos }: ActivityListProps) {
   const [filtroEstado, setFiltroEstado] = useState<ActivityEntryStatus | 'todos'>('todos');
@@ -255,6 +348,7 @@ export function ActivityList({ entries, periodos }: ActivityListProps) {
         </p>
       ) : (
         <div style={{ overflowX: 'auto' }}>
+          <style>{'.activity-row:hover .activity-delete-btn { opacity: 1 !important; }'}</style>
           <table
             style={{
               width: '100%',
@@ -287,6 +381,7 @@ export function ActivityList({ entries, periodos }: ActivityListProps) {
               {filtradas.map((entry) => (
                 <Fragment key={entry.id}>
                   <tr
+                    className="activity-row"
                     style={{
                       borderBottom:
                         expandida === entry.id ? 'none' : '1px solid var(--color-border)',
@@ -358,13 +453,24 @@ export function ActivityList({ entries, periodos }: ActivityListProps) {
                         ? new Date(entry.submitted_at).toLocaleDateString('es')
                         : '—'}
                     </td>
+                    <td
+                      style={{
+                        ...estiloCelda,
+                        width: '40px',
+                        textAlign: 'center',
+                        paddingLeft: 'var(--space-2)',
+                        paddingRight: 'var(--space-2)',
+                      }}
+                    >
+                      <DeleteEntryButton entryId={entry.id} />
+                    </td>
                   </tr>
 
                   {/* ── Panel de anomalía expandible ── */}
                   {expandida === entry.id && entry.anomaly && (
                     <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
                       <td
-                        colSpan={6}
+                        colSpan={7}
                         style={{
                           padding: 'var(--space-3) var(--space-4) var(--space-4)',
                           background: 'oklch(58% 0.16 155 / 4%)',

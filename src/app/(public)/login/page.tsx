@@ -214,9 +214,9 @@ export default function LoginPage() {
           style={{
             display: 'none',
             flexDirection: 'column',
-            justifyContent: 'flex-end',
+            justifyContent: 'center',
             padding: 'clamp(2.5rem, 5vw, 5rem)',
-            paddingTop: 'clamp(2rem, 4vw, 4rem)',
+            paddingTop: 'clamp(6rem, 10vw, 9rem)',
             background: 'oklch(10% 0.048 162)',
             position: 'relative',
             overflow: 'hidden',
@@ -293,16 +293,6 @@ export default function LoginPage() {
           </motion.div>
 
           <div style={{ position: 'relative', zIndex: 2, maxWidth: '50ch' }}>
-            <motion.p
-              className="eyebrow"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease, delay: 0.18 }}
-              style={{ color: 'oklch(60% 0.16 162)', marginBottom: 'var(--space-5)' }}
-            >
-              Auditoría ESG · Alcances 1 y 2
-            </motion.p>
-
             <motion.h1
               initial={{ opacity: 0, y: 32 }}
               animate={{ opacity: 1, y: 0 }}
@@ -348,7 +338,7 @@ export default function LoginPage() {
               style={{
                 listStyle: 'none',
                 padding: 0,
-                margin: '0 0 var(--space-8)',
+                margin: 0,
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 'var(--space-3)',
@@ -371,31 +361,6 @@ export default function LoginPage() {
               ))}
             </motion.ul>
 
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, ease, delay: 0.64 }}
-              style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}
-            >
-              {['GHG Protocol', 'ISO 14064', 'Alcance 1–2'].map((badge) => (
-                <span
-                  key={badge}
-                  style={{
-                    padding: '4px 11px',
-                    borderRadius: 'var(--radius-pill)',
-                    background: 'oklch(55% 0.20 162 / 15%)',
-                    border: '1px solid oklch(58% 0.18 162 / 35%)',
-                    fontSize: 'var(--text-xs)',
-                    fontFamily: 'var(--font-mono)',
-                    fontWeight: 600,
-                    color: 'oklch(70% 0.14 162)',
-                    letterSpacing: '0.05em',
-                  }}
-                >
-                  {badge}
-                </span>
-              ))}
-            </motion.div>
           </div>
         </div>
 

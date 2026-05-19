@@ -13,6 +13,7 @@ import type {
 
 const exportSchema = z.object({
   period_ids: z.string().min(1, 'Selecciona al menos un periodo'),
+  year: z.string().regex(/^\d{4}$/).optional(),
 });
 
 export interface ExportCsvState {
@@ -33,7 +34,10 @@ export async function exportCsv(
   } = await supabase.auth.getUser();
   if (!user) return { error: 'No autenticado' };
 
-  const parsed = exportSchema.safeParse({ period_ids: formData.get('period_ids') });
+  const parsed = exportSchema.safeParse({
+    period_ids: formData.get('period_ids'),
+    year: formData.get('year') ?? undefined,
+  });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? 'Error de validación' };
   }
@@ -167,8 +171,10 @@ export async function exportCsv(
 
   const csvContent = csvRows.join('\n');
   const sha256 = createHash('sha256').update(csvContent, 'utf8').digest('hex');
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  const filename = `earthlink-export-${timestamp}.csv`;
+  const annualYear = parsed.data.year;
+  const filename = annualYear
+    ? `earthlink-${annualYear}-reporte.csv`
+    : `earthlink-export-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.csv`;
 
   // Save one export record per org covered by the authorized periods
   const authorizedPeriods = periods.filter((p) => authorizedPeriodIds.includes(p.id));

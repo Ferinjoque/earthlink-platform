@@ -8,6 +8,7 @@ import type {
   SupplierRow,
   ReportingPeriodRow,
   ReportExportRow,
+  OrganizationRow,
 } from '@/types/database';
 import type { PeriodoExportable, ExportHistorial } from '@/components/reports/ReportsPanel';
 
@@ -30,6 +31,18 @@ export default async function ReportesPage() {
     ...new Set(memberships.map((m) => m.organization_id).filter((id): id is string => id !== null)),
   ];
 
+  // Fetch org name for report header
+  let orgName = 'EarthLink';
+  if (orgIds.length) {
+    const { data: orgsData } = await supabase
+      .from('organizations')
+      .select('name')
+      .in('id', orgIds)
+      .limit(1);
+    const orgs = (orgsData ?? []) as Pick<OrganizationRow, 'name'>[];
+    if (orgs[0]) orgName = orgs[0].name;
+  }
+
   const suppliersData: Pick<SupplierRow, 'id' | 'name'>[] = [];
   if (orgIds.length) {
     const { data } = await supabase
@@ -41,32 +54,42 @@ export default async function ReportesPage() {
   const supplierMap = new Map(suppliersData.map((s) => [s.id, s.name]));
   const allSupplierIds = suppliersData.map((s) => s.id);
 
-  // Fetch exportable periods (under_review or locked)
-  type FilaPeriodo = Pick<ReportingPeriodRow, 'id' | 'label' | 'supplier_id' | 'status'>;
+  // Fetch exportable periods (under_review or locked) — include start_date for year grouping
+  type FilaPeriodo = Pick<ReportingPeriodRow, 'id' | 'label' | 'supplier_id' | 'status' | 'start_date'>;
   const periodsData: FilaPeriodo[] = [];
   if (allSupplierIds.length) {
     const { data } = await supabase
       .from('reporting_periods')
-      .select('id, label, supplier_id, status')
+      .select('id, label, supplier_id, status, start_date')
       .in('supplier_id', allSupplierIds)
       .in('status', ['under_review', 'locked'])
-      .order('label', { ascending: true });
+      .order('start_date', { ascending: true });
     if (data) periodsData.push(...(data as FilaPeriodo[]));
   }
 
-  // Fetch emission result summaries for these periods
+  // Fetch emission result summaries for these periods (with scope breakdown)
   const periodIds = periodsData.map((p) => p.id);
-  const mapaResumen = new Map<string, { totalCo2eKg: number; nResultados: number }>();
+  const mapaResumen = new Map<
+    string,
+    { totalCo2eKg: number; scope1Kg: number; scope2Kg: number; nResultados: number }
+  >();
   if (periodIds.length) {
     const { data } = await supabase
       .from('emission_results')
-      .select('reporting_period_id, co2e_kg')
+      .select('reporting_period_id, co2e_kg, scope')
       .in('reporting_period_id', periodIds);
     if (data) {
-      for (const r of data as Array<{ reporting_period_id: string; co2e_kg: number }>) {
-        const prev = mapaResumen.get(r.reporting_period_id) ?? { totalCo2eKg: 0, nResultados: 0 };
+      for (const r of data as Array<{ reporting_period_id: string; co2e_kg: number; scope: number }>) {
+        const prev = mapaResumen.get(r.reporting_period_id) ?? {
+          totalCo2eKg: 0,
+          scope1Kg: 0,
+          scope2Kg: 0,
+          nResultados: 0,
+        };
         mapaResumen.set(r.reporting_period_id, {
           totalCo2eKg: prev.totalCo2eKg + r.co2e_kg,
+          scope1Kg: prev.scope1Kg + (r.scope === 1 ? r.co2e_kg : 0),
+          scope2Kg: prev.scope2Kg + (r.scope === 2 ? r.co2e_kg : 0),
           nResultados: prev.nResultados + 1,
         });
       }
@@ -75,13 +98,17 @@ export default async function ReportesPage() {
 
   const periodos: PeriodoExportable[] = periodsData.map((p) => {
     const resumen = mapaResumen.get(p.id);
+    const year = new Date(p.start_date).getFullYear();
     return {
       id: p.id,
       label: p.label,
       supplier_name: supplierMap.get(p.supplier_id) ?? '—',
       status: p.status as 'under_review' | 'locked',
       totalCo2eKg: resumen?.totalCo2eKg ?? 0,
+      scope1Kg: resumen?.scope1Kg ?? 0,
+      scope2Kg: resumen?.scope2Kg ?? 0,
       nResultados: resumen?.nResultados ?? 0,
+      year,
     };
   });
 
@@ -128,8 +155,8 @@ export default async function ReportesPage() {
           maxWidth: 'var(--max-w-content)',
         }}
       >
-        {/* Editorial header */}
-        <div style={{ marginBottom: 'var(--space-8)' }}>
+        {/* Editorial header — hidden in print (replaced by cover page inside ReportsPanel) */}
+        <div data-no-print style={{ marginBottom: 'var(--space-8)' }}>
           <p className="eyebrow" style={{ marginBottom: 'var(--space-3)' }}>
             Protocolo GHG · Exportación de datos
           </p>
@@ -160,7 +187,7 @@ export default async function ReportesPage() {
           </p>
         </div>
 
-        <ReportsPanel periodos={periodos} historial={historial} />
+        <ReportsPanel periodos={periodos} historial={historial} orgName={orgName} />
       </main>
     </>
   );

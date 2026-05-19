@@ -124,6 +124,7 @@ export type Database = {
           id: string;
           is_resolved: boolean;
           message: string;
+          resolution_note: string | null;
           resolved_at: string | null;
           resolved_by: string | null;
           severity: string;
@@ -137,6 +138,7 @@ export type Database = {
           id?: string;
           is_resolved?: boolean;
           message: string;
+          resolution_note?: string | null;
           resolved_at?: string | null;
           resolved_by?: string | null;
           severity: string;
@@ -150,6 +152,7 @@ export type Database = {
           id?: string;
           is_resolved?: boolean;
           message?: string;
+          resolution_note?: string | null;
           resolved_at?: string | null;
           resolved_by?: string | null;
           severity?: string;
@@ -1332,7 +1335,9 @@ export type EmissionSourceType =
   | 'mobile_combustion'
   | 'purchased_electricity'
   | 'purchased_steam'
-  | 'fugitive';
+  | 'fugitive'
+  | 'water_use'
+  | 'waste';
 
 export type ActivityEntryStatus = 'draft' | 'submitted' | 'validated' | 'rejected';
 

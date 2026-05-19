@@ -1,11 +1,12 @@
 'use client';
 
-import { useActionState, useState, useRef } from 'react';
+import { useActionState, useState, useRef, useEffect } from 'react';
 import { Upload, FileText, X } from 'lucide-react';
 import { importActivityCsv } from '@/actions/activity';
 import type { CsvImportState } from '@/actions/activity';
 import { parseCsvText, getCsvTemplate } from '@/lib/csv';
 import type { ParsedCsvRow } from '@/lib/csv';
+import { useToast } from '@/components/ui/Toast';
 
 function downloadTemplate() {
   const blob = new Blob([getCsvTemplate()], { type: 'text/csv;charset=utf-8;' });
@@ -19,7 +20,7 @@ function downloadTemplate() {
 
 const CABECERAS_PREVIEW = [
   'Fila',
-  'ID Periodo',
+  'Proveedor / Mes',
   'Fuente',
   'Secundario',
   'Cant.',
@@ -37,6 +38,20 @@ export function CsvImportPanel() {
   const [fileName, setFileName] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (!state?.submittedAt) return;
+    if (state.success) {
+      const n = state.imported ?? 0;
+      toast(
+        `${n} registro${n !== 1 ? 's' : ''} importado${n !== 1 ? 's' : ''}${(state.skipped ?? 0) > 0 ? ` · ${state.skipped} omitidos` : ''}`,
+        'success',
+      );
+    } else if (state.error) {
+      toast(state.error, 'error');
+    }
+  }, [state?.submittedAt]);
 
   function loadFile(file: File) {
     setFileName(file.name);
@@ -182,7 +197,7 @@ export function CsvImportPanel() {
               gap: 'var(--space-2)',
               cursor: 'pointer',
               transition: 'border-color 150ms, background 150ms',
-              background: 'var(--color-surface-2)',
+              background: 'var(--color-surface-0)',
             }}
           >
             <Upload size={20} style={{ color: 'var(--color-ink-3)' }} />
@@ -227,7 +242,7 @@ export function CsvImportPanel() {
           placeholder={getCsvTemplate()}
           style={{
             padding: 'var(--space-2) var(--space-3)',
-            background: 'var(--color-surface-2)',
+            background: 'var(--color-surface-0)',
             border: '1px solid var(--color-border)',
             borderRadius: 'var(--radius-md)',
             fontSize: 'var(--text-xs)',
@@ -286,7 +301,7 @@ export function CsvImportPanel() {
                   <tr key={row.rowIndex}>
                     <td style={estiloCeldaPreview}>{row.rowIndex}</td>
                     <td style={estiloCeldaPreview}>
-                      {row.data?.reporting_period_id.slice(0, 8) ?? '—'}…
+                      {row.data ? `${row.data.supplier_id.slice(0, 8)}… / ${row.data.year_month}` : '—'}
                     </td>
                     <td style={estiloCeldaPreview}>{row.data?.source_type ?? '?'}</td>
                     <td style={estiloCeldaPreview}>{row.data?.secondary || '—'}</td>
@@ -312,64 +327,8 @@ export function CsvImportPanel() {
         </div>
       )}
 
-      {/* Resultado éxito */}
-      {state?.success && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: 'var(--space-3)',
-            padding: 'var(--space-4)',
-            background: 'var(--color-signal-ok-bg)',
-            border: '1px solid var(--color-signal-ok)',
-            borderRadius: 'var(--radius-md)',
-            fontSize: 'var(--text-sm)',
-          }}
-        >
-          <span style={{ fontSize: '16px', lineHeight: 1, flexShrink: 0 }}>✓</span>
-          <div>
-            <strong
-              style={{ color: 'var(--color-signal-ok)', display: 'block', marginBottom: '2px' }}
-            >
-              Importación completada
-            </strong>
-            <span style={{ color: 'var(--color-ink-2)' }}>
-              {state.imported} registro{state.imported !== 1 ? 's' : ''} importado
-              {state.imported !== 1 ? 's' : ''}
-              {(state.skipped ?? 0) > 0 && ` · ${state.skipped} omitidos`}.
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Error */}
-      {state?.error && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: 'var(--space-3)',
-            padding: 'var(--space-4)',
-            background: 'var(--color-signal-hi-bg)',
-            border: '1px solid var(--color-signal-hi)',
-            borderRadius: 'var(--radius-md)',
-            fontSize: 'var(--text-sm)',
-          }}
-        >
-          <span style={{ fontSize: '16px', lineHeight: 1, flexShrink: 0 }}>✗</span>
-          <div>
-            <strong
-              style={{ color: 'var(--color-signal-hi)', display: 'block', marginBottom: '2px' }}
-            >
-              Error al importar
-            </strong>
-            <span style={{ color: 'var(--color-ink-2)' }}>{state.error}</span>
-          </div>
-        </div>
-      )}
-
       {/* Enviar */}
-      <form action={formAction}>
+      <form action={formAction} noValidate>
         <input type="hidden" name="csv_text" value={csvText} />
         <button
           type="submit"
