@@ -21,6 +21,20 @@ export class ActivityEntryRepository extends SupabaseRepository<ActivityEntry> {
     return (data as Record<string, unknown>[]).map((row) => this.toEntity(row));
   }
 
+  async findByPeriodIds(periodIds: readonly string[]): Promise<readonly ActivityEntry[]> {
+    if (periodIds.length === 0) return [];
+    const { data, error } = await this.client
+      .from(this.tableName)
+      .select(
+        'id, reporting_period_id, source_type, activity_kind, raw_quantity, raw_unit, status, submitted_at, submitted_by, created_at',
+      )
+      .in('reporting_period_id', periodIds)
+      .is('voided_at', null)
+      .order('created_at', { ascending: true });
+    if (error ?? !data) return [];
+    return (data as Record<string, unknown>[]).map((row) => this.toEntity(row));
+  }
+
   async findByStatus(
     periodId: string,
     status: ActivityEntryStatus,

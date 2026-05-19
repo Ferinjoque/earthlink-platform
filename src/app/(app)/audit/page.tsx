@@ -4,6 +4,7 @@ import { createServerClient } from '@/services/supabase/server';
 import { TopBar } from '@/components/shell/TopBar';
 import { Badge } from '@/components/ui/Badge';
 import { AuditTable } from '@/components/audit/AuditTable';
+import { LockedPeriodsTable } from '@/components/audit/LockedPeriodsTable';
 import type {
   MembershipRow,
   SupplierRow,
@@ -13,7 +14,6 @@ import type {
   AnomalyFlagRow,
 } from '@/types/database';
 import { variantEstadoPeriodo, etiquetaEstadoPeriodo } from '@/lib/reporting-period';
-import { formatearKg } from '@/lib/format';
 import type { PeriodStatus } from '@/domain/ReportingPeriod';
 import type {
   PeriodoFila,
@@ -24,7 +24,17 @@ import type {
 
 export const metadata: Metadata = { title: 'Auditoría' };
 
-export default async function AuditoriaPage() {
+interface PageProps {
+  searchParams: Promise<{ year?: string }>;
+}
+
+export default async function AuditoriaPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const nowYear = new Date().getFullYear();
+  const selectedYear =
+    params.year && /^\d{4}$/.test(params.year)
+      ? parseInt(params.year, 10)
+      : nowYear;
   const supabase = await createServerClient();
   const {
     data: { user },
@@ -67,10 +77,14 @@ export default async function AuditoriaPage() {
   >;
   const periodsData: FilaPeriodo[] = [];
   if (allSupplierIds.length) {
+    const startOfYear = `${selectedYear}-01-01`;
+    const endOfYear = `${selectedYear}-12-31`;
     const { data } = await supabase
       .from('reporting_periods')
       .select('id, label, supplier_id, status, start_date, end_date')
       .in('supplier_id', allSupplierIds)
+      .gte('start_date', startOfYear)
+      .lte('start_date', endOfYear)
       .order('start_date', { ascending: false });
     if (data) periodsData.push(...(data as FilaPeriodo[]));
   }
@@ -246,20 +260,20 @@ export default async function AuditoriaPage() {
     (p) => p.status === 'locked' && p.resumen !== undefined,
   );
 
+  const lockedRows = bloqueadosConResumen.map((p) => ({
+    id: p.id,
+    supplier_name: p.supplier_name,
+    label: p.label,
+    start_date: p.start_date,
+    totalCo2eKg: p.resumen!.totalCo2eKg,
+    scope1Co2eKg: p.resumen!.scope1Co2eKg,
+    scope2Co2eKg: p.resumen!.scope2Co2eKg,
+    nResultados: p.resumen!.nResultados,
+  }));
 
   return (
     <>
       <TopBar title="Consola de auditoría" email={user?.email} section="Registro inmutable" />
-      <style>{`
-        .locked-card {
-          transition: box-shadow 180ms var(--ease-out-expo), transform 180ms var(--ease-out-expo), border-color 180ms;
-        }
-        .locked-card:hover {
-          box-shadow: var(--shadow-md);
-          transform: translateY(-2px);
-          border-color: oklch(42% 0.12 155 / 45%) !important;
-        }
-      `}</style>
       <main
         style={{
           padding: 'var(--space-8)',
@@ -268,7 +282,7 @@ export default async function AuditoriaPage() {
           gap: 'var(--space-8)',
         }}
       >
-        {/* Chips de estado */}
+        {/* Cabecera con filtro de año + chips de estado */}
         <section
           style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)', alignItems: 'center' }}
         >
@@ -281,7 +295,7 @@ export default async function AuditoriaPage() {
               letterSpacing: 'var(--tracking-wide)',
             }}
           >
-            Periodos:
+            {selectedYear}:
           </span>
           {(
             [
@@ -304,6 +318,26 @@ export default async function AuditoriaPage() {
               </span>
             </span>
           ))}
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 'var(--space-2)' }}>
+            {[nowYear - 1, nowYear, nowYear + 1].filter((y) => y >= 2024).map((y) => (
+              <a
+                key={y}
+                href={`/audit?year=${y}`}
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 'var(--text-xs)',
+                  padding: '3px var(--space-3)',
+                  borderRadius: 'var(--radius-md)',
+                  border: y === selectedYear ? '1px solid var(--color-accent)' : '1px solid var(--color-border)',
+                  background: y === selectedYear ? 'var(--color-accent-soft)' : 'transparent',
+                  color: y === selectedYear ? 'var(--color-accent)' : 'var(--color-ink-3)',
+                  textDecoration: 'none',
+                }}
+              >
+                {y}
+              </a>
+            ))}
+          </div>
         </section>
 
         {/* Tabla de periodos con filtro y paneles expandibles */}
@@ -311,8 +345,8 @@ export default async function AuditoriaPage() {
           <AuditTable periodos={periodos} isAdmin={isAdmin} />
         </section>
 
-        {/* Tarjetas de periodos bloqueados */}
-        {bloqueadosConResumen.length > 0 && (
+        {/* Resumen compacto de periodos bloqueados */}
+        {lockedRows.length > 0 && (
           <section>
             <div style={{ marginBottom: 'var(--space-4)' }}>
               <h2
@@ -332,85 +366,10 @@ export default async function AuditoriaPage() {
                   margin: 'var(--space-1) 0 0',
                 }}
               >
-                Registros CO₂e inmutables — estas cifras ya no pueden modificarse.
+                Registros CO₂e inmutables para {selectedYear} — estas cifras ya no pueden modificarse.
               </p>
             </div>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                gap: 'var(--space-4)',
-              }}
-            >
-              {bloqueadosConResumen.map((p) => {
-                const r = p.resumen!;
-                return (
-                  <div
-                    key={p.id}
-                    className="locked-card"
-                    style={{
-                      background: 'var(--color-accent-soft)',
-                      border: '1px solid oklch(42% 0.12 155 / 22%)',
-                      borderRadius: 'var(--radius-lg)',
-                      padding: 'var(--space-5)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 'var(--space-3)',
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'baseline',
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontFamily: 'var(--font-mono)',
-                          fontSize: 'var(--text-xs)',
-                          color: 'var(--color-ink-3)',
-                        }}
-                      >
-                        {p.supplier_name} · {p.label}
-                      </span>
-                      <Badge variant="locked">Bloqueado</Badge>
-                    </div>
-                    <div
-                      style={{
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: 'var(--text-2xl)',
-                        fontWeight: 700,
-                        color: 'var(--color-ink-1)',
-                        letterSpacing: 'var(--tracking-tight)',
-                      }}
-                    >
-                      {formatearKg(r.totalCo2eKg)}
-                    </div>
-                    <div
-                      style={{ display: 'flex', gap: 'var(--space-4)', fontSize: 'var(--text-xs)' }}
-                    >
-                      <span style={{ color: 'var(--color-ink-3)' }}>
-                        Alcance 1:{' '}
-                        <span
-                          style={{ color: 'var(--color-ink-1)', fontFamily: 'var(--font-mono)' }}
-                        >
-                          {formatearKg(r.scope1Co2eKg)}
-                        </span>
-                      </span>
-                      <span style={{ color: 'var(--color-ink-3)' }}>
-                        Alcance 2:{' '}
-                        <span
-                          style={{ color: 'var(--color-ink-1)', fontFamily: 'var(--font-mono)' }}
-                        >
-                          {formatearKg(r.scope2Co2eKg)}
-                        </span>
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <LockedPeriodsTable rows={lockedRows} />
           </section>
         )}
       </main>

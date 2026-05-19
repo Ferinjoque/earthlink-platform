@@ -6,7 +6,7 @@ import { TopBar } from '@/components/shell/TopBar';
 import { ActivityList } from '@/components/activity/ActivityList';
 import { BulkImportPanel } from '@/components/activity/BulkImportPanel';
 import { ClipboardList } from 'lucide-react';
-import type { ActivityEntryView } from '@/components/activity/ActivityList';
+import type { ActivityEntryView, PaginationInfo } from '@/components/activity/ActivityList';
 import type {
   MembershipRow,
   SupplierRow,
@@ -18,7 +18,15 @@ import type {
 
 export const metadata: Metadata = { title: 'Actividad' };
 
-export default async function ActividadPage() {
+const PAGE_SIZE = 25;
+
+interface PageProps {
+  searchParams: Promise<{ page?: string }>;
+}
+
+export default async function ActividadPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const page = Math.max(1, parseInt(params.page ?? '1', 10) || 1);
   const supabase = await createServerClient();
   const {
     data: { user },
@@ -78,7 +86,7 @@ export default async function ActividadPage() {
 
   const periodIds = periodsData.map((p) => p.id);
 
-  const entriesData: Pick<
+  type EntryRow = Pick<
     ActivityEntryRow,
     | 'id'
     | 'reporting_period_id'
@@ -90,17 +98,23 @@ export default async function ActividadPage() {
     | 'notes'
     | 'voided_at'
     | 'void_reason'
-  >[] = [];
+  >;
+  const entriesData: EntryRow[] = [];
+  let totalEntries = 0;
+  const offset = (page - 1) * PAGE_SIZE;
+
   if (periodIds.length) {
-    const { data } = await supabase
+    const { data, count } = await supabase
       .from('activity_entries')
       .select(
         'id, reporting_period_id, source_type, raw_quantity, raw_unit, status, submitted_at, notes, voided_at, void_reason',
+        { count: 'exact' },
       )
       .in('reporting_period_id', periodIds)
       .order('created_at', { ascending: false })
-      .limit(100);
-    if (data) entriesData.push(...data);
+      .range(offset, offset + PAGE_SIZE - 1);
+    if (data) entriesData.push(...(data as EntryRow[]));
+    totalEntries = count ?? 0;
   }
 
   const entryIds = entriesData.map((e) => e.id);
@@ -153,7 +167,7 @@ export default async function ActividadPage() {
     anomaly: flagMap.get(e.id),
   }));
 
-  const nEntradas = entries.length;
+  const nEntradas = totalEntries;
 
   // Empty state: no suppliers accessible
   if (suppliersData.length === 0) {
@@ -302,7 +316,11 @@ export default async function ActividadPage() {
                 </p>
               </div>
             ) : (
-              <ActivityList entries={entries} periodos={periods} />
+              <ActivityList
+                entries={entries}
+                periodos={periods}
+                pagination={{ page, pageSize: PAGE_SIZE, total: totalEntries, basePath: '/activity' }}
+              />
             )}
           </div>
         </section>
