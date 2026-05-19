@@ -5,8 +5,6 @@ import { revalidatePath } from 'next/cache';
 import { createServerClient } from '@/services/supabase/server';
 import { CATEGORIAS_VALIDAS } from '@/lib/supplier-constants';
 
-export { CATEGORIAS_VALIDAS };
-
 const rucSchema = z
   .string()
   .regex(/^\d{11}$/, 'El RUC debe tener exactamente 11 dígitos numéricos')
@@ -15,7 +13,9 @@ const rucSchema = z
 
 const createSchema = z.object({
   nombre: z.string().min(2, 'El nombre debe tener al menos 2 caracteres').max(200),
-  categoria: z.enum(CATEGORIAS_VALIDAS, { errorMap: () => ({ message: 'Selecciona una categoría válida' }) }),
+  categoria: z.enum(CATEGORIAS_VALIDAS, {
+    errorMap: () => ({ message: 'Selecciona una categoría válida' }),
+  }),
   contacto: z.string().email('Correo electrónico inválido').or(z.literal('')).optional(),
   ruc: rucSchema,
   organization_id: z.string().uuid('ID de organización inválido'),
@@ -24,7 +24,9 @@ const createSchema = z.object({
 const updateSchema = z.object({
   id: z.string().uuid(),
   nombre: z.string().min(2, 'El nombre debe tener al menos 2 caracteres').max(200),
-  categoria: z.enum(CATEGORIAS_VALIDAS, { errorMap: () => ({ message: 'Selecciona una categoría válida' }) }),
+  categoria: z.enum(CATEGORIAS_VALIDAS, {
+    errorMap: () => ({ message: 'Selecciona una categoría válida' }),
+  }),
   contacto: z.string().email('Correo electrónico inválido').or(z.literal('')).optional(),
   ruc: rucSchema,
 });
@@ -45,7 +47,9 @@ export async function createSupplier(
   formData: FormData,
 ): Promise<SupplierActionState> {
   const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return { error: 'No autenticado' };
 
   const parsed = createSchema.safeParse({
@@ -100,7 +104,9 @@ export async function updateSupplier(
   formData: FormData,
 ): Promise<SupplierActionState> {
   const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return { error: 'No autenticado' };
 
   const parsed = updateSchema.safeParse({
@@ -165,7 +171,9 @@ export async function archiveSupplier(
   formData: FormData,
 ): Promise<SupplierActionState> {
   const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return { error: 'No autenticado' };
 
   const id = formData.get('id');

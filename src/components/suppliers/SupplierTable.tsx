@@ -10,11 +10,18 @@ import {
   type SupplierActionState,
 } from '@/actions/suppliers';
 import { CATEGORIAS_VALIDAS } from '@/lib/supplier-constants';
+import { useToast } from '@/components/ui/Toast';
 import type { SupplierRow } from '@/types/database';
+
+interface OrgOption {
+  id: string;
+  name: string;
+}
 
 interface Props {
   suppliers: SupplierRow[];
   organizationId: string;
+  organizations?: OrgOption[];
 }
 
 const estiloInput = (error?: boolean): React.CSSProperties => ({
@@ -22,7 +29,7 @@ const estiloInput = (error?: boolean): React.CSSProperties => ({
   padding: 'var(--space-2) var(--space-3)',
   borderRadius: 'var(--radius-md)',
   border: `1px solid ${error ? 'var(--color-signal-hi)' : 'var(--color-border)'}`,
-  background: 'var(--color-surface-2)',
+  background: 'var(--color-surface-0)',
   fontSize: 'var(--text-sm)',
   color: 'var(--color-ink-1)',
   outline: 'none',
@@ -50,11 +57,13 @@ const estiloError: React.CSSProperties = {
 
 function FormProveedor({
   organizationId,
+  organizations,
   initial,
   onCancel,
   mode,
 }: {
   organizationId: string;
+  organizations?: OrgOption[];
   initial?: SupplierRow;
   onCancel: () => void;
   mode: 'create' | 'edit';
@@ -65,12 +74,18 @@ function FormProveedor({
     null,
   );
 
+  const { toast } = useToast();
+
   // Auto-close on success
   useEffect(() => {
     if (!state?.success) return;
+    toast(
+      mode === 'create' ? 'Proveedor creado correctamente' : 'Proveedor actualizado',
+      'success',
+    );
     const t = setTimeout(() => onCancel(), 300);
     return () => clearTimeout(t);
-  }, [state?.success, onCancel]);
+  }, [state?.success, mode, onCancel, toast]);
 
   const fe = state?.fieldErrors ?? {};
 
@@ -82,18 +97,56 @@ function FormProveedor({
         gridTemplateColumns: '1fr 1fr',
         gap: 'var(--space-4)',
         padding: 'var(--space-6)',
-        background: 'var(--color-accent-soft)',
+        background: 'var(--color-surface-1)',
         borderBottom: '1px solid var(--color-border)',
       }}
     >
       {mode === 'edit' && <input type="hidden" name="id" value={initial?.id} />}
-      <input type="hidden" name="organization_id" value={organizationId} />
+
+      {/* Organización — selector solo si hay varias y estamos creando */}
+      {mode === 'create' && organizations && organizations.length > 1 ? (
+        <div style={{ gridColumn: '1 / -1' }}>
+          <label
+            htmlFor="org-selector"
+            style={{
+              fontSize: 'var(--text-xs)',
+              color: 'var(--color-ink-2)',
+              display: 'block',
+              marginBottom: 'var(--space-1)',
+              fontWeight: 500,
+            }}
+          >
+            Organización *
+          </label>
+          <select
+            id="org-selector"
+            name="organization_id"
+            required
+            defaultValue={organizationId}
+            style={estiloSelect()}
+          >
+            {organizations.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : (
+        <input type="hidden" name="organization_id" value={organizationId} />
+      )}
 
       {/* Nombre */}
       <div>
         <label
           htmlFor={`nombre-${mode}`}
-          style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)', display: 'block', marginBottom: 'var(--space-1)', fontWeight: 500 }}
+          style={{
+            fontSize: 'var(--text-xs)',
+            color: 'var(--color-ink-2)',
+            display: 'block',
+            marginBottom: 'var(--space-1)',
+            fontWeight: 500,
+          }}
         >
           Nombre *
         </label>
@@ -112,7 +165,13 @@ function FormProveedor({
       <div>
         <label
           htmlFor={`categoria-${mode}`}
-          style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)', display: 'block', marginBottom: 'var(--space-1)', fontWeight: 500 }}
+          style={{
+            fontSize: 'var(--text-xs)',
+            color: 'var(--color-ink-2)',
+            display: 'block',
+            marginBottom: 'var(--space-1)',
+            fontWeight: 500,
+          }}
         >
           Categoría *
         </label>
@@ -123,9 +182,13 @@ function FormProveedor({
           defaultValue={initial?.category ?? ''}
           style={estiloSelect(!!fe.categoria)}
         >
-          <option value="" disabled>Selecciona una categoría</option>
+          <option value="" disabled>
+            Selecciona una categoría
+          </option>
           {CATEGORIAS_VALIDAS.map((c) => (
-            <option key={c} value={c}>{c}</option>
+            <option key={c} value={c}>
+              {c}
+            </option>
           ))}
         </select>
         {fe.categoria && <p style={estiloError}>{fe.categoria}</p>}
@@ -135,7 +198,13 @@ function FormProveedor({
       <div>
         <label
           htmlFor={`contacto-${mode}`}
-          style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)', display: 'block', marginBottom: 'var(--space-1)', fontWeight: 500 }}
+          style={{
+            fontSize: 'var(--text-xs)',
+            color: 'var(--color-ink-2)',
+            display: 'block',
+            marginBottom: 'var(--space-1)',
+            fontWeight: 500,
+          }}
         >
           Correo de contacto
         </label>
@@ -154,7 +223,13 @@ function FormProveedor({
       <div>
         <label
           htmlFor={`ruc-${mode}`}
-          style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)', display: 'block', marginBottom: 'var(--space-1)', fontWeight: 500 }}
+          style={{
+            fontSize: 'var(--text-xs)',
+            color: 'var(--color-ink-2)',
+            display: 'block',
+            marginBottom: 'var(--space-1)',
+            fontWeight: 500,
+          }}
         >
           RUC <span style={{ color: 'var(--color-ink-3)', fontWeight: 400 }}>(11 dígitos)</span>
         </label>
@@ -184,22 +259,6 @@ function FormProveedor({
           }}
         >
           {state.error}
-        </div>
-      )}
-
-      {state?.success && (
-        <div
-          style={{
-            gridColumn: '1 / -1',
-            fontSize: 'var(--text-xs)',
-            color: 'var(--color-signal-ok)',
-            background: 'var(--color-signal-ok-bg)',
-            padding: 'var(--space-2) var(--space-3)',
-            borderRadius: 'var(--radius-md)',
-            fontFamily: 'var(--font-mono)',
-          }}
-        >
-          {mode === 'create' ? 'Proveedor creado correctamente.' : 'Cambios guardados.'}
         </div>
       )}
 
@@ -267,6 +326,14 @@ function ConfirmacionArchivo({
     archiveSupplier,
     null,
   );
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (state?.success) {
+      toast(`${supplier.name} archivado`, 'info');
+      onCancel();
+    }
+  }, [state?.success, supplier.name, onCancel, toast]);
 
   return (
     <form
@@ -321,7 +388,7 @@ function ConfirmacionArchivo({
   );
 }
 
-export function SupplierTable({ suppliers, organizationId }: Props) {
+export function SupplierTable({ suppliers, organizationId, organizations }: Props) {
   const router = useRouter();
   const [mostrarFormCrear, setMostrarFormCrear] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
@@ -430,6 +497,7 @@ export function SupplierTable({ suppliers, organizationId }: Props) {
         {mostrarFormCrear && (
           <FormProveedor
             organizationId={organizationId}
+            {...(organizations ? { organizations } : {})}
             mode="create"
             onCancel={() => setMostrarFormCrear(false)}
           />
@@ -481,16 +549,40 @@ export function SupplierTable({ suppliers, organizationId }: Props) {
                     style={{ borderBottom: '1px solid var(--color-border)', cursor: 'pointer' }}
                     onClick={() => router.push(`/suppliers/${s.id}`)}
                   >
-                    <td style={{ padding: 'var(--space-3) var(--space-4)', color: 'var(--color-ink-1)', fontWeight: 500 }}>
+                    <td
+                      style={{
+                        padding: 'var(--space-3) var(--space-4)',
+                        color: 'var(--color-ink-1)',
+                        fontWeight: 500,
+                      }}
+                    >
                       {s.name}
                     </td>
-                    <td style={{ padding: 'var(--space-3) var(--space-4)', color: 'var(--color-ink-2)' }}>
+                    <td
+                      style={{
+                        padding: 'var(--space-3) var(--space-4)',
+                        color: 'var(--color-ink-2)',
+                      }}
+                    >
                       {s.category}
                     </td>
-                    <td style={{ padding: 'var(--space-3) var(--space-4)', color: 'var(--color-ink-3)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>
+                    <td
+                      style={{
+                        padding: 'var(--space-3) var(--space-4)',
+                        color: 'var(--color-ink-3)',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 'var(--text-xs)',
+                      }}
+                    >
                       {s.ruc ?? '—'}
                     </td>
-                    <td style={{ padding: 'var(--space-3) var(--space-4)', color: 'var(--color-ink-2)', fontSize: 'var(--text-xs)' }}>
+                    <td
+                      style={{
+                        padding: 'var(--space-3) var(--space-4)',
+                        color: 'var(--color-ink-2)',
+                        fontSize: 'var(--text-xs)',
+                      }}
+                    >
                       {s.contact_email ?? '—'}
                     </td>
                     <td
@@ -564,10 +656,7 @@ export function SupplierTable({ suppliers, organizationId }: Props) {
                   {archivandoId === s.id && (
                     <tr>
                       <td colSpan={5} style={{ padding: 0 }}>
-                        <ConfirmacionArchivo
-                          supplier={s}
-                          onCancel={() => setArchivandoId(null)}
-                        />
+                        <ConfirmacionArchivo supplier={s} onCancel={() => setArchivandoId(null)} />
                       </td>
                     </tr>
                   )}

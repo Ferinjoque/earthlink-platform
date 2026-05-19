@@ -1,5 +1,8 @@
 import { calculate, aggregate, _internals } from '../calc/pipeline';
 import type { EmissionFactor, EmissionResult, EvaluationTotals } from '../calc/types';
+
+// Kinds with no GHG factor — zero CO2e, not persisted to emission_results
+const NO_GHG_KINDS: ReadonlySet<string> = new Set(['water_use', 'waste']);
 import type { ActivityEntryRepository } from '../repos/ActivityEntryRepository';
 import type { EmissionFactorRepository } from '../repos/EmissionFactorRepository';
 import type { UnitConversionRepository } from '../repos/UnitConversionRepository';
@@ -39,8 +42,18 @@ export class EvaluationService {
       [];
     const errors: EvaluationError[] = [];
 
+    const noGhgResults: EmissionResult[] = [];
+
     for (const entry of entries) {
       const record = entry.toActivityRecord(period.supplierId);
+
+      // Water / waste: zero CO2e, no factor required, not persisted to emission_results
+      if (NO_GHG_KINDS.has(record.activity.kind)) {
+        const calcResult = calculate(record, factors, conversions);
+        if (calcResult.ok) noGhgResults.push(calcResult.value);
+        continue;
+      }
+
       const factorResult = _internals.resolveFactor(record.activity, factors);
       if (!factorResult.ok) {
         errors.push({ entryId: entry.id, message: `Missing factor: ${factorResult.error.type}` });
@@ -58,7 +71,8 @@ export class EvaluationService {
       await this.emissionResultRepo.insertMany(successes);
     }
 
-    const totals = aggregate(successes.map((s) => s.result));
+    const allResults = [...successes.map((s) => s.result), ...noGhgResults];
+    const totals = aggregate(allResults);
     return { totals, errors };
   }
 }

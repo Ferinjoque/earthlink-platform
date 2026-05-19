@@ -24,7 +24,7 @@ export default async function ConfiguracionPage() {
   const { data: rawMemberships } = await supabase
     .from('memberships')
     .select('role, organization_id')
-    .eq('user_id', user?.id ?? '')
+    .eq('user_id', user.id)
     .limit(1);
 
   const memberships = (rawMemberships ?? []) as Pick<MembershipRow, 'role' | 'organization_id'>[];
@@ -51,8 +51,8 @@ export default async function ConfiguracionPage() {
     }
   }
 
-  const email = user?.email ?? '—';
-  const createdAt = user?.created_at
+  const email = user.email ?? '—';
+  const createdAt = user.created_at
     ? new Date(user.created_at).toLocaleDateString('es-PE', {
         year: 'numeric',
         month: 'long',

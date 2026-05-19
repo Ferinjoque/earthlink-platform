@@ -105,6 +105,13 @@ describe('AuditService.lock()', () => {
 });
 
 describe('AuditService.transitionStatus()', () => {
+  it('throws when period not found', async () => {
+    const { service } = makeService(null);
+    await expect(
+      service.transitionStatus('period-001', 'calculating', 'user-001'),
+    ).rejects.toThrow('not found');
+  });
+
   it('throws when period is locked', async () => {
     const { service } = makeService(makePeriod('locked'));
     await expect(service.transitionStatus('period-001', 'calculating', 'user-001')).rejects.toThrow(

@@ -31,22 +31,31 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   type SupplierOption = { id: string; name: string; category: string };
   const searchSuppliers: SupplierOption[] = [];
+  let anomaliaCount = 0;
+
   if (orgIds.length) {
-    const { data } = await supabase
-      .from('suppliers')
-      .select('id, name, category')
-      .in('organization_id', orgIds)
-      .is('archived_at', null)
-      .order('name');
-    if (data) searchSuppliers.push(...(data as SupplierOption[]));
+    const [suppliersResult, anomaliaResult] = await Promise.all([
+      supabase
+        .from('suppliers')
+        .select('id, name, category')
+        .in('organization_id', orgIds)
+        .is('archived_at', null)
+        .order('name'),
+      supabase
+        .from('anomaly_flags')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_resolved', false),
+    ]);
+    if (suppliersResult.data) searchSuppliers.push(...(suppliersResult.data as SupplierOption[]));
+    anomaliaCount = anomaliaResult.count ?? 0;
   }
 
   return (
     <SearchProvider suppliers={searchSuppliers}>
       <ToastProvider>
-        <div style={{ display: 'flex', height: '100dvh', overflow: 'hidden' }}>
-          <Sidebar />
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
+        <div data-app-root style={{ display: 'flex', height: '100dvh', overflow: 'hidden' }}>
+          <Sidebar anomaliaCount={anomaliaCount} />
+          <div data-app-main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
             {children}
           </div>
         </div>

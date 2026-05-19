@@ -22,10 +22,15 @@ export async function signIn(
   const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
 
   if (error) {
-    return { error: error.message };
+    return { error: 'Correo o contraseña incorrectos.' };
   }
 
-  redirect('/dashboard');
+  const next = formData.get('next');
+  const destination =
+    typeof next === 'string' && next.startsWith('/') && !next.startsWith('//')
+      ? next
+      : '/dashboard';
+  redirect(destination);
 }
 
 export async function signOut(): Promise<void> {
