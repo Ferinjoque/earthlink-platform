@@ -20,14 +20,12 @@
 > ninguna empresa, producto o marca registrada que pueda llevar ese nombre, incluyendo
 > cualquier proveedor de telecomunicaciones u otro servicio.
 >
-> **Sin vinculacion con Seabridge ni servicios de sostenibilidad similares.** Este proyecto
-> no representa, no esta afiliado ni se desprende de los productos, servicios, metodologias
-> ni soluciones de sostenibilidad de Seabridge Sustainability ni de ninguna organizacion
-> relacionada. Las funcionalidades, el diseno del dominio y los datos de ejemplo son
-> enteramente ficticios.
+> **Sin vinculacion con ninguna plataforma, empresa o servicio de sostenibilidad.** Este
+> proyecto no representa ni esta afiliado a ninguna organizacion, producto o solucion de
+> sostenibilidad existente. Las funcionalidades, el diseno del dominio y los datos de
+> ejemplo son enteramente ficticios.
 >
-> El uso de este proyecto con fines comerciales requiere permiso expreso del autor.
-> Ver [LICENSE](LICENSE).
+> El uso comercial de este proyecto no esta permitido. Ver [LICENSE](LICENSE).
 
 ---
 
