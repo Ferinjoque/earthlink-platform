@@ -99,7 +99,7 @@ src/
 
 \* Append-only — triggers bloquean UPDATE y DELETE.
 
-**Migraciones:** 001 → 010 aplicadas. La 010 añade INSERT policy en `emission_results` para admin/consultant.
+**Migraciones:** 001 → 020 aplicadas (incluyendo `archived_at` en suppliers, `data_quality` en activity_entries, políticas RLS actualizadas).
 
 **Seed:**
 - 2 orgs: EcoGroup SAC (PE), Andean Mining Corp (PE)
@@ -116,119 +116,121 @@ src/
 
 ## Estado actual de la UI
 
+> **Última actualización:** 2026-05-19. Plataforma completa y funcional. Todos los flujos principales implementados.
+
 ### `/login` — Completo ✅
 
 Split 100dvh: hero oscuro izquierda (58%) + formulario derecha (42%).
-
-**Hero (`oklch(10% 0.048 162)`):**
-- Canvas rAF: ~80-90 partículas esmeralda con conexiones dinámicas y pulso. Cada 7mo nodo es "bright" (glow más intenso).
-- Radiales ambientales: verde top-right, ámbar bottom-left.
-- Framer Motion: eyebrow → h1 serif italic → descripción → PILARES (3 bullets) → badges de certificación.
-- Wordmark top-left animado.
-- Responsive: hero oculto en mobile, form ocupa 100dvh.
-
-**Formulario:** email + password + spinner + error inline + Framer Motion entrance.
+Canvas rAF con 80-90 partículas esmeralda. Framer Motion entrance en hero y form. Lazy-load de `ParticleField`.
 
 ---
 
 ### App shell — Completo ✅
 
-**Sidebar** (260px, `data-theme="dark"`, `position: sticky`):
-- Wordmark: icono Leaf + "EarthLink" serif + "Auditor ESG" mono.
-- Navegación: Panel / Proveedores / Actividad / Auditoría / Reportes.
-- Estado activo: `oklch(58% 0.16 155 / 16%)` fondo, acento verde.
-- Cerrar sesión: botón al fondo (form → signOut action).
+**Sidebar** (260px, `data-theme="dark"`):
+- Navegación: Panel / Proveedores / Actividad / Auditoría / Reportes / Configuración.
+- Badge rojo con conteo de anomalías no resueltas en ítem "Auditoría".
+- Cerrar sesión al fondo.
 
 **TopBar** (64px, sticky, backdrop blur):
-- Props: `title`, `email`, `section` (breadcrumb).
-- Hint "Buscar… ⌘K", avatar con inicial del email.
+- `title`, `email`, `section` (breadcrumb).
+- Búsqueda ⌘K global (`SearchProvider` + `SearchModal` client component).
+- Avatar con inicial del email.
+
+**Layout app** (`src/app/(app)/layout.tsx`):
+- `PageTransition` — fade-in `y: 5→0` en cada cambio de ruta.
+- `ToastProvider` — sistema toast global con `createPortal`.
+- `SearchProvider` — suppliers para búsqueda global.
+- Fetch anomalía count para badge de sidebar.
 
 ---
 
-### `/dashboard` — Parcial ⚠️
+### `/dashboard` — Completo ✅
 
-**Implementado:**
-- Titular editorial (serif italic) con eyebrow "Protocolo GHG · Alcances 1 y 2".
-- KPI strip: Total CO₂e (protagonista, mono tabular) + Alcance 1 (verde) + Alcance 2 (violeta `--color-scope2`). Dividido por `border-left` semántico (datos, no decoración).
-- Barras de distribución horizontal: Alcance 1 vs Alcance 2, % + valor. CSS transition `700ms`.
-- Indicador de periodos abiertos (dot verde + contador).
-- Lista editorial de módulos (4 items): icono + título + descripción + fase.
-- Estado vacío: mensaje descriptivo cuando `totalCo2eKg === 0`.
-
-**Falta:**
-- Gráfico tendencia mensual CO₂e (últimos 6 meses, SVG artesanal o recharts).
-- Feed actividad reciente (últimas 5-8 entradas con badge anomalía).
-- Tarjeta de anomalías pendientes (count + CTA a /audit).
+- 4 KPIs: CO₂e verificado / Cobertura / Anomalías activas / En revisión. Semáforos semánticos.
+- `YearSelector` — filtro por año vía searchParam `?year=X`.
+- Ranking por emisiones (leaderboard): barras scope1/scope2 con `.bar-animate`.
+- Mezcla de fuentes: barras horizontales con `.bar-animate`.
+- Pipeline de auditoría: tabla matriz proveedor × periodo con pills de estado.
+- Tendencia anual CO₂e: SVG artesanal con 12 barras mensuales.
+- Anomalías pendientes: panel de alerta con top-3 + CTA a /audit.
+- `AmbientBackground` — gradientes sutiles de fondo.
+- Stagger 1→6 en todas las secciones. Estado vacío descriptivo.
 
 ---
 
-### `/activity` — Mayormente completo ✅⚠️
+### `/activity` — Completo ✅
 
-**Implementado:**
-- **ActivityForm** (`'use client'`): todos los campos con validación Zod, bordes rojos en campos inválidos (`estiloInput(hasError)`, `estiloSelect(hasError)`), spinner en submit, banner éxito/error.
-- **CsvImportPanel** (`'use client'`): drag-and-drop, pegar CSV, detección automática de delimitador (`,` `;` `\t`), aliases de columna español/inglés, vista previa por fila, botón "Descargar plantilla" (`getCsvTemplate()`).
-- **ActivityList**: tabla con AnomalyBadge, estado de entrada, timestamp.
-- Query correcta para admin: memberships con `supplier_id = null` se resuelven via org → suppliers.
-
-**Falta:**
-- Estado vacío elegante cuando no hay periodos abiertos o entradas.
-- Filtros de tabla (por estado, fuente, periodo).
-- Detalle de entrada al hacer clic (factores usados, hash sha256, trazabilidad).
-- Paginación (actualmente límite hardcoded 100).
+- **BulkImportPanel** (`'use client'`): tabs Manual / CSV / Excel. Selección de proveedor + periodo. Form manual con Zod. CSV drag-and-drop con preview. Excel con xlsx.
+- Campo `data_quality` incluido en formulario, CSV y Excel templates.
+- **ActivityList**: tabla paginada (25/página), AnomalyBadge, estado de entrada, void info. Columna Fuente sin tooltip.
+- Estado vacío cuando no hay proveedores.
+- Paginación real con `?page=N`.
+- Stagger 1→2 en secciones.
 
 ---
 
-### `/suppliers` — Parcial ⚠️
+### `/suppliers` — Completo ✅
 
-**Implementado:**
-- Tabla: nombre, categoría, email, cantidad de periodos.
-- CSS hover con `<style>` tag (Server Component).
-
-**Falta (CRUD completo):**
-- Crear proveedor: form expandible inline (no modal). Campos: nombre, categoría, contacto, RUC.
-- Editar proveedor: mismo form, pre-populated.
-- Archivar: soft-delete con columna `archived_at` en `suppliers` (migración requerida).
-- Vista detalle `/suppliers/[id]`: periodos del proveedor, últimas entradas, CO₂e histórico.
-- Crear periodo desde vista detalle.
-- Estado vacío.
-- Búsqueda client-side por nombre/categoría.
+- **SupplierTable** (`'use client'`): tabla con nombre/categoría/email/RUC/periodos, búsqueda client-side, filtro por categoría.
+- CRUD inline: crear proveedor (form expandible), editar, archivar (soft-delete con `archived_at`).
+- **`/suppliers/[id]`**: KPIs CO₂e, períodos de reporte con estados + acciones, últimas entradas de actividad.
+- **NuevoPeriodoForm**: crear periodo desde detalle del proveedor.
+- Stagger 1→3 en secciones.
 
 ---
 
-### `/audit` — Parcial ⚠️
+### `/audit` — Completo ✅
 
-**Implementado:**
-- Chips de estado con conteo por estado.
-- Tabla de periodos: proveedor, label, fechas, estado (Badge), CO₂e total, acciones.
-- **PeriodActions**: `open` → "Calcular CO₂e" (EvaluationService → INSERT emission_results); `under_review` → "Bloquear periodo" (AuditService → status locked).
-- Tarjetas de periodos bloqueados: background `--color-accent-soft`, borde verde sutil (sin side-stripe).
-- CSS hover en filas.
-
-**Falta:**
-- Vista inline de resultados post-cálculo: tabla CO₂e por entrada (source_type, raw_quantity, co2e_kg, scope, factor usado).
-- Panel de anomalías activas del periodo (con acción "Marcar como revisado").
-- Filtro por estado en tabla de periodos.
-- Botón "Nuevo periodo" (form inline: proveedor, label, fecha inicio/fin).
-- Log de auditoría visible: quién calculó, cuándo, versión del motor.
+- **AuditTable** (`'use client'`): tabla de periodos con filtros por estado, expand inline de resultados y anomalías. `PeriodActions` para calcular/bloquear.
+- Chips de conteo por estado + filtro de año (links a `?year=Y`).
+- **LockedPeriodsTable**: resumen compacto de periodos bloqueados.
+- **`/audit/[periodId]`**: página de detalle completa — KPIs CO₂e, anomalías activas con severidad, tabla de resultados por entrada, audit log timeline.
+- Stagger 1→5 en secciones de detalle.
 
 ---
 
-### `/reports` — Vacío ❌
+### `/reports` — Completo ✅
 
-Solo placeholder. Falta todo:
-- Lista de periodos exportables (status `under_review` o `locked`).
-- Exportar CSV: emission_results + factor provenance. Action con `crypto.createHash('sha256')`.
-- Guardar registro en `report_exports`.
-- Exportar PDF (opcional: `@react-pdf/renderer` o `window.print()` con CSS impresión).
-- Historial de exportaciones con sha256.
+- **ReportsPanel** (`'use client'`): lista de periodos exportables (status `under_review` o `locked`) agrupados por año.
+- Exportar CSV: emission_results + factor provenance + sha256 (`crypto.createHash`).
+- Guardar en `report_exports` con org_id y period IDs.
+- Historial de exports con sha256 y fecha.
+- Modo impresión CSS (`@media print`): oculta chrome, cover page generada.
+- Stagger 1→2 en secciones.
 
 ---
 
-### `/settings` — No existe ❌
+### `/settings` — Completo ✅
 
-Falta crear `src/app/(app)/settings/page.tsx`:
-- Email del usuario, nombre de la organización, rol.
-- Enlace en sidebar (Settings icon o avatar del TopBar clickeable).
+- 3 secciones: Cuenta (email, fecha), Organización (nombre, país, industria), Permisos (rol activo).
+- Enlace en sidebar (ícono Settings).
+- Stagger 1→4.
+
+---
+
+### `/consumo` — Completo ✅
+
+- **ConsumoPanel** (`'use client'`): medidores virtuales por fuente. Conversiones de unidades desde DB (kWh, m³, kg).
+- Entradas de actividad filtradas por tipo (electricidad, gas, agua).
+- Stagger wrapper.
+
+---
+
+### Animaciones — Completo ✅
+
+- **PageTransition**: `fade-in y:5→0` en cada cambio de ruta (Framer Motion, `PageTransition.tsx`).
+- **Stagger CSS** (`animate-fade-up stagger-1..6`): todas las páginas tienen stagger de entrada en sus secciones.
+- **`.bar-animate`** (`barGrow` keyframe): barras del leaderboard y mezcla de fuentes en Dashboard animan desde 0.
+- `prefers-reduced-motion: reduce` desactiva todas las animaciones.
+
+---
+
+### Tests — Completo ✅
+
+- **Unit**: 514 tests, 24 archivos, Vitest. Cobertura ≥ 75%.
+- **E2E**: `auth.setup.ts` (storageState) + 6 spec files para todas las páginas autenticadas.
+- `playwright.config.ts`: proyecto `setup` como dependencia de los proyectos de browser.
 
 ---
 
@@ -260,7 +262,7 @@ Modo oscuro `[data-theme="dark"]`: usado por Sidebar y login hero. Ver `docs/DES
 
 **`AnomalyBadge`** — chip con severidad `low/medium/high`. z-score + mensaje en tooltip.
 
-**`Card`** — base surface-1 + borde. **Nota:** la variante Accent aún usa `border-left` — pendiente de limpiar a background tint.
+**`Card`** — base surface-1 + borde. Variante `accent`: background tint `--color-accent-soft` + borde sutil (sin `border-left` anti-patrón).
 
 ---
 
@@ -341,42 +343,18 @@ Aplicar: `npx supabase db push`
 
 ## Lista de tareas — prioridades
 
-### P1 — Funcionalidad esencial
+> **Estado 2026-05-19:** Plataforma funcional completa. Todas las P1/P2/P3 anteriores están implementadas.
+> Lo que sigue es polish avanzado y mejoras opcionales.
+
+### Pendiente — polish y mejoras
 
 | # | Tarea | Archivos clave |
 |---|---|---|
-| 1.1 | Página `/settings` (email, org, rol) + enlace en sidebar | `src/app/(app)/settings/page.tsx`, `Sidebar.tsx` |
-| 1.2 | CRUD proveedores: crear/editar/archivar inline + migración `archived_at` | `src/app/(app)/suppliers/`, `src/actions/suppliers.ts` (nuevo), migración |
-| 1.3 | Vista detalle proveedor `/suppliers/[id]`: periodos, CO₂e, crear periodo | `src/app/(app)/suppliers/[id]/page.tsx` (nuevo) |
-| 1.4 | Resultados de auditoría post-cálculo: tabla inline CO₂e por entrada | `src/app/(app)/audit/page.tsx`, `src/components/audit/` |
-| 1.5 | Panel de reportes: exportar CSV + sha256 + guardar en `report_exports` | `src/app/(app)/reports/page.tsx`, `src/actions/reports.ts` (nuevo) |
-
-### P2 — Completar paneles
-
-| # | Tarea | Archivos clave |
-|---|---|---|
-| 2.1 | Dashboard: gráfico tendencia mensual CO₂e (SVG artesanal, últimos 6 meses) | `src/app/(app)/dashboard/page.tsx` |
-| 2.2 | Dashboard: feed actividad reciente (5-8 entradas) + tarjeta anomalías pendientes | `src/app/(app)/dashboard/page.tsx` |
-| 2.3 | Actividad: estado vacío + filtros (estado/fuente/periodo) | `src/app/(app)/activity/page.tsx`, `ActivityList.tsx` |
-| 2.4 | Auditoría: panel anomalías (listar + "Marcar revisado") + filtro por estado + "Nuevo periodo" | `src/app/(app)/audit/page.tsx`, acciones audit |
-
-### P3 — QoL y polish
-
-| # | Tarea | Archivos clave |
-|---|---|---|
-| 3.1 | Estados vacíos consistentes en todas las páginas | Todas las páginas |
-| 3.2 | Sistema toast global (`createPortal` + CSS) | `src/components/ui/Toast.tsx` (nuevo), app layout |
-| 3.3 | Skeletons de carga (`shimmer` keyframe ya existe) | Dashboard, tablas |
-| 3.4 | Card Accent: limpiar `border-left` anti-pattern → background tint | `src/components/ui/Card.tsx` |
-| 3.5 | Badge anomalías en sidebar (count no resueltos en ítem "Auditoría") | `Sidebar.tsx`, query en layout |
-
-### P4 — Avanzado
-
-| # | Tarea |
-|---|---|
-| 4.1 | Exportación PDF (`@react-pdf/renderer` o `window.print()`) |
-| 4.2 | Página detalle periodo `/audit/[periodId]`: emission results completos + audit log |
-| 4.3 | Búsqueda ⌘K global (command palette) |
+| A | Filtros de tabla en `/activity`: por estado/fuente/periodo (client-side) | `ActivityList.tsx` |
+| B | "Marcar anomalía como revisada" en `/audit/[periodId]` | `src/actions/audit.ts`, AuditTable |
+| C | Skeletons de carga (`shimmer`) en Dashboard y tablas largas | Dashboard, tablas |
+| D | Exportación PDF con `window.print()` ya implementada — mejorar CSS de impresión | `ReportsPanel.tsx` |
+| E | Test de cobertura: `npx vitest run --coverage` y subir a 80%+ en branches | `vitest.config.ts` |
 
 ---
 
