@@ -552,6 +552,7 @@ const SOURCE_TYPES = Object.keys(ETIQUETAS_FUENTE) as EmissionSourceType[];
 const tdStyle: React.CSSProperties = {
   padding: '4px 6px',
   verticalAlign: 'middle',
+  overflow: 'hidden',
 };
 
 function TableMode({
@@ -630,7 +631,18 @@ function TableMode({
       )}
 
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '860px' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+          <colgroup>
+            <col style={{ width: '14%' }} />
+            <col style={{ width: '13%' }} />
+            <col style={{ width: '14%' }} />
+            <col style={{ width: '13%' }} />
+            <col style={{ width: '8%' }} />
+            <col style={{ width: '10%' }} />
+            <col style={{ width: '9%' }} />
+            <col style={{ width: '16%' }} />
+            <col style={{ width: '3%' }} />
+          </colgroup>
           <thead>
             <tr style={{ background: 'var(--color-surface-2)' }}>
               {['Proveedor', 'Mes', null, 'Secundario', 'Cantidad', 'Unidad', 'Calidad', 'Notas', ''].map(
@@ -680,7 +692,6 @@ function TableMode({
                       value={row.supplier_id}
                       onChange={(e) => onUpdateRow(idx, { supplier_id: e.target.value })}
                       aria-label="Proveedor"
-                      style={{ minWidth: '140px' }}
                     >
                       {suppliers.map((s) => (
                         <option key={s.id} value={s.id}>{s.name}</option>
@@ -692,7 +703,7 @@ function TableMode({
                     <MonthYearSelect
                       value={row.year_month}
                       onChange={(v) => onUpdateRow(idx, { year_month: v })}
-                      style={{ minWidth: '168px' }}
+                      abbreviated
                     />
                   </td>
 
@@ -702,7 +713,6 @@ function TableMode({
                       value={row.source_type}
                       onChange={(e) => onChangeSourceType(idx, e.target.value as EmissionSourceType)}
                       aria-label="Fuente"
-                      style={{ minWidth: '130px' }}
                     >
                       {SOURCE_TYPES.map((st) => (
                         <option key={st} value={st}>{ETIQUETAS_FUENTE[st]}</option>
@@ -717,7 +727,6 @@ function TableMode({
                         value={row.secondary}
                         onChange={(e) => onUpdateRow(idx, { secondary: e.target.value })}
                         aria-label={secLabel}
-                        style={{ minWidth: '130px' }}
                       >
                         {secs.map((o) => (
                           <option key={o.value} value={o.value}>{o.label}</option>
@@ -747,7 +756,7 @@ function TableMode({
                       onChange={(e) => onUpdateRow(idx, { raw_quantity: e.target.value })}
                       placeholder="0.00"
                       aria-label="Cantidad"
-                      style={{ minWidth: '80px', fontFamily: 'var(--font-mono)' }}
+                      style={{ fontFamily: 'var(--font-mono)' }}
                     />
                   </td>
 
@@ -757,7 +766,6 @@ function TableMode({
                       value={row.raw_unit}
                       onChange={(e) => onUpdateRow(idx, { raw_unit: e.target.value })}
                       aria-label="Unidad"
-                      style={{ minWidth: '110px' }}
                     >
                       {units.map(({ unit }) => (
                         <option key={unit} value={unit}>
@@ -773,7 +781,6 @@ function TableMode({
                       value={row.data_quality}
                       onChange={(e) => onUpdateRow(idx, { data_quality: e.target.value })}
                       aria-label="Calidad del dato"
-                      style={{ minWidth: '90px' }}
                     >
                       <option value="measured">Med.</option>
                       <option value="estimated">Est.</option>
@@ -789,7 +796,6 @@ function TableMode({
                       onChange={(e) => onUpdateRow(idx, { notes: e.target.value })}
                       placeholder="Opcional"
                       aria-label="Notas"
-                      style={{ minWidth: '90px' }}
                     />
                   </td>
 
