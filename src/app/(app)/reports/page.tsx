@@ -156,7 +156,7 @@ export default async function ReportesPage() {
         }}
       >
         {/* Editorial header — hidden in print (replaced by cover page inside ReportsPanel) */}
-        <div data-no-print style={{ marginBottom: 'var(--space-8)' }}>
+        <div data-no-print className="animate-fade-up stagger-1" style={{ marginBottom: 'var(--space-8)' }}>
           <p className="eyebrow" style={{ marginBottom: 'var(--space-3)' }}>
             Protocolo GHG · Exportación de datos
           </p>
@@ -187,7 +187,9 @@ export default async function ReportesPage() {
           </p>
         </div>
 
-        <ReportsPanel periodos={periodos} historial={historial} orgName={orgName} />
+        <div className="animate-fade-up stagger-2">
+          <ReportsPanel periodos={periodos} historial={historial} orgName={orgName} />
+        </div>
       </main>
     </>
   );
