@@ -285,6 +285,7 @@ export default async function AuditoriaPage({ searchParams }: PageProps) {
       >
         {/* Cabecera con filtro de año + chips de estado */}
         <section
+          className="animate-fade-up stagger-1"
           style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)', alignItems: 'center' }}
         >
           <span
@@ -341,13 +342,13 @@ export default async function AuditoriaPage({ searchParams }: PageProps) {
         </section>
 
         {/* Tabla de periodos con filtro y paneles expandibles */}
-        <section>
+        <section className="animate-fade-up stagger-2">
           <AuditTable periodos={periodos} isAdmin={isAdmin} />
         </section>
 
         {/* Resumen compacto de periodos bloqueados */}
         {lockedRows.length > 0 && (
-          <section>
+          <section className="animate-fade-up stagger-3">
             <div style={{ marginBottom: 'var(--space-4)' }}>
               <h2
                 style={{

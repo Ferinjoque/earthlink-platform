@@ -249,6 +249,7 @@ export default async function DetallePeriodoPage({
 
         {/* ── Header ── */}
         <section
+          className="animate-fade-up stagger-1"
           style={{
             display: 'flex',
             flexDirection: 'column',
@@ -296,6 +297,7 @@ export default async function DetallePeriodoPage({
         {/* ── KPI strip ── */}
         {results.length > 0 && (
           <section
+            className="animate-fade-up stagger-2"
             style={{
               background: 'var(--color-surface-1)',
               border: '1px solid var(--color-border)',
@@ -336,7 +338,7 @@ export default async function DetallePeriodoPage({
 
         {/* ── Anomalías activas ── */}
         {flagsData.length > 0 && (
-          <section>
+          <section className="animate-fade-up stagger-3">
             <div style={{ marginBottom: 'var(--space-4)' }}>
               <h3
                 style={{
@@ -434,7 +436,7 @@ export default async function DetallePeriodoPage({
         )}
 
         {/* ── Tabla de resultados ── */}
-        <section>
+        <section className="animate-fade-up stagger-4">
           <div style={{ marginBottom: 'var(--space-4)' }}>
             <h3
               style={{
@@ -647,7 +649,7 @@ export default async function DetallePeriodoPage({
         </section>
 
         {/* ── Audit log timeline ── */}
-        <section>
+        <section className="animate-fade-up stagger-5">
           <div style={{ marginBottom: 'var(--space-5)' }}>
             <h3
               style={{
