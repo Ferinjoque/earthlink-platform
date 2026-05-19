@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
 
-const PUBLIC_PATHS = ['/login', '/signup'];
+const PUBLIC_PATHS = ['/login', '/signup', '/robots.txt', '/sitemap.xml'];
 const STATIC_EXT = /\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|ttf|css|js)$/;
 
 function safeNextPath(raw: string): string | null {
