@@ -5,11 +5,17 @@ const MESES_ES = [
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
 ];
 
+const MESES_ABREV = [
+  'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+  'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+];
+
 interface MonthYearSelectProps {
   value: string; // "YYYY-MM"
   onChange: (value: string) => void;
   name?: string;
   hasError?: boolean;
+  abbreviated?: boolean;
   style?: React.CSSProperties;
   className?: string;
 }
@@ -19,6 +25,7 @@ export function MonthYearSelect({
   onChange,
   name,
   hasError = false,
+  abbreviated = false,
   style,
   className,
 }: MonthYearSelectProps) {
@@ -63,13 +70,13 @@ export function MonthYearSelect({
         value={month}
         onChange={(e) => handleMonthChange(e.target.value)}
         aria-label="Mes"
-        style={{ ...base, flex: '1 1 0', minWidth: '90px' }}
+        style={{ ...base, flex: '1 1 0', minWidth: abbreviated ? '58px' : '90px' }}
       >
         {MESES_ES.map((mes, i) => {
           const m = String(i + 1).padStart(2, '0');
           return (
             <option key={m} value={m}>
-              {mes}
+              {abbreviated ? MESES_ABREV[i] : mes}
             </option>
           );
         })}
