@@ -42,6 +42,10 @@ yarn-error.log*
 # supabase temp (contiene datos de conexión sensibles)
 supabase/.temp/
 
+# documentación interna (solo uso local, no subir a GitHub)
+CLAUDE.md
+docs/
+
 # logs de desarrollo y lighthouse
 *.log
 lh-*.json
