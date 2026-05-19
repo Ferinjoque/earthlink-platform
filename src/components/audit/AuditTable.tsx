@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Fragment, useState, useActionState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
 import { PeriodActions } from '@/components/audit/PeriodActions';
 import {
@@ -9,10 +10,13 @@ import {
   calculateYear,
   closeYear,
   recalculatePeriod,
+  unlockPeriod,
   type ResolveAnomalyState,
   type BatchYearState,
   type RecalculateState,
+  type UnlockPeriodState,
 } from '@/actions/audit';
+import { voidActivityEntry, type VoidEntryState } from '@/actions/activity';
 import { traducirMensajeAnomalia } from '@/lib/anomaly';
 import { formatearKg } from '@/lib/format';
 import { variantEstadoPeriodo, etiquetaEstadoPeriodo } from '@/lib/reporting-period';
@@ -24,6 +28,7 @@ import type { AnomalySeverity } from '@/types/database';
 
 export interface ResultadoDetalle {
   id: string;
+  activity_entry_id: string;
   source_type: string;
   raw_quantity: number;
   raw_unit: string;
@@ -69,6 +74,7 @@ export interface PeriodoFila {
 
 interface AuditTableProps {
   periodos: PeriodoFila[];
+  isAdmin: boolean;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -138,7 +144,6 @@ function agruparPorAnio(periodos: PeriodoFila[]): GrupoAnual[] {
       });
     }
   }
-  // Sort by year desc, then supplier name
   return [...mapa.values()].sort((a, b) => {
     if (b.year !== a.year) return b.year - a.year;
     return a.supplier_name.localeCompare(b.supplier_name, 'es');
@@ -151,7 +156,6 @@ function mesesFaltantes(periodos: PeriodoFila[], year: number): number[] {
   for (let m = 1; m <= 12; m++) {
     if (!presentes.has(m)) faltantes.push(m);
   }
-  // Only show gaps for the current year (partial year expected)
   const ahora = new Date();
   const mesActual = ahora.getMonth() + 1;
   const anioActual = ahora.getFullYear();
@@ -183,9 +187,232 @@ function puedeCerrarAnio(periodos: PeriodoFila[], year: number): boolean {
     periodos.some((p) => p.status === 'under_review');
 }
 
+// ── VoidResultButton ──────────────────────────────────────────────────────────
+
+function VoidResultButton({ activityEntryId }: { activityEntryId: string }) {
+  const { toast } = useToast();
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [state, formAction, isPending] = useActionState<VoidEntryState | null, FormData>(
+    voidActivityEntry,
+    null,
+  );
+
+  useEffect(() => {
+    if (state?.success) {
+      toast('Entrada anulada', 'success');
+      router.refresh();
+    }
+    if (state?.error) {
+      toast(state.error, 'error');
+      setOpen(false);
+    }
+  }, [state?.success, state?.error, toast, router]);
+
+  if (open) {
+    return (
+      <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <input type="hidden" name="entry_id" value={activityEntryId} />
+        <input
+          name="void_reason"
+          required
+          placeholder="Motivo de anulación"
+          autoFocus
+          style={{
+            fontSize: '10px',
+            fontFamily: 'var(--font-mono)',
+            color: 'var(--color-ink-2)',
+            background: 'var(--color-surface-1)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-md)',
+            padding: '2px var(--space-2)',
+            outline: 'none',
+            width: '130px',
+          }}
+        />
+        <div style={{ display: 'flex', gap: '4px' }}>
+          <button
+            type="submit"
+            disabled={isPending}
+            style={{
+              fontSize: '10px',
+              fontFamily: 'var(--font-mono)',
+              color: 'var(--color-signal-hi)',
+              background: 'color-mix(in oklch, var(--color-signal-hi) 10%, transparent)',
+              border: '1px solid color-mix(in oklch, var(--color-signal-hi) 25%, transparent)',
+              borderRadius: 'var(--radius-md)',
+              padding: '2px 6px',
+              cursor: isPending ? 'default' : 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {isPending ? '…' : 'Confirmar'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            style={{
+              fontSize: '10px',
+              fontFamily: 'var(--font-mono)',
+              color: 'var(--color-ink-3)',
+              background: 'transparent',
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-md)',
+              padding: '2px 4px',
+              cursor: 'pointer',
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      </form>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      style={{
+        fontSize: '10px',
+        fontFamily: 'var(--font-mono)',
+        color: 'var(--color-ink-3)',
+        background: 'transparent',
+        border: 'none',
+        borderRadius: 'var(--radius-md)',
+        padding: '2px 6px',
+        cursor: 'pointer',
+        whiteSpace: 'nowrap',
+        opacity: 0.5,
+      }}
+    >
+      Anular
+    </button>
+  );
+}
+
+// ── UnlockButton ──────────────────────────────────────────────────────────────
+
+function UnlockButton({ periodId }: { periodId: string }) {
+  const { toast } = useToast();
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [state, formAction, isPending] = useActionState<UnlockPeriodState | null, FormData>(
+    unlockPeriod,
+    null,
+  );
+
+  useEffect(() => {
+    if (state?.success) {
+      toast('Periodo desbloqueado — ahora en revisión', 'success');
+      router.refresh();
+    }
+    if (state?.error) {
+      toast(state.error, 'error');
+      setOpen(false);
+    }
+  }, [state?.success, state?.error, toast, router]);
+
+  if (open) {
+    return (
+      <form
+        action={formAction}
+        style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}
+      >
+        <input type="hidden" name="period_id" value={periodId} />
+        <textarea
+          name="unlock_reason"
+          required
+          placeholder="Razón del desbloqueo (obligatorio)"
+          rows={2}
+          style={{
+            fontSize: 'var(--text-xs)',
+            fontFamily: 'var(--font-mono)',
+            color: 'var(--color-ink-2)',
+            background: 'var(--color-surface-2)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-md)',
+            padding: 'var(--space-2) var(--space-3)',
+            resize: 'none',
+            minWidth: '200px',
+            outline: 'none',
+          }}
+        />
+        <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+          <button
+            type="submit"
+            disabled={isPending}
+            style={{
+              fontSize: 'var(--text-xs)',
+              fontFamily: 'var(--font-mono)',
+              fontWeight: 600,
+              color: isPending ? 'var(--color-ink-3)' : 'var(--color-signal-md)',
+              background: 'color-mix(in oklch, var(--color-signal-md) 10%, transparent)',
+              border: '1px solid color-mix(in oklch, var(--color-signal-md) 30%, transparent)',
+              borderRadius: 'var(--radius-md)',
+              padding: '3px var(--space-3)',
+              cursor: isPending ? 'default' : 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {isPending ? 'Desbloqueando…' : 'Confirmar desbloqueo'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            style={{
+              fontSize: 'var(--text-xs)',
+              fontFamily: 'var(--font-mono)',
+              color: 'var(--color-ink-3)',
+              background: 'transparent',
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-md)',
+              padding: '3px var(--space-2)',
+              cursor: 'pointer',
+            }}
+          >
+            Cancelar
+          </button>
+        </div>
+      </form>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      style={{
+        fontSize: 'var(--text-xs)',
+        fontFamily: 'var(--font-mono)',
+        color: 'var(--color-signal-md)',
+        background: 'color-mix(in oklch, var(--color-signal-md) 8%, transparent)',
+        border: '1px solid color-mix(in oklch, var(--color-signal-md) 25%, transparent)',
+        borderRadius: 'var(--radius-md)',
+        padding: '2px var(--space-2)',
+        cursor: 'pointer',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      Desbloquear
+    </button>
+  );
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function ScopeTable({ rows, accentColor }: { rows: ResultadoDetalle[]; accentColor: string }) {
+function ScopeTable({
+  rows,
+  accentColor,
+  periodStatus,
+  isAdmin,
+}: {
+  rows: ResultadoDetalle[];
+  accentColor: string;
+  periodStatus: PeriodStatus;
+  isAdmin: boolean;
+}) {
+  const showVoid = periodStatus !== 'locked' || isAdmin;
   const total = rows.reduce((s, r) => s + r.co2e_kg, 0);
   return (
     <div style={{ overflowX: 'auto' }}>
@@ -208,6 +435,14 @@ function ScopeTable({ rows, accentColor }: { rows: ResultadoDetalle[]; accentCol
                 {h}
               </th>
             ))}
+            {showVoid && (
+              <th
+                style={{
+                  padding: '4px var(--space-2)',
+                  borderBottom: `1px solid color-mix(in oklch, ${accentColor} 20%, var(--color-border))`,
+                }}
+              />
+            )}
           </tr>
         </thead>
         <tbody>
@@ -226,13 +461,21 @@ function ScopeTable({ rows, accentColor }: { rows: ResultadoDetalle[]; accentCol
               <td style={{ ...estiloCeldaMini, color: 'var(--color-ink-3)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>
                 {new Date(r.calculated_at).toLocaleDateString('es')}
               </td>
+              {showVoid && (
+                <td style={{ ...estiloCeldaMini, padding: '4px var(--space-2)' }}>
+                  <VoidResultButton activityEntryId={r.activity_entry_id} />
+                </td>
+              )}
             </tr>
           ))}
           <tr>
             <td colSpan={2} style={{ ...estiloCeldaMini, fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-ink-2)', paddingTop: 'var(--space-2)' }}>
               Subtotal
             </td>
-            <td colSpan={3} style={{ ...estiloCeldaMini, fontFamily: 'var(--font-mono)', fontWeight: 700, color: accentColor, paddingTop: 'var(--space-2)', whiteSpace: 'nowrap' }}>
+            <td
+              colSpan={showVoid ? 4 : 3}
+              style={{ ...estiloCeldaMini, fontFamily: 'var(--font-mono)', fontWeight: 700, color: accentColor, paddingTop: 'var(--space-2)', whiteSpace: 'nowrap' }}
+            >
               {formatearKg(total)}
             </td>
           </tr>
@@ -242,7 +485,15 @@ function ScopeTable({ rows, accentColor }: { rows: ResultadoDetalle[]; accentCol
   );
 }
 
-function ResultadosPanel({ results }: { results: ResultadoDetalle[] }) {
+function ResultadosPanel({
+  results,
+  periodStatus,
+  isAdmin,
+}: {
+  results: ResultadoDetalle[];
+  periodStatus: PeriodStatus;
+  isAdmin: boolean;
+}) {
   if (results.length === 0) {
     return (
       <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', fontFamily: 'var(--font-mono)', margin: 0 }}>
@@ -263,7 +514,7 @@ function ResultadosPanel({ results }: { results: ResultadoDetalle[] }) {
               Alcance 1
             </span>
           </div>
-          <ScopeTable rows={scope1} accentColor="var(--color-accent)" />
+          <ScopeTable rows={scope1} accentColor="var(--color-accent)" periodStatus={periodStatus} isAdmin={isAdmin} />
         </div>
       )}
       {scope2.length > 0 && (
@@ -273,7 +524,7 @@ function ResultadosPanel({ results }: { results: ResultadoDetalle[] }) {
               Alcance 2
             </span>
           </div>
-          <ScopeTable rows={scope2} accentColor="var(--color-scope2)" />
+          <ScopeTable rows={scope2} accentColor="var(--color-scope2)" periodStatus={periodStatus} isAdmin={isAdmin} />
         </div>
       )}
     </div>
@@ -305,7 +556,6 @@ function AnomaliaItem({ anomalia }: { anomalia: AnomaliaDetalle }) {
         borderBottom: '1px solid var(--color-border)',
       }}
     >
-      {/* Meta row */}
       <div
         style={{
           display: 'flex',
@@ -414,7 +664,6 @@ function AnomaliaItem({ anomalia }: { anomalia: AnomaliaDetalle }) {
         )}
       </div>
 
-      {/* Resolution form */}
       {resolviendo && (
         <form
           action={formAction}
@@ -775,7 +1024,6 @@ function YearGroupRow({
         borderTop: '1px solid var(--color-border)',
       }}
     >
-      {/* Toggle + title */}
       <td
         colSpan={3}
         style={{
@@ -844,7 +1092,6 @@ function YearGroupRow({
         </button>
       </td>
 
-      {/* Status summary */}
       <td
         style={{
           padding: 'var(--space-3) var(--space-4)',
@@ -862,7 +1109,6 @@ function YearGroupRow({
         </span>
       </td>
 
-      {/* Total CO₂e */}
       <td
         style={{
           padding: 'var(--space-3) var(--space-4)',
@@ -877,7 +1123,6 @@ function YearGroupRow({
         {total > 0 ? formatearKg(total) : '—'}
       </td>
 
-      {/* Gap chips */}
       <td
         colSpan={2}
         style={{
@@ -917,7 +1162,6 @@ function YearGroupRow({
         )}
       </td>
 
-      {/* Batch actions */}
       <td
         style={{
           padding: 'var(--space-3) var(--space-4)',
@@ -967,12 +1211,11 @@ const estiloCeldaMini: React.CSSProperties = {
   fontSize: 'var(--text-xs)',
 };
 
-export function AuditTable({ periodos }: AuditTableProps) {
+export function AuditTable({ periodos, isAdmin }: AuditTableProps) {
   const [filtroEstado, setFiltroEstado] = useState<PeriodStatus | 'todos'>('todos');
   const [expandidoResultados, setExpandidoResultados] = useState<string | null>(null);
   const [expandidoAnomalias, setExpandidoAnomalias] = useState<string | null>(null);
   const [vistaAgrupada, setVistaAgrupada] = useState(true);
-  // Set of expanded "supplier__year" keys — default: none = all collapsed
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
 
   function toggleGrupo(key: string) {
@@ -1043,7 +1286,6 @@ export function AuditTable({ periodos }: AuditTableProps) {
       <div
         style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}
       >
-        {/* Vista toggle */}
         <div style={{ display: 'flex', gap: 'var(--space-1)' }}>
           {[
             { val: true, label: 'Por año' },
@@ -1081,7 +1323,6 @@ export function AuditTable({ periodos }: AuditTableProps) {
           |
         </span>
 
-        {/* Estado filter */}
         <span
           style={{
             fontSize: 'var(--text-xs)',
@@ -1191,6 +1432,7 @@ export function AuditTable({ periodos }: AuditTableProps) {
                             <PeriodoRow
                               key={p.id}
                               p={p}
+                              isAdmin={isAdmin}
                               expandidoResultados={expandidoResultados}
                               expandidoAnomalias={expandidoAnomalias}
                               setExpandidoResultados={setExpandidoResultados}
@@ -1204,6 +1446,7 @@ export function AuditTable({ periodos }: AuditTableProps) {
                     <PeriodoRow
                       key={p.id}
                       p={p}
+                      isAdmin={isAdmin}
                       expandidoResultados={expandidoResultados}
                       expandidoAnomalias={expandidoAnomalias}
                       setExpandidoResultados={setExpandidoResultados}
@@ -1222,12 +1465,14 @@ export function AuditTable({ periodos }: AuditTableProps) {
 
 function PeriodoRow({
   p,
+  isAdmin,
   expandidoResultados,
   expandidoAnomalias,
   setExpandidoResultados,
   setExpandidoAnomalias,
 }: {
   p: PeriodoFila;
+  isAdmin: boolean;
   expandidoResultados: string | null;
   expandidoAnomalias: string | null;
   setExpandidoResultados: React.Dispatch<React.SetStateAction<string | null>>;
@@ -1394,7 +1639,7 @@ function PeriodoRow({
                   style={{
                     fontSize: 'var(--text-xs)',
                     fontFamily: 'var(--font-mono)',
-                    color: anomaliasAbiertas ? sevColor : sevColor,
+                    color: sevColor,
                     background: anomaliasAbiertas
                       ? `color-mix(in oklch, ${sevColor} 18%, transparent)`
                       : `color-mix(in oklch, ${sevColor} 10%, transparent)`,
@@ -1426,6 +1671,7 @@ function PeriodoRow({
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
             <PeriodActions periodId={p.id} status={p.status} />
             {p.status === 'locked' && <RecalculateButton periodId={p.id} />}
+            {p.status === 'locked' && isAdmin && <UnlockButton periodId={p.id} />}
           </div>
         </td>
       </tr>
@@ -1473,7 +1719,7 @@ function PeriodoRow({
                 ×
               </button>
             </div>
-            <ResultadosPanel results={p.results} />
+            <ResultadosPanel results={p.results} periodStatus={p.status} isAdmin={isAdmin} />
           </td>
         </tr>
       )}

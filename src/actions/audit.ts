@@ -525,3 +525,70 @@ export async function resolveAnomaly(
   return { success: true };
 }
 
+// ── unlockPeriod ──────────────────────────────────────────────────────────────
+
+export interface UnlockPeriodState {
+  error?: string | undefined;
+  success?: boolean | undefined;
+}
+
+export async function unlockPeriod(
+  _prevState: UnlockPeriodState | null,
+  formData: FormData,
+): Promise<UnlockPeriodState> {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: 'No autenticado' };
+
+  const periodId = formData.get('period_id');
+  const reason = formData.get('unlock_reason');
+  if (typeof periodId !== 'string' || !periodId) return { error: 'Falta el ID del periodo' };
+  if (typeof reason !== 'string' || !reason.trim()) {
+    return { error: 'La razón de desbloqueo es obligatoria' };
+  }
+
+  const periodRepo = new ReportingPeriodRepository(supabase);
+  const period = await periodRepo.findById(periodId);
+  if (!period) return { error: 'Periodo de reporte no encontrado' };
+
+  type SupplierOrg = { organization_id: string };
+  const { data: supplierRaw } = await supabase
+    .from('suppliers')
+    .select('organization_id')
+    .eq('id', period.supplierId)
+    .maybeSingle();
+  const supplierOrg = supplierRaw as SupplierOrg | null;
+  if (!supplierOrg) return { error: 'Proveedor del periodo no encontrado' };
+
+  const { data: memRaw } = await supabase
+    .from('memberships')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('organization_id', supplierOrg.organization_id)
+    .in('role', ['admin'])
+    .maybeSingle();
+  if (!memRaw) return { error: 'Solo administradores pueden desbloquear periodos' };
+
+  if (period.status !== 'locked') {
+    return { error: `El periodo no está bloqueado (estado actual: "${period.status}")` };
+  }
+
+  const { error: updateError } = await supabase
+    .from('reporting_periods')
+    .update({
+      status: 'under_review',
+      unlocked_at: new Date().toISOString(),
+      unlock_reason: reason.trim(),
+      unlocked_by: user.id,
+    })
+    .eq('id', periodId);
+
+  if (updateError) return { error: `Error al desbloquear: ${updateError.message}` };
+
+  revalidatePath('/audit');
+  revalidatePath('/dashboard');
+  return { success: true };
+}
+
