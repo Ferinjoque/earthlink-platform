@@ -90,7 +90,7 @@ export default async function AuditoriaPage() {
     | 'factor_unit'
     | 'calculated_at'
   >;
-  type FilaEntradaMin = Pick<ActivityEntryRow, 'id' | 'reporting_period_id' | 'source_type' | 'raw_quantity' | 'raw_unit'>;
+  type FilaEntradaMin = Pick<ActivityEntryRow, 'id' | 'reporting_period_id' | 'source_type' | 'raw_quantity' | 'raw_unit' | 'voided_at'>;
 
   const [resultsRaw, allEntriesRaw] = await Promise.all([
     nonOpenPeriodIds.length
@@ -104,19 +104,26 @@ export default async function AuditoriaPage() {
     allPeriodIds.length
       ? supabase
           .from('activity_entries')
-          .select('id, reporting_period_id, source_type, raw_quantity, raw_unit')
+          .select('id, reporting_period_id, source_type, raw_quantity, raw_unit, voided_at')
           .in('reporting_period_id', allPeriodIds)
       : Promise.resolve({ data: [] as FilaEntradaMin[] }),
   ]);
 
   const resultsData = (resultsRaw.data ?? []) as FilaResultado[];
   const allEntriesData = (allEntriesRaw.data ?? []) as FilaEntradaMin[];
-  const entryPeriodMap = new Map(allEntriesData.map((e) => [e.id, e]));
-  const allEntryIds = allEntriesData.map((e) => e.id);
 
-  // Build unique source types per period
+  // Entries that have been voided — exclude their emission_results from summaries
+  const voidedEntryIds = new Set(
+    allEntriesData.filter((e) => e.voided_at !== null).map((e) => e.id),
+  );
+  const activeEntriesData = allEntriesData.filter((e) => e.voided_at === null);
+
+  const entryPeriodMap = new Map(activeEntriesData.map((e) => [e.id, e]));
+  const allEntryIds = activeEntriesData.map((e) => e.id);
+
+  // Build unique source types per period (active entries only)
   const mapaSourceTypes = new Map<string, Set<string>>();
-  for (const e of allEntriesData) {
+  for (const e of activeEntriesData) {
     const set = mapaSourceTypes.get(e.reporting_period_id) ?? new Set<string>();
     set.add(e.source_type);
     mapaSourceTypes.set(e.reporting_period_id, set);
@@ -136,6 +143,7 @@ export default async function AuditoriaPage() {
           .from('activity_entries')
           .select('id, source_type, raw_quantity, raw_unit')
           .in('id', resultEntryIds)
+          .is('voided_at', null)
       : Promise.resolve({ data: [] as FilaEntrada[] }),
     allEntryIds.length
       ? supabase
@@ -155,6 +163,7 @@ export default async function AuditoriaPage() {
   const mapaResumen = new Map<string, ResumenEmisiones>();
   const mapaResultados = new Map<string, ResultadoDetalle[]>();
   for (const r of resultsData) {
+    if (voidedEntryIds.has(r.activity_entry_id)) continue;
     const entrada = entryMap.get(r.activity_entry_id);
     const prev = mapaResumen.get(r.reporting_period_id) ?? {
       totalCo2eKg: 0,
