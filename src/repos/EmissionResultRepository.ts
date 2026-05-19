@@ -39,7 +39,9 @@ export class EmissionResultRepository {
       calc_version: result.engineVersion,
       emission_factor_id: result.factorId ?? null,
     }));
-    const { error } = await this.client.from('emission_results').insert(rows);
+    const { error } = await this.client
+      .from('emission_results')
+      .upsert(rows, { onConflict: 'calc_hash', ignoreDuplicates: true });
     if (error) throw new Error(`Failed to batch-insert emission_results: ${error.message}`);
   }
 
