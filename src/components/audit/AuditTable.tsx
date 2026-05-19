@@ -1206,7 +1206,6 @@ function YearGroupRow({
 const ESTADOS_FILTRO: { valor: PeriodStatus | 'todos'; etiqueta: string }[] = [
   { valor: 'todos', etiqueta: 'Todos' },
   { valor: 'open', etiqueta: 'Abierto' },
-  { valor: 'calculating', etiqueta: 'Calculando' },
   { valor: 'under_review', etiqueta: 'En revisión' },
   { valor: 'locked', etiqueta: 'Bloqueado' },
 ];
