@@ -1,10 +1,11 @@
 'use client';
 
 import { Fragment, useState, useActionState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
 import { AnomalyBadge } from '@/components/activity/AnomalyBadge';
 import { traducirMensajeAnomalia } from '@/lib/anomaly';
-import { deleteActivityEntry, type DeleteEntryState } from '@/actions/activity';
+import { voidActivityEntry, type VoidEntryState } from '@/actions/activity';
 import { useToast } from '@/components/ui/Toast';
 import type { ActivityEntryStatus, AnomalySeverity, EmissionSourceType } from '@/types/database';
 
@@ -12,12 +13,15 @@ export interface ActivityEntryView {
   id: string;
   period_id: string;
   period_label: string;
+  period_status?: string | undefined;
   source_type: string;
   raw_quantity: number;
   raw_unit: string;
   status: ActivityEntryStatus;
   submitted_at: string | null;
   notes: string | null;
+  voided_at?: string | null;
+  void_reason?: string | null;
   anomaly?:
     | {
         severity: AnomalySeverity;
@@ -64,7 +68,7 @@ const COLOR_SEVERIDAD: Record<AnomalySeverity, string> = {
   high: 'var(--color-signal-hi)',
 };
 
-const CABECERAS = ['Periodo', 'Fuente', 'Cantidad', 'Estado', 'Anomalía', 'Enviado', ''];
+const CABECERAS = ['Periodo', 'Fuente', 'Cantidad', 'Estado', 'Anomalía / Motivo', 'Enviado', ''];
 
 const estiloSelect: React.CSSProperties = {
   fontSize: 'var(--text-xs)',
@@ -81,33 +85,64 @@ const estiloSelect: React.CSSProperties = {
   paddingRight: 'var(--space-6)',
 };
 
-// ── DeleteEntryButton ─────────────────────────────────────────────────────────
+const estiloCelda: React.CSSProperties = {
+  padding: 'var(--space-2) var(--space-3)',
+  color: 'var(--color-ink-1)',
+};
 
-function DeleteEntryButton({ entryId }: { entryId: string }) {
+// ── VoidEntryButton ───────────────────────────────────────────────────────────
+
+function VoidEntryButton({ entryId }: { entryId: string }) {
   const { toast } = useToast();
-  const [confirm, setConfirm] = useState(false);
-  const [state, formAction, isPending] = useActionState<DeleteEntryState | null, FormData>(
-    deleteActivityEntry,
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [state, formAction, isPending] = useActionState<VoidEntryState | null, FormData>(
+    voidActivityEntry,
     null,
   );
 
   useEffect(() => {
     if (state?.success) {
-      toast('Registro eliminado', 'success');
+      toast('Registro anulado', 'success');
+      router.refresh();
+      setOpen(false);
     }
     if (state?.error) {
       toast(state.error, 'error');
-      setConfirm(false);
     }
-  }, [state?.success, state?.error, toast]);
+  }, [state?.success, state?.error, toast, router]);
 
-  if (state?.success) return null;
-
-  if (confirm) {
+  if (open) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexShrink: 0 }}>
-        <form action={formAction}>
-          <input type="hidden" name="entry_id" value={entryId} />
+      <form
+        action={formAction}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'var(--space-2)',
+          minWidth: '180px',
+        }}
+      >
+        <input type="hidden" name="entry_id" value={entryId} />
+        <input
+          name="void_reason"
+          required
+          placeholder="Motivo de anulación"
+          autoFocus
+          style={{
+            fontSize: 'var(--text-xs)',
+            fontFamily: 'var(--font-mono)',
+            color: 'var(--color-ink-2)',
+            background: 'var(--color-surface-0)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-md)',
+            padding: '3px var(--space-2)',
+            outline: 'none',
+            width: '100%',
+            boxSizing: 'border-box',
+          }}
+        />
+        <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
           <button
             type="submit"
             disabled={isPending}
@@ -115,43 +150,43 @@ function DeleteEntryButton({ entryId }: { entryId: string }) {
               fontSize: 'var(--text-xs)',
               fontFamily: 'var(--font-mono)',
               color: 'var(--color-signal-hi)',
-              background: 'color-mix(in oklch, var(--color-signal-hi) 10%, transparent)',
-              border: '1px solid color-mix(in oklch, var(--color-signal-hi) 30%, transparent)',
+              background: 'color-mix(in oklch, var(--color-signal-hi) 8%, transparent)',
+              border: '1px solid color-mix(in oklch, var(--color-signal-hi) 25%, transparent)',
               borderRadius: 'var(--radius-md)',
-              padding: '2px var(--space-2)',
+              padding: '2px var(--space-3)',
               cursor: isPending ? 'default' : 'pointer',
               whiteSpace: 'nowrap',
             }}
           >
-            {isPending ? '…' : 'Sí'}
+            {isPending ? '…' : 'Anular'}
           </button>
-        </form>
-        <button
-          type="button"
-          onClick={() => setConfirm(false)}
-          style={{
-            fontSize: 'var(--text-xs)',
-            fontFamily: 'var(--font-mono)',
-            color: 'var(--color-ink-3)',
-            background: 'transparent',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-md)',
-            padding: '2px var(--space-2)',
-            cursor: 'pointer',
-          }}
-        >
-          No
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            style={{
+              fontSize: 'var(--text-xs)',
+              fontFamily: 'var(--font-mono)',
+              color: 'var(--color-ink-3)',
+              background: 'transparent',
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-md)',
+              padding: '2px var(--space-2)',
+              cursor: 'pointer',
+            }}
+          >
+            Cancelar
+          </button>
+        </div>
+      </form>
     );
   }
 
   return (
     <button
       type="button"
-      onClick={() => setConfirm(true)}
-      className="activity-delete-btn"
-      aria-label="Eliminar registro"
+      onClick={() => setOpen(true)}
+      className="activity-void-btn"
+      aria-label="Anular registro"
       style={{
         fontSize: 'var(--text-xs)',
         fontFamily: 'var(--font-mono)',
@@ -165,8 +200,258 @@ function DeleteEntryButton({ entryId }: { entryId: string }) {
         lineHeight: 1,
       }}
     >
-      ×
+      Anular
     </button>
+  );
+}
+
+// ── EntradaFila ───────────────────────────────────────────────────────────────
+
+function EntradaFila({
+  entry,
+  expandida,
+  toggleExpandida,
+  setExpandida,
+  isVoided,
+}: {
+  entry: ActivityEntryView;
+  expandida: string | null;
+  toggleExpandida: (id: string) => void;
+  setExpandida: React.Dispatch<React.SetStateAction<string | null>>;
+  isVoided: boolean;
+}) {
+  return (
+    <Fragment>
+      <tr
+        className="activity-row"
+        style={{
+          borderBottom:
+            expandida === entry.id ? 'none' : '1px solid var(--color-border)',
+          transition: 'background 100ms',
+          opacity: isVoided ? 0.55 : 1,
+        }}
+        onMouseEnter={(e) =>
+          ((e.currentTarget as HTMLTableRowElement).style.background =
+            expandida === entry.id ? 'oklch(58% 0.16 155 / 4%)' : 'var(--color-surface-2)')
+        }
+        onMouseLeave={(e) =>
+          ((e.currentTarget as HTMLTableRowElement).style.background =
+            expandida === entry.id ? 'oklch(58% 0.16 155 / 4%)' : 'transparent')
+        }
+      >
+        <td style={estiloCelda}>{entry.period_label}</td>
+        <td
+          style={{
+            ...estiloCelda,
+            textDecoration: isVoided ? 'line-through' : 'none',
+            color: isVoided ? 'var(--color-ink-3)' : 'var(--color-ink-1)',
+          }}
+        >
+          {FUENTE_CORTA[entry.source_type] ?? entry.source_type}
+        </td>
+        <td
+          style={{
+            ...estiloCelda,
+            fontFamily: 'var(--font-mono)',
+            whiteSpace: 'nowrap',
+            textDecoration: isVoided ? 'line-through' : 'none',
+            color: isVoided ? 'var(--color-ink-3)' : 'var(--color-ink-1)',
+          }}
+        >
+          {entry.raw_quantity.toLocaleString('es')} {entry.raw_unit}
+        </td>
+        <td style={estiloCelda}>
+          {isVoided ? (
+            <span
+              style={{
+                fontSize: 'var(--text-xs)',
+                fontFamily: 'var(--font-mono)',
+                color: 'var(--color-ink-3)',
+                background: 'var(--color-surface-2)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-md)',
+                padding: '2px var(--space-2)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Anulado
+            </span>
+          ) : (
+            <Badge variant={entry.status}>{ETIQUETAS_ESTADO[entry.status]}</Badge>
+          )}
+        </td>
+        <td style={estiloCelda}>
+          {entry.anomaly && !isVoided ? (
+            <button
+              type="button"
+              onClick={() => toggleExpandida(entry.id)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+                display: 'inline-flex',
+              }}
+              aria-expanded={expandida === entry.id}
+              aria-label={`Ver detalle anomalía ${ETIQUETAS_SEVERIDAD[entry.anomaly.severity]}`}
+            >
+              <AnomalyBadge
+                severity={entry.anomaly.severity}
+                zScore={entry.anomaly.z_score ?? undefined}
+              />
+            </button>
+          ) : isVoided && entry.void_reason ? (
+            <span
+              style={{
+                fontSize: 'var(--text-xs)',
+                color: 'var(--color-ink-3)',
+                fontStyle: 'italic',
+              }}
+              title={entry.void_reason}
+            >
+              {entry.void_reason.length > 28
+                ? `${entry.void_reason.slice(0, 28)}…`
+                : entry.void_reason}
+            </span>
+          ) : (
+            <span style={{ color: 'var(--color-ink-3)', fontSize: 'var(--text-xs)' }}>—</span>
+          )}
+        </td>
+        <td
+          style={{
+            ...estiloCelda,
+            color: 'var(--color-ink-3)',
+            fontFamily: 'var(--font-mono)',
+            fontSize: 'var(--text-xs)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {entry.submitted_at
+            ? new Date(entry.submitted_at).toLocaleDateString('es')
+            : '—'}
+        </td>
+        <td
+          style={{
+            ...estiloCelda,
+            width: '52px',
+            textAlign: 'center',
+            paddingLeft: 'var(--space-2)',
+            paddingRight: 'var(--space-2)',
+          }}
+        >
+          {!isVoided && <VoidEntryButton entryId={entry.id} />}
+        </td>
+      </tr>
+
+      {/* ── Panel de anomalía expandible ── */}
+      {expandida === entry.id && entry.anomaly && (
+        <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+          <td
+            colSpan={7}
+            style={{
+              padding: 'var(--space-3) var(--space-4) var(--space-4)',
+              background: 'oklch(58% 0.16 155 / 4%)',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 'var(--space-6)',
+                flexWrap: 'wrap',
+              }}
+            >
+              <div>
+                <p
+                  style={{
+                    fontSize: 'var(--text-xs)',
+                    color: 'var(--color-ink-3)',
+                    fontFamily: 'var(--font-mono)',
+                    margin: '0 0 2px',
+                  }}
+                >
+                  Severidad
+                </p>
+                <span
+                  style={{
+                    fontSize: 'var(--text-sm)',
+                    fontWeight: 600,
+                    color: COLOR_SEVERIDAD[entry.anomaly.severity],
+                  }}
+                >
+                  {ETIQUETAS_SEVERIDAD[entry.anomaly.severity]}
+                </span>
+              </div>
+
+              {entry.anomaly.z_score !== null && (
+                <div>
+                  <p
+                    style={{
+                      fontSize: 'var(--text-xs)',
+                      color: 'var(--color-ink-3)',
+                      fontFamily: 'var(--font-mono)',
+                      margin: '0 0 2px',
+                    }}
+                  >
+                    Z-score
+                  </p>
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 'var(--text-sm)',
+                      fontWeight: 700,
+                      color: 'var(--color-ink-1)',
+                    }}
+                  >
+                    {entry.anomaly.z_score.toFixed(2)}
+                  </span>
+                </div>
+              )}
+
+              <div style={{ flex: 1, minWidth: '200px' }}>
+                <p
+                  style={{
+                    fontSize: 'var(--text-xs)',
+                    color: 'var(--color-ink-3)',
+                    fontFamily: 'var(--font-mono)',
+                    margin: '0 0 2px',
+                  }}
+                >
+                  Detalle
+                </p>
+                <p
+                  style={{
+                    fontSize: 'var(--text-sm)',
+                    color: 'var(--color-ink-2)',
+                    margin: 0,
+                  }}
+                >
+                  {traducirMensajeAnomalia(entry.anomaly.message)}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setExpandida(null)}
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--color-ink-3)',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  alignSelf: 'flex-start',
+                  padding: '2px var(--space-2)',
+                }}
+                aria-label="Cerrar detalle de anomalía"
+              >
+                Cerrar ✕
+              </button>
+            </div>
+          </td>
+        </tr>
+      )}
+    </Fragment>
   );
 }
 
@@ -177,11 +462,15 @@ export function ActivityList({ entries, periodos }: ActivityListProps) {
   const [filtroFuente, setFiltroFuente] = useState<EmissionSourceType | 'todos'>('todos');
   const [filtroPeriodo, setFiltroPeriodo] = useState<string>('todos');
   const [expandida, setExpandida] = useState<string | null>(null);
+  const [mostrarAnulados, setMostrarAnulados] = useState(false);
+
+  const activas = entries.filter((e) => !e.voided_at);
+  const anuladas = entries.filter((e) => Boolean(e.voided_at));
 
   const hayFiltro =
     filtroEstado !== 'todos' || filtroFuente !== 'todos' || filtroPeriodo !== 'todos';
 
-  const filtradas = entries.filter((e) => {
+  const filtradas = activas.filter((e) => {
     if (filtroEstado !== 'todos' && e.status !== filtroEstado) return false;
     if (filtroFuente !== 'todos' && e.source_type !== filtroFuente) return false;
     if (filtroPeriodo !== 'todos' && e.period_id !== filtroPeriodo) return false;
@@ -320,19 +609,46 @@ export function ActivityList({ entries, periodos }: ActivityListProps) {
           </button>
         )}
 
-        <span
+        <div
           style={{
             marginLeft: 'auto',
-            fontSize: 'var(--text-xs)',
-            color: 'var(--color-ink-3)',
-            fontFamily: 'var(--font-mono)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-3)',
           }}
         >
-          {filtradas.length} de {entries.length}
-        </span>
+          <span
+            style={{
+              fontSize: 'var(--text-xs)',
+              color: 'var(--color-ink-3)',
+              fontFamily: 'var(--font-mono)',
+            }}
+          >
+            {filtradas.length} de {activas.length}
+          </span>
+          {anuladas.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setMostrarAnulados((v) => !v)}
+              style={{
+                fontSize: 'var(--text-xs)',
+                fontFamily: 'var(--font-mono)',
+                color: mostrarAnulados ? 'var(--color-ink-2)' : 'var(--color-ink-3)',
+                background: mostrarAnulados ? 'var(--color-surface-2)' : 'transparent',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-md)',
+                padding: '2px var(--space-2)',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {anuladas.length} anulado{anuladas.length > 1 ? 's' : ''}
+            </button>
+          )}
+        </div>
       </div>
 
-      {filtradas.length === 0 ? (
+      {filtradas.length === 0 && (!mostrarAnulados || anuladas.length === 0) ? (
         <p
           style={{
             color: 'var(--color-ink-3)',
@@ -342,13 +658,13 @@ export function ActivityList({ entries, periodos }: ActivityListProps) {
             textAlign: 'center',
           }}
         >
-          {entries.length === 0
+          {activas.length === 0
             ? 'Sin registros aún. Envía uno usando el formulario de arriba.'
             : 'Ningún registro coincide con los filtros.'}
         </p>
       ) : (
         <div style={{ overflowX: 'auto' }}>
-          <style>{'.activity-row:hover .activity-delete-btn { opacity: 1 !important; }'}</style>
+          <style>{'.activity-row:hover .activity-void-btn { opacity: 1 !important; }'}</style>
           <table
             style={{
               width: '100%',
@@ -379,203 +695,26 @@ export function ActivityList({ entries, periodos }: ActivityListProps) {
             </thead>
             <tbody>
               {filtradas.map((entry) => (
-                <Fragment key={entry.id}>
-                  <tr
-                    className="activity-row"
-                    style={{
-                      borderBottom:
-                        expandida === entry.id ? 'none' : '1px solid var(--color-border)',
-                      transition: 'background 100ms',
-                    }}
-                    onMouseEnter={(e) =>
-                      ((e.currentTarget as HTMLTableRowElement).style.background =
-                        expandida === entry.id
-                          ? 'oklch(58% 0.16 155 / 4%)'
-                          : 'var(--color-surface-2)')
-                    }
-                    onMouseLeave={(e) =>
-                      ((e.currentTarget as HTMLTableRowElement).style.background =
-                        expandida === entry.id ? 'oklch(58% 0.16 155 / 4%)' : 'transparent')
-                    }
-                  >
-                    <td style={estiloCelda}>{entry.period_label}</td>
-                    <td style={estiloCelda}>
-                      {FUENTE_CORTA[entry.source_type] ?? entry.source_type}
-                    </td>
-                    <td
-                      style={{
-                        ...estiloCelda,
-                        fontFamily: 'var(--font-mono)',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {entry.raw_quantity.toLocaleString('es')} {entry.raw_unit}
-                    </td>
-                    <td style={estiloCelda}>
-                      <Badge variant={entry.status}>{ETIQUETAS_ESTADO[entry.status]}</Badge>
-                    </td>
-                    <td style={estiloCelda}>
-                      {entry.anomaly ? (
-                        <button
-                          type="button"
-                          onClick={() => toggleExpandida(entry.id)}
-                          style={{
-                            background: 'transparent',
-                            border: 'none',
-                            padding: 0,
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                          }}
-                          aria-expanded={expandida === entry.id}
-                          aria-label={`Ver detalle anomalía ${ETIQUETAS_SEVERIDAD[entry.anomaly.severity]}`}
-                        >
-                          <AnomalyBadge
-                            severity={entry.anomaly.severity}
-                            zScore={entry.anomaly.z_score ?? undefined}
-                          />
-                        </button>
-                      ) : (
-                        <span style={{ color: 'var(--color-ink-3)', fontSize: 'var(--text-xs)' }}>
-                          —
-                        </span>
-                      )}
-                    </td>
-                    <td
-                      style={{
-                        ...estiloCelda,
-                        color: 'var(--color-ink-3)',
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: 'var(--text-xs)',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {entry.submitted_at
-                        ? new Date(entry.submitted_at).toLocaleDateString('es')
-                        : '—'}
-                    </td>
-                    <td
-                      style={{
-                        ...estiloCelda,
-                        width: '40px',
-                        textAlign: 'center',
-                        paddingLeft: 'var(--space-2)',
-                        paddingRight: 'var(--space-2)',
-                      }}
-                    >
-                      <DeleteEntryButton entryId={entry.id} />
-                    </td>
-                  </tr>
-
-                  {/* ── Panel de anomalía expandible ── */}
-                  {expandida === entry.id && entry.anomaly && (
-                    <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-                      <td
-                        colSpan={7}
-                        style={{
-                          padding: 'var(--space-3) var(--space-4) var(--space-4)',
-                          background: 'oklch(58% 0.16 155 / 4%)',
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: 'var(--space-6)',
-                            flexWrap: 'wrap',
-                          }}
-                        >
-                          <div>
-                            <p
-                              style={{
-                                fontSize: 'var(--text-xs)',
-                                color: 'var(--color-ink-3)',
-                                fontFamily: 'var(--font-mono)',
-                                margin: '0 0 2px',
-                              }}
-                            >
-                              Severidad
-                            </p>
-                            <span
-                              style={{
-                                fontSize: 'var(--text-sm)',
-                                fontWeight: 600,
-                                color: COLOR_SEVERIDAD[entry.anomaly.severity],
-                              }}
-                            >
-                              {ETIQUETAS_SEVERIDAD[entry.anomaly.severity]}
-                            </span>
-                          </div>
-
-                          {entry.anomaly.z_score !== null && (
-                            <div>
-                              <p
-                                style={{
-                                  fontSize: 'var(--text-xs)',
-                                  color: 'var(--color-ink-3)',
-                                  fontFamily: 'var(--font-mono)',
-                                  margin: '0 0 2px',
-                                }}
-                              >
-                                Z-score
-                              </p>
-                              <span
-                                style={{
-                                  fontFamily: 'var(--font-mono)',
-                                  fontSize: 'var(--text-sm)',
-                                  fontWeight: 700,
-                                  color: 'var(--color-ink-1)',
-                                }}
-                              >
-                                {entry.anomaly.z_score.toFixed(2)}
-                              </span>
-                            </div>
-                          )}
-
-                          <div style={{ flex: 1, minWidth: '200px' }}>
-                            <p
-                              style={{
-                                fontSize: 'var(--text-xs)',
-                                color: 'var(--color-ink-3)',
-                                fontFamily: 'var(--font-mono)',
-                                margin: '0 0 2px',
-                              }}
-                            >
-                              Detalle
-                            </p>
-                            <p
-                              style={{
-                                fontSize: 'var(--text-sm)',
-                                color: 'var(--color-ink-2)',
-                                margin: 0,
-                              }}
-                            >
-                              {traducirMensajeAnomalia(entry.anomaly.message)}
-                            </p>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => setExpandida(null)}
-                            style={{
-                              fontSize: 'var(--text-xs)',
-                              fontFamily: 'var(--font-mono)',
-                              color: 'var(--color-ink-3)',
-                              background: 'transparent',
-                              border: 'none',
-                              cursor: 'pointer',
-                              alignSelf: 'flex-start',
-                              padding: '2px var(--space-2)',
-                            }}
-                            aria-label="Cerrar detalle de anomalía"
-                          >
-                            Cerrar ✕
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
+                <EntradaFila
+                  key={entry.id}
+                  entry={entry}
+                  expandida={expandida}
+                  toggleExpandida={toggleExpandida}
+                  setExpandida={setExpandida}
+                  isVoided={false}
+                />
               ))}
+              {mostrarAnulados &&
+                anuladas.map((entry) => (
+                  <EntradaFila
+                    key={entry.id}
+                    entry={entry}
+                    expandida={expandida}
+                    toggleExpandida={toggleExpandida}
+                    setExpandida={setExpandida}
+                    isVoided
+                  />
+                ))}
             </tbody>
           </table>
         </div>
@@ -583,8 +722,3 @@ export function ActivityList({ entries, periodos }: ActivityListProps) {
     </div>
   );
 }
-
-const estiloCelda: React.CSSProperties = {
-  padding: 'var(--space-2) var(--space-3)',
-  color: 'var(--color-ink-1)',
-};

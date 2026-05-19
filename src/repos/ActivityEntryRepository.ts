@@ -15,6 +15,7 @@ export class ActivityEntryRepository extends SupabaseRepository<ActivityEntry> {
         'id, reporting_period_id, source_type, activity_kind, raw_quantity, raw_unit, status, submitted_at, submitted_by, created_at',
       )
       .eq('reporting_period_id', periodId)
+      .is('voided_at', null)
       .order('created_at', { ascending: true });
     if (error ?? !data) return [];
     return (data as Record<string, unknown>[]).map((row) => this.toEntity(row));

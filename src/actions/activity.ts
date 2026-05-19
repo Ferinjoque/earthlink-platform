@@ -469,6 +469,76 @@ export async function importActivityBulk(
   return { success: true, imported: importedCount, skipped: skippedCount, submittedAt: Date.now() };
 }
 
+// ── voidActivityEntry ─────────────────────────────────────────────────────────
+
+export interface VoidEntryState {
+  error?: string | undefined;
+  success?: boolean | undefined;
+}
+
+export async function voidActivityEntry(
+  _prev: VoidEntryState | null,
+  formData: FormData,
+): Promise<VoidEntryState> {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: 'No autenticado' };
+
+  const entryId = formData.get('entry_id');
+  const reason = formData.get('void_reason');
+  if (typeof entryId !== 'string' || !entryId) return { error: 'Falta el ID del registro' };
+  if (typeof reason !== 'string' || !reason.trim()) {
+    return { error: 'La razón de anulación es obligatoria' };
+  }
+
+  type EntryPeriod = {
+    voided_at: string | null;
+    reporting_period_id: string;
+    reporting_periods: { status: string; suppliers: { organization_id: string } };
+  };
+  const { data: entryRaw } = await supabase
+    .from('activity_entries')
+    .select('voided_at, reporting_period_id, reporting_periods(status, suppliers(organization_id))')
+    .eq('id', entryId)
+    .maybeSingle();
+  const entryData = entryRaw as EntryPeriod | null;
+  if (!entryData) return { error: 'Registro no encontrado' };
+  if (entryData.voided_at) return { error: 'Este registro ya está anulado' };
+
+  const periodStatus = entryData.reporting_periods?.status;
+  const orgId = entryData.reporting_periods?.suppliers?.organization_id;
+  if (!orgId) return { error: 'Proveedor del registro no encontrado' };
+
+  const { data: memRaw } = await supabase
+    .from('memberships')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('organization_id', orgId)
+    .maybeSingle();
+  const mem = memRaw as { role: string } | null;
+  if (!mem) return { error: 'Sin permisos para este registro' };
+
+  if (periodStatus === 'locked' && mem.role !== 'admin') {
+    return { error: 'Solo administradores pueden anular registros en periodos bloqueados' };
+  }
+
+  const { error: updateError } = await supabase
+    .from('activity_entries')
+    .update({
+      voided_at: new Date().toISOString(),
+      void_reason: reason.trim(),
+      voided_by: user.id,
+    })
+    .eq('id', entryId);
+  if (updateError) return { error: `Error al anular: ${updateError.message}` };
+
+  revalidatePath('/activity');
+  revalidatePath('/audit');
+  return { success: true };
+}
+
 // ── deleteActivityEntry ───────────────────────────────────────────────────────
 
 export interface DeleteEntryState {
