@@ -60,7 +60,9 @@ const CANONICAL_UNIT: Record<ConsumoCategory, string> = {
   refrigerantes: 'kg',
 };
 
-const TO_KWH: Record<string, number> = {
+// Fallback constants — used when the DB does not supply a conversion for the given unit.
+// Physical constants (MWh→kWh, etc.) are stable; fuel energy content values are approximations.
+const FALLBACK_TO_KWH: Record<string, number> = {
   kWh: 1, MWh: 1000, GJ: 277.778, MJ: 0.27778,
   kBtu: 0.29307, MMBtu: 293.07, MBtu: 293.07, therms: 29.307,
   m3_ng: 10.55, ft3_ng: 0.2988,
@@ -71,25 +73,35 @@ const FUEL_KWH_PER_L: Record<string, number> = {
   lpg: 6.9, propane: 6.9,
 };
 
-const TO_M3: Record<string, number> = {
+const FALLBACK_TO_M3: Record<string, number> = {
   m3: 1, L: 0.001, kgal_us: 3.785, megaliter: 1000, gallon: 0.003785,
 };
 
-const TO_KG: Record<string, number> = {
+const FALLBACK_TO_KG: Record<string, number> = {
   kg: 1, lb: 0.4536, tonne: 1000, ton_us: 907.185,
 };
 
-function toCanonical(qty: number, unit: string, secondary: string, cat: ConsumoCategory): number {
-  if (cat === 'energia') {
-    if (TO_KWH[unit] !== undefined) return qty * TO_KWH[unit]!;
-    const kwhPerL = FUEL_KWH_PER_L[secondary] ?? 9.5;
-    if (unit === 'gallon') return qty * kwhPerL * 3.785;
-    if (unit === 'imp_gallon') return qty * kwhPerL * 4.546;
-    if (unit === 'L') return qty * kwhPerL;
-    return qty;
-  }
-  if (cat === 'agua') return qty * (TO_M3[unit] ?? 1);
-  return qty * (TO_KG[unit] ?? 1);
+function makeToCanonical(
+  dbToKwh: Record<string, number>,
+  dbToM3: Record<string, number>,
+  dbToKg: Record<string, number>,
+) {
+  const toKwh = { ...FALLBACK_TO_KWH, ...dbToKwh };
+  const toM3 = { ...FALLBACK_TO_M3, ...dbToM3 };
+  const toKg = { ...FALLBACK_TO_KG, ...dbToKg };
+
+  return function toCanonical(qty: number, unit: string, secondary: string, cat: ConsumoCategory): number {
+    if (cat === 'energia') {
+      if (toKwh[unit] !== undefined) return qty * toKwh[unit]!;
+      const kwhPerL = FUEL_KWH_PER_L[secondary] ?? 9.5;
+      if (unit === 'gallon') return qty * kwhPerL * (toM3['gallon'] ?? 0.003785) * 1000;
+      if (unit === 'imp_gallon') return qty * kwhPerL * 4.546;
+      if (unit === 'L') return qty * kwhPerL;
+      return qty;
+    }
+    if (cat === 'agua') return qty * (toM3[unit] ?? 1);
+    return qty * (toKg[unit] ?? 1);
+  };
 }
 
 function computeLegendH(nMeters: number): number {
@@ -101,6 +113,7 @@ function aggregateStandardized(
   entries: EntryWithPeriod[],
   year: number,
   category: ConsumoCategory,
+  toCanonical: (qty: number, unit: string, secondary: string, cat: ConsumoCategory) => number,
 ): MeterYearSummary[] {
   const types = CATEGORY_TYPES[category];
   const canonical = CANONICAL_UNIT[category];
@@ -545,9 +558,12 @@ function CategoryFilter({
 interface ConsumoPanelProps {
   entries: EntryWithPeriod[];
   suppliers: { id: string; name: string }[];
+  toKwh?: Record<string, number>;
+  toM3?: Record<string, number>;
+  toKg?: Record<string, number>;
 }
 
-export function ConsumoPanel({ entries, suppliers }: ConsumoPanelProps) {
+export function ConsumoPanel({ entries, suppliers, toKwh = {}, toM3 = {}, toKg = {} }: ConsumoPanelProps) {
   const availableYears = useMemo(() => getAvailableYears(entries), [entries]);
   const currentYear = new Date().getFullYear();
   const defaultYear = availableYears.includes(currentYear) ? currentYear : (availableYears[0] ?? currentYear);
@@ -557,6 +573,8 @@ export function ConsumoPanel({ entries, suppliers }: ConsumoPanelProps) {
   const [selectedSuppliers, setSelectedSuppliers] = useState<Set<string>>(new Set());
   const [categoryFilter, setCategoryFilter] = useState<ConsumoCategory | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+
+  const toCanonical = useMemo(() => makeToCanonical(toKwh, toM3, toKg), [toKwh, toM3, toKg]);
 
   const filteredEntries = useMemo(() => {
     if (selectedSuppliers.size === 0) return entries;
@@ -581,8 +599,8 @@ export function ConsumoPanel({ entries, suppliers }: ConsumoPanelProps) {
 
   const chartSummaries = useMemo(() => {
     if (!effectiveCategoryFilter) return allSummaries;
-    return aggregateStandardized(filteredEntries, selectedYear, effectiveCategoryFilter);
-  }, [filteredEntries, selectedYear, effectiveCategoryFilter, allSummaries]);
+    return aggregateStandardized(filteredEntries, selectedYear, effectiveCategoryFilter, toCanonical);
+  }, [filteredEntries, selectedYear, effectiveCategoryFilter, allSummaries, toCanonical]);
 
   const effectiveMeterId =
     selectedMeterId !== null && allSummaries.some((s) => s.meter.id === selectedMeterId)

@@ -10,6 +10,7 @@ import {
   FileText,
   Leaf,
   BarChart2,
+  Settings,
 } from 'lucide-react';
 
 interface NavItem {
@@ -42,6 +43,7 @@ export function Sidebar({ anomaliaCount = 0 }: SidebarProps) {
         ]
       : [{ href: '/audit', label: 'Auditoría', icon: <ShieldCheck size={18} /> }]),
     { href: '/reports', label: 'Reportes', icon: <FileText size={18} /> },
+    { href: '/settings', label: 'Configuración', icon: <Settings size={18} /> },
   ];
 
   return (

@@ -106,6 +106,22 @@ export default async function ConsumoPage() {
     ];
   });
 
+  const { data: rawConversions } = await supabase
+    .from('unit_conversions')
+    .select('from_unit, to_unit, factor')
+    .in('to_unit', ['kWh', 'm3', 'kg']);
+
+  const convRows = (rawConversions ?? []) as { from_unit: string; to_unit: string; factor: number }[];
+  const toKwh: Record<string, number> = Object.fromEntries(
+    convRows.filter((r) => r.to_unit === 'kWh').map((r) => [r.from_unit, r.factor]),
+  );
+  const toM3: Record<string, number> = Object.fromEntries(
+    convRows.filter((r) => r.to_unit === 'm3').map((r) => [r.from_unit, r.factor]),
+  );
+  const toKg: Record<string, number> = Object.fromEntries(
+    convRows.filter((r) => r.to_unit === 'kg').map((r) => [r.from_unit, r.factor]),
+  );
+
   return (
     <>
       <TopBar title="Consumo energético" email={user?.email} section="Medidores virtuales" />
@@ -117,7 +133,13 @@ export default async function ConsumoPage() {
           gap: 'var(--space-8)',
         }}
       >
-        <ConsumoPanel entries={entries} suppliers={suppliersData} />
+        <ConsumoPanel
+          entries={entries}
+          suppliers={suppliersData}
+          toKwh={toKwh}
+          toM3={toM3}
+          toKg={toKg}
+        />
       </main>
     </>
   );

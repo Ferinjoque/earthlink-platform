@@ -698,7 +698,17 @@ export default async function DetallePeriodoPage({
                 .timeline-item:last-child::before { bottom: calc(100% - 16px); }
               `}</style>
               {auditLog.map((entry) => {
-                const accion = entry.action.replace(/_/g, ' ').toLowerCase();
+                const ACCION_LABEL: Record<string, string> = {
+                  insert: 'Creación',
+                  update: 'Actualización',
+                  status_change: 'Cambio de estado',
+                  delete: 'Eliminación',
+                  lock: 'Bloqueo',
+                  unlock: 'Desbloqueo',
+                  calculate: 'Cálculo',
+                  void: 'Anulación',
+                };
+                const accion = ACCION_LABEL[entry.action] ?? entry.action.replace(/_/g, ' ');
                 const newVals = entry.new_values as Record<string, unknown> | null;
                 const nuevoEstado = newVals?.status as string | undefined;
                 return (
@@ -745,7 +755,6 @@ export default async function DetallePeriodoPage({
                           fontSize: 'var(--text-sm)',
                           fontWeight: 600,
                           color: 'var(--color-ink-1)',
-                          textTransform: 'capitalize' as const,
                         }}
                       >
                         {accion}
