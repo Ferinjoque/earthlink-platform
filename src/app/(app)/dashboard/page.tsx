@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
 import { createServerClient } from '@/services/supabase/server';
 import { TopBar } from '@/components/shell/TopBar';
 import { AnomalyBadge } from '@/components/activity/AnomalyBadge';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
+import { YearSelector } from '@/components/ui/YearSelector';
 import { ShieldAlert, ArrowRight } from 'lucide-react';
 import { traducirMensajeAnomalia } from '@/lib/anomaly';
 import type { MembershipRow, AnomalySeverity } from '@/types/database';
@@ -53,12 +55,18 @@ const MESES_ES = [
   'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
 ];
 
-export default async function PanelPage() {
+interface PageProps {
+  searchParams: Promise<{ year?: string }>;
+}
+
+export default async function PanelPage({ searchParams }: PageProps) {
   const supabase = await createServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
+
+  const params = await searchParams;
 
   // ── Phase 1: memberships ──
   const { data: rawMemberships } = await supabase
@@ -98,7 +106,7 @@ export default async function PanelPage() {
     }
   }
 
-  // ── Phase 3: periods ──
+  // ── Phase 3: ALL periods (to derive available years) ──
   type PeriodRow = {
     id: string;
     status: string;
@@ -106,15 +114,34 @@ export default async function PanelPage() {
     start_date: string;
     label: string;
   };
-  const periodsData: PeriodRow[] = [];
+  const allPeriodsData: PeriodRow[] = [];
   if (allSupplierIds.length) {
     const { data } = await supabase
       .from('reporting_periods')
       .select('id, status, supplier_id, start_date, label')
       .in('supplier_id', allSupplierIds)
       .order('start_date', { ascending: true });
-    if (data) periodsData.push(...(data as PeriodRow[]));
+    if (data) allPeriodsData.push(...(data as PeriodRow[]));
   }
+
+  // Derive available years
+  const yearSet = new Set<number>();
+  for (const p of allPeriodsData) {
+    yearSet.add(new Date(p.start_date).getFullYear());
+  }
+  const nowYear = new Date().getFullYear();
+  yearSet.add(nowYear);
+  const availableYears = [...yearSet].sort((a, b) => b - a);
+
+  const selectedYear =
+    params.year && /^\d{4}$/.test(params.year)
+      ? parseInt(params.year, 10)
+      : (availableYears[0] ?? nowYear);
+
+  // Filter periods to selected year
+  const periodsData = allPeriodsData.filter(
+    (p) => new Date(p.start_date).getFullYear() === selectedYear,
+  );
 
   const periodIds = periodsData.map((p) => p.id);
   const periodSupplierMap = new Map<string, string>();
@@ -155,7 +182,6 @@ export default async function PanelPage() {
   const emissionRows = (emissionsResult.data as EmissionRow[] | null) ?? [];
   const activityEntries = (activityEntriesResult.data as ActivityEntryRaw[] | null) ?? [];
 
-  // entry_id → source_type lookup
   const entrySourceMap = new Map<string, string>();
   for (const e of activityEntries) {
     entrySourceMap.set(e.id, e.source_type);
@@ -195,23 +221,20 @@ export default async function PanelPage() {
     }
   }
 
-  // Coverage: unique suppliers with ≥1 activity entry
   const suppliersWithEntries = new Set<string>();
   for (const e of activityEntries) {
     const supplierId = periodSupplierMap.get(e.reporting_period_id);
     if (supplierId) suppliersWithEntries.add(supplierId);
   }
 
-  // Period status counts
   const periodosAbiertos = periodsData.filter((p) => p.status === 'open').length;
   const periodosEnRevision = periodsData.filter((p) => p.status === 'under_review').length;
 
-  // ── Trend: Jan-Dec current year, grouped by period start_date ──
-  const currentYear = new Date().getFullYear();
-  const currentMonthKey = `${currentYear}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  // ── Trend: Jan-Dec selected year ──
+  const currentMonthKey = `${nowYear}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
   const trendMap = new Map<string, number>();
   for (let m = 1; m <= 12; m++) {
-    trendMap.set(`${currentYear}-${String(m).padStart(2, '0')}`, 0);
+    trendMap.set(`${selectedYear}-${String(m).padStart(2, '0')}`, 0);
   }
   for (const r of emissionRows) {
     const startDate = periodStartMap.get(r.reporting_period_id);
@@ -231,7 +254,7 @@ export default async function PanelPage() {
   const maxTrendKg = Math.max(...trendData.map((m) => m.kg), 1);
   const hayTrend = trendData.some((m) => m.kg > 0);
 
-  // ── Leaderboard: suppliers sorted by total CO₂e desc ──
+  // ── Leaderboard ──
   const leaderboard = [...supplierCo2eMap.entries()]
     .map(([id, { s1, s2 }]) => ({
       id,
@@ -244,7 +267,7 @@ export default async function PanelPage() {
     .slice(0, 8);
   const maxLeaderboardKg = Math.max(...leaderboard.map((l) => l.total), 1);
 
-  // ── Source mix: top 6 source types by CO₂e ──
+  // ── Source mix ──
   const sourceMix = [...sourceTypeCo2eMap.entries()]
     .map(([sourceType, kg]) => ({
       sourceType,
@@ -359,20 +382,34 @@ export default async function PanelPage() {
             <p className="eyebrow" style={{ marginBottom: 'var(--space-3)' }}>
               Protocolo GHG · Alcances 1 y 2
             </p>
-            <h2
+            <div
               style={{
-                fontFamily: 'var(--font-serif)',
-                fontSize: 'var(--text-3xl)',
-                fontWeight: 400,
-                fontStyle: 'italic',
-                color: 'var(--color-ink-1)',
-                margin: '0 0 var(--space-2)',
-                letterSpacing: '-0.032em',
-                lineHeight: 1.1,
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between',
+                gap: 'var(--space-4)',
+                flexWrap: 'wrap',
+                marginBottom: 'var(--space-2)',
               }}
             >
-              Portafolio de emisiones de la cadena de suministro
-            </h2>
+              <h2
+                style={{
+                  fontFamily: 'var(--font-serif)',
+                  fontSize: 'var(--text-3xl)',
+                  fontWeight: 400,
+                  fontStyle: 'italic',
+                  color: 'var(--color-ink-1)',
+                  margin: 0,
+                  letterSpacing: '-0.032em',
+                  lineHeight: 1.1,
+                }}
+              >
+                Portafolio de emisiones de la cadena de suministro
+              </h2>
+              <Suspense>
+                <YearSelector availableYears={availableYears} selectedYear={selectedYear} />
+              </Suspense>
+            </div>
             <p
               style={{
                 fontSize: 'var(--text-sm)',
@@ -382,8 +419,8 @@ export default async function PanelPage() {
               }}
             >
               {tieneDatos
-                ? 'Vista consolidada del portafolio de proveedores: emisiones verificadas, cobertura y estado de auditoría.'
-                : 'Los datos aparecerán cuando los proveedores envíen sus registros de actividad.'}
+                ? `Vista consolidada del portafolio de proveedores para ${selectedYear}: emisiones verificadas, cobertura y estado de auditoría.`
+                : `Los datos aparecerán cuando los proveedores envíen sus registros de actividad para ${selectedYear}.`}
             </p>
           </section>
 
@@ -607,7 +644,7 @@ export default async function PanelPage() {
                       margin: 'var(--space-1) 0 0',
                     }}
                   >
-                    Alcance 1 (verde) + Alcance 2 (violeta) · ordenado por total
+                    Alcance 1 (verde) + Alcance 2 (violeta) · ordenado por total · {selectedYear}
                   </p>
                 </div>
                 {leaderboard.length === 0 ? (
@@ -664,7 +701,6 @@ export default async function PanelPage() {
                             >
                               {supplier.name}
                             </p>
-                            {/* Stacked bar */}
                             <div
                               style={{
                                 height: '5px',
@@ -778,7 +814,7 @@ export default async function PanelPage() {
                     margin: '0 0 var(--space-5)',
                   }}
                 >
-                  CO₂e por tipo de fuente · portafolio completo
+                  CO₂e por tipo de fuente · {selectedYear}
                 </p>
                 {sourceMix.length === 0 ? (
                   <p
@@ -871,7 +907,7 @@ export default async function PanelPage() {
                     margin: '0 0 var(--space-5)',
                   }}
                 >
-                  Estado de cada proveedor por periodo de reporte
+                  Estado de cada proveedor por periodo de reporte · {selectedYear}
                 </p>
               </div>
               <div style={{ overflowX: 'auto' }}>
@@ -1027,7 +1063,7 @@ export default async function PanelPage() {
             </section>
           )}
 
-          {/* ── Tendencia anual CO₂e (Jan–Dic, por periodo de reporte) ── */}
+          {/* ── Tendencia anual CO₂e ── */}
           <section
             style={{
               background: 'var(--color-surface-1)',
@@ -1053,7 +1089,7 @@ export default async function PanelPage() {
                     margin: 'var(--space-1) 0 0',
                   }}
                 >
-                  Agrupado por inicio del periodo de reporte · {currentYear}
+                  Agrupado por inicio del periodo de reporte · {selectedYear}
                 </p>
               </div>
             </div>
@@ -1067,16 +1103,17 @@ export default async function PanelPage() {
                   margin: 0,
                 }}
               >
-                Sin datos calculados para {currentYear}.
+                Sin datos calculados para {selectedYear}.
               </p>
             ) : (
               <div style={{ overflowX: 'auto' }}>
                 <svg
                   viewBox="0 0 780 130"
                   style={{ width: '100%', minWidth: '480px', display: 'block' }}
-                  aria-label={`Tendencia de emisiones CO₂e ${currentYear}`}
+                  aria-label={`Tendencia de emisiones CO₂e ${selectedYear}`}
+                  role="img"
                 >
-                  {/* horizontal guide lines */}
+                  <title>Tendencia de emisiones CO₂e {selectedYear}</title>
                   {[0.25, 0.5, 0.75, 1].map((pct) => {
                     const y = 96 - pct * 72;
                     return (
@@ -1108,7 +1145,7 @@ export default async function PanelPage() {
                     const barH = mes.kg > 0 ? Math.max((mes.kg / maxTrendKg) * maxH, 3) : 1;
                     const y = 96 - barH;
                     const fmt = formatearCo2e(mes.kg);
-                    const isCurrent = mes.key === currentMonthKey;
+                    const isCurrent = mes.key === currentMonthKey && selectedYear === nowYear;
                     return (
                       <g key={mes.key}>
                         <rect
@@ -1170,7 +1207,7 @@ export default async function PanelPage() {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                  <ShieldAlert size={16} style={{ color: 'var(--color-signal-hi)' }} />
+                  <ShieldAlert size={16} style={{ color: 'var(--color-signal-hi)' }} aria-hidden="true" />
                   <p className="eyebrow" style={{ color: 'var(--color-signal-hi)' }}>
                     {totalAnomalias} anomalía{totalAnomalias !== 1 ? 's' : ''} pendiente
                     {totalAnomalias !== 1 ? 's' : ''}
@@ -1188,7 +1225,7 @@ export default async function PanelPage() {
                     gap: 'var(--space-1)',
                   }}
                 >
-                  Ver en auditoría <ArrowRight size={12} />
+                  Ver en auditoría <ArrowRight size={12} aria-hidden="true" />
                 </Link>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
