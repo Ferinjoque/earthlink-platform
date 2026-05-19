@@ -379,6 +379,7 @@ export async function importActivityCsv(
       submittedAt: now,
       submittedBy: user.id,
       createdAt: now,
+      dataQuality: row.data.data_quality,
     });
 
     try {

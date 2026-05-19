@@ -630,7 +630,7 @@ function TableMode({
       )}
 
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '860px' }}>
           <thead>
             <tr style={{ background: 'var(--color-surface-2)' }}>
               {['Proveedor', 'Mes', null, 'Secundario', 'Cantidad', 'Unidad', 'Calidad', 'Notas', ''].map(
@@ -692,7 +692,7 @@ function TableMode({
                     <MonthYearSelect
                       value={row.year_month}
                       onChange={(v) => onUpdateRow(idx, { year_month: v })}
-                      style={{ minWidth: '200px' }}
+                      style={{ minWidth: '168px' }}
                     />
                   </td>
 
@@ -702,7 +702,7 @@ function TableMode({
                       value={row.source_type}
                       onChange={(e) => onChangeSourceType(idx, e.target.value as EmissionSourceType)}
                       aria-label="Fuente"
-                      style={{ minWidth: '150px' }}
+                      style={{ minWidth: '130px' }}
                     >
                       {SOURCE_TYPES.map((st) => (
                         <option key={st} value={st}>{ETIQUETAS_FUENTE[st]}</option>
@@ -773,11 +773,11 @@ function TableMode({
                       value={row.data_quality}
                       onChange={(e) => onUpdateRow(idx, { data_quality: e.target.value })}
                       aria-label="Calidad del dato"
-                      style={{ minWidth: '110px' }}
+                      style={{ minWidth: '90px' }}
                     >
-                      <option value="measured">Medido</option>
-                      <option value="estimated">Estimado</option>
-                      <option value="calculated">Calculado</option>
+                      <option value="measured">Med.</option>
+                      <option value="estimated">Est.</option>
+                      <option value="calculated">Cal.</option>
                     </select>
                   </td>
 
@@ -789,7 +789,7 @@ function TableMode({
                       onChange={(e) => onUpdateRow(idx, { notes: e.target.value })}
                       placeholder="Opcional"
                       aria-label="Notas"
-                      style={{ minWidth: '120px' }}
+                      style={{ minWidth: '90px' }}
                     />
                   </td>
 

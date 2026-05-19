@@ -233,7 +233,7 @@ describe('getCsvTemplate', () => {
   it('contains the canonical header row', () => {
     const template = getCsvTemplate();
     const firstLine = template.split('\n')[0]!;
-    expect(firstLine).toBe('supplier_id,year_month,source_type,secondary,raw_quantity,raw_unit,notes');
+    expect(firstLine).toBe('supplier_id,year_month,source_type,secondary,raw_quantity,raw_unit,data_quality,notes');
   });
 
   it('has at least 8 lines — one header plus example rows for all source types', () => {
@@ -244,11 +244,11 @@ describe('getCsvTemplate', () => {
     expect(lines[0]).toContain('year_month');
   });
 
-  it('each example row has 7 comma-separated fields', () => {
+  it('each example row has 8 comma-separated fields', () => {
     const template = getCsvTemplate();
     const lines = template.split('\n').filter(Boolean);
     for (const line of lines) {
-      expect(line.split(',').length).toBe(7);
+      expect(line.split(',').length).toBe(8);
     }
   });
 

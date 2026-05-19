@@ -10,6 +10,8 @@ const SOURCE_TYPES = [
   'waste',
 ] as const;
 
+const DATA_QUALITY_VALUES = ['measured', 'estimated', 'calculated'] as const;
+
 const csvRowSchema = z.object({
   supplier_id: z.string().uuid('Debe ser un UUID de proveedor válido'),
   year_month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Formato mes inválido (YYYY-MM, ej: 2026-01)'),
@@ -17,6 +19,7 @@ const csvRowSchema = z.object({
   secondary: z.string().default(''),
   raw_quantity: z.coerce.number().positive('Debe ser un número positivo'),
   raw_unit: z.string().min(1, 'Unidad obligatoria'),
+  data_quality: z.enum(DATA_QUALITY_VALUES).default('measured'),
   notes: z.string().optional(),
 });
 
@@ -84,6 +87,14 @@ const COL_ALIASES: Record<string, string[]> = {
     'raw quantity',
   ],
   raw_unit: ['raw_unit', 'unidad', 'unit', 'units', 'uom', 'raw unit'],
+  data_quality: [
+    'data_quality',
+    'calidad',
+    'calidad_dato',
+    'calidad del dato',
+    'quality',
+    'data quality',
+  ],
   notes: [
     'notes',
     'notas',
@@ -246,18 +257,18 @@ export function parseCsvText(text: string): ParsedCsvRow[] {
 
 export function getCsvTemplate(): string {
   return [
-    'supplier_id,year_month,source_type,secondary,raw_quantity,raw_unit,notes',
-    '<UUID-del-proveedor>,2026-01,stationary_combustion,natural_gas,1000,m3_ng,Caldera A',
-    '<UUID-del-proveedor>,2026-01,stationary_combustion,fuel_oil_no2,500,kBtu,Generador de emergencia',
-    '<UUID-del-proveedor>,2026-01,stationary_combustion,propane,200,L,Calefaccion exterior',
-    '<UUID-del-proveedor>,2026-01,purchased_electricity,SEIN_PERU,5000,kWh,Piso 2 oficinas',
-    '<UUID-del-proveedor>,2026-01,mobile_combustion,diesel,200,L,Flota de vehiculos',
-    '<UUID-del-proveedor>,2026-01,fugitive,R410A,5,kg,Mantenimiento HVAC',
-    '<UUID-del-proveedor>,2026-01,purchased_steam,,100,GJ,',
-    '<UUID-del-proveedor>,2026-01,water_use,potable_mixed,150,kgal_us,Medidor principal',
-    '<UUID-del-proveedor>,2026-01,water_use,reclaimed_mixed,30,kgal_us,Riego exterior',
-    '<UUID-del-proveedor>,2026-01,waste,disposed_trash,2.5,ton_us,Contenedor general',
-    '<UUID-del-proveedor>,2026-01,waste,recycled,1.2,ton_us,Reciclaje papel/carton',
-    '<UUID-del-proveedor>,2026-01,waste,composted,0.8,tonne,Compost residuos organicos',
+    'supplier_id,year_month,source_type,secondary,raw_quantity,raw_unit,data_quality,notes',
+    '<UUID-del-proveedor>,2026-01,stationary_combustion,natural_gas,1000,m3_ng,measured,Caldera A',
+    '<UUID-del-proveedor>,2026-01,stationary_combustion,fuel_oil_no2,500,kBtu,measured,Generador de emergencia',
+    '<UUID-del-proveedor>,2026-01,stationary_combustion,propane,200,L,estimated,Calefaccion exterior',
+    '<UUID-del-proveedor>,2026-01,purchased_electricity,SEIN_PERU,5000,kWh,measured,Piso 2 oficinas',
+    '<UUID-del-proveedor>,2026-01,mobile_combustion,diesel,200,L,measured,Flota de vehiculos',
+    '<UUID-del-proveedor>,2026-01,fugitive,R410A,5,kg,measured,Mantenimiento HVAC',
+    '<UUID-del-proveedor>,2026-01,purchased_steam,,100,GJ,calculated,',
+    '<UUID-del-proveedor>,2026-01,water_use,potable_mixed,150,kgal_us,measured,Medidor principal',
+    '<UUID-del-proveedor>,2026-01,water_use,reclaimed_mixed,30,kgal_us,estimated,Riego exterior',
+    '<UUID-del-proveedor>,2026-01,waste,disposed_trash,2.5,ton_us,measured,Contenedor general',
+    '<UUID-del-proveedor>,2026-01,waste,recycled,1.2,ton_us,measured,Reciclaje papel/carton',
+    '<UUID-del-proveedor>,2026-01,waste,composted,0.8,tonne,measured,Compost residuos organicos',
   ].join('\n');
 }
