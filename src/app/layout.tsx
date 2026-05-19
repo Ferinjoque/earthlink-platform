@@ -29,7 +29,6 @@ export const metadata: Metadata = {
   },
   description:
     'Plataforma de auditoría de huella de carbono para cadenas de suministro — Alcance 1 y 2.',
-  robots: { index: false, follow: false },
 };
 
 export const viewport: Viewport = {
