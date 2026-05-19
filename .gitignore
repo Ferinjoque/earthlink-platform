@@ -39,6 +39,14 @@ yarn-error.log*
 # vercel
 .vercel
 
+# supabase temp (contiene datos de conexión sensibles)
+supabase/.temp/
+
+# logs de desarrollo y lighthouse
+*.log
+lh-*.json
+lighthouse-*.json
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
