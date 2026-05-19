@@ -8,12 +8,14 @@ import type { EmissionSourceType } from '@/types/database';
 import type { Unit } from '@/calc/types';
 import {
   ETIQUETAS_FUENTE,
+  AYUDA_FUENTE,
   OPCIONES_SECUNDARIAS,
   UNIDADES_POR_FUENTE,
   etiquetaUnidad,
   labelSecundarioPara,
 } from '@/lib/activity-options';
 import { MonthYearSelect } from '@/components/ui/MonthYearSelect';
+import { HelpTooltip } from '@/components/ui/HelpTooltip';
 import { useToast } from '@/components/ui/Toast';
 
 interface Supplier {
@@ -24,7 +26,7 @@ interface Supplier {
 interface EntryRow {
   _id: string;
   supplier_id: string;
-  year_month: string; // "YYYY-MM"
+  year_month: string;
   source_type: EmissionSourceType;
   secondary: string;
   raw_quantity: string;
@@ -42,7 +44,7 @@ function advanceMonth(yearMonth: string): string {
   const year = Number(parts[0]);
   const month = Number(parts[1]);
   if (!Number.isFinite(year) || !Number.isFinite(month)) return yearMonth;
-  const next = new Date(year, month); // month is 1-based, Date constructor is 0-based → this goes to next month
+  const next = new Date(year, month);
   return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
 }
 
@@ -73,12 +75,323 @@ function updateSourceType(row: EntryRow, st: EmissionSourceType): EntryRow {
   };
 }
 
-interface BulkEntryBuilderProps {
-  suppliers: Supplier[];
-  defaultSupplierId?: string | undefined;
+// ── Shared styles ─────────────────────────────────────────────────────────────
+
+function estiloInput(hasError = false): React.CSSProperties {
+  return {
+    padding: 'var(--space-2) var(--space-3)',
+    background: 'var(--color-surface-0)',
+    border: `1px solid ${hasError ? 'var(--color-signal-hi)' : 'var(--color-border)'}`,
+    borderRadius: 'var(--radius-md)',
+    fontSize: 'var(--text-sm)',
+    color: 'var(--color-ink-1)',
+    outline: 'none',
+    width: '100%',
+    boxSizing: 'border-box',
+  };
 }
 
-const SOURCE_TYPES = Object.keys(ETIQUETAS_FUENTE) as EmissionSourceType[];
+function estiloSelect(hasError = false): React.CSSProperties {
+  return {
+    ...estiloInput(hasError),
+    appearance: 'none',
+    backgroundImage:
+      "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")",
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'right 10px center',
+    paddingRight: '28px',
+  };
+}
+
+const labelStyle: React.CSSProperties = {
+  fontSize: 'var(--text-sm)',
+  color: 'var(--color-ink-2)',
+  fontWeight: 500,
+};
+
+function FieldLabel({
+  htmlFor,
+  label,
+  ayuda,
+  optional,
+}: {
+  htmlFor: string;
+  label: string;
+  ayuda?: string;
+  optional?: boolean;
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+      <label htmlFor={htmlFor} style={labelStyle}>
+        {label}
+        {optional && (
+          <span style={{ color: 'var(--color-ink-3)', fontWeight: 400 }}> (opcional)</span>
+        )}
+      </label>
+      {ayuda && <HelpTooltip content={ayuda} />}
+    </div>
+  );
+}
+
+// ── GRESB hint banner ─────────────────────────────────────────────────────────
+
+function GresbHint({ sourceType }: { sourceType: EmissionSourceType }) {
+  if (sourceType !== 'water_use' && sourceType !== 'waste') return null;
+  return (
+    <p
+      style={{
+        fontSize: 'var(--text-xs)',
+        color: 'var(--color-ink-3)',
+        margin: '0',
+        padding: 'var(--space-2) var(--space-3)',
+        background: 'var(--color-surface-2)',
+        borderRadius: 'var(--radius-md)',
+      }}
+    >
+      {sourceType === 'water_use'
+        ? 'Consumo de agua: se registra para GRESB. No afecta el total de CO₂e.'
+        : 'Residuos: se registra para GRESB. No afecta el total de CO₂e.'}
+    </p>
+  );
+}
+
+// ── Card mode (1 row) ─────────────────────────────────────────────────────────
+
+function CardMode({
+  row,
+  suppliers,
+  jsonEntries,
+  isPending,
+  validCount,
+  onAddRow,
+  onUpdateRow,
+  onChangeSourceType,
+}: {
+  row: EntryRow;
+  suppliers: Supplier[];
+  jsonEntries: string;
+  isPending: boolean;
+  validCount: number;
+  onAddRow: () => void;
+  onUpdateRow: (patch: Partial<EntryRow>) => void;
+  onChangeSourceType: (st: EmissionSourceType) => void;
+}) {
+  const secs = OPCIONES_SECUNDARIAS[row.source_type] ?? [];
+  const units = UNIDADES_POR_FUENTE[row.source_type];
+  const secLabel = labelSecundarioPara(row.source_type);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+      <style>{`@keyframes ringSpin { to { transform: rotate(360deg); } }`}</style>
+
+      {/* Proveedor + Mes */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+          <label htmlFor="card-supplier" style={labelStyle}>Proveedor</label>
+          <select
+            id="card-supplier"
+            value={row.supplier_id}
+            onChange={(e) => onUpdateRow({ supplier_id: e.target.value })}
+            style={estiloSelect()}
+            disabled={suppliers.length === 0}
+          >
+            {suppliers.length === 0 ? (
+              <option value="">Sin proveedores disponibles</option>
+            ) : (
+              suppliers.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))
+            )}
+          </select>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+          <label style={labelStyle}>Mes de reporte</label>
+          <MonthYearSelect
+            value={row.year_month}
+            onChange={(v) => onUpdateRow({ year_month: v })}
+            name="year_month_card"
+            style={{ gap: 'var(--space-2)' }}
+          />
+        </div>
+      </div>
+
+      {/* Fuente de emisión */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+        <FieldLabel
+          htmlFor="card-source"
+          label="Fuente de emisión"
+          ayuda={AYUDA_FUENTE[row.source_type]}
+        />
+        <select
+          id="card-source"
+          value={row.source_type}
+          onChange={(e) => onChangeSourceType(e.target.value as EmissionSourceType)}
+          style={estiloSelect()}
+        >
+          {(Object.keys(ETIQUETAS_FUENTE) as EmissionSourceType[]).map((t) => (
+            <option key={t} value={t}>{ETIQUETAS_FUENTE[t]}</option>
+          ))}
+        </select>
+        <GresbHint sourceType={row.source_type} />
+      </div>
+
+      {/* Secundario */}
+      {secs.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+          <FieldLabel
+            htmlFor="card-secondary"
+            label={secLabel}
+            {...(secs.find((s) => s.value === row.secondary)?.ayuda
+              ? { ayuda: secs.find((s) => s.value === row.secondary)!.ayuda }
+              : {})}
+          />
+          <select
+            id="card-secondary"
+            value={row.secondary}
+            onChange={(e) => onUpdateRow({ secondary: e.target.value })}
+            style={estiloSelect()}
+          >
+            {secs.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {row.source_type === 'purchased_steam' && null}
+
+      {/* Cantidad + Unidad */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 'var(--space-3)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+          <label htmlFor="card-qty" style={labelStyle}>Cantidad</label>
+          <input
+            id="card-qty"
+            type="number"
+            step="any"
+            min="0"
+            placeholder="0.00"
+            value={row.raw_quantity}
+            onChange={(e) => onUpdateRow({ raw_quantity: e.target.value })}
+            style={{ ...estiloInput(), fontFamily: 'var(--font-mono)' }}
+          />
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+          <FieldLabel
+            htmlFor="card-unit"
+            label="Unidad"
+            {...(units.find((u) => u.unit === row.raw_unit)?.ayuda
+              ? { ayuda: units.find((u) => u.unit === row.raw_unit)!.ayuda }
+              : {})}
+          />
+          <select
+            id="card-unit"
+            value={row.raw_unit}
+            onChange={(e) => onUpdateRow({ raw_unit: e.target.value })}
+            style={estiloSelect()}
+          >
+            {units.map(({ unit, ayuda }) => (
+              <option key={unit} value={unit} title={ayuda}>
+                {etiquetaUnidad(unit as Unit)}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Notas */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+        <label htmlFor="card-notes" style={labelStyle}>
+          Notas <span style={{ color: 'var(--color-ink-3)', fontWeight: 400 }}>(opcional)</span>
+        </label>
+        <textarea
+          id="card-notes"
+          rows={2}
+          placeholder="Descripción de la fuente, ID de medidor, referencia de factura…"
+          value={row.notes}
+          onChange={(e) => onUpdateRow({ notes: e.target.value })}
+          style={{ ...estiloInput(), resize: 'vertical', fontFamily: 'inherit' }}
+        />
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+        <form
+          action={undefined}
+          onSubmit={(e) => {
+            e.preventDefault();
+            // Use hidden form submit via the outer form action
+          }}
+          style={{ display: 'contents' }}
+        >
+          <input type="hidden" name="json_entries" value={jsonEntries} form="bulk-form-card" />
+          <button
+            type="submit"
+            form="bulk-form-card"
+            disabled={isPending || validCount === 0 || suppliers.length === 0}
+            style={{
+              padding: 'var(--space-2) var(--space-4)',
+              background:
+                isPending || validCount === 0 || suppliers.length === 0
+                  ? 'var(--color-ink-3)'
+                  : 'var(--color-accent)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 'var(--radius-md)',
+              fontSize: 'var(--text-sm)',
+              fontWeight: 600,
+              cursor:
+                isPending || validCount === 0 || suppliers.length === 0
+                  ? 'not-allowed'
+                  : 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 'var(--space-2)',
+              transition: 'opacity 150ms',
+            }}
+          >
+            {isPending ? (
+              <>
+                <span
+                  style={{
+                    width: '12px',
+                    height: '12px',
+                    border: '2px solid rgba(255,255,255,0.3)',
+                    borderTopColor: 'white',
+                    borderRadius: '50%',
+                    display: 'inline-block',
+                    animation: 'ringSpin 0.7s linear infinite',
+                  }}
+                />
+                Enviando…
+              </>
+            ) : (
+              'Enviar registro'
+            )}
+          </button>
+        </form>
+
+        <button
+          type="button"
+          onClick={onAddRow}
+          style={{
+            padding: 'var(--space-2) var(--space-4)',
+            background: 'none',
+            border: '1px dashed var(--color-border-strong)',
+            borderRadius: 'var(--radius-md)',
+            fontSize: 'var(--text-sm)',
+            color: 'var(--color-ink-2)',
+            cursor: 'pointer',
+            transition: 'border-color 120ms, color 120ms',
+          }}
+        >
+          + Agregar otra fila
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // ── Delete confirmation modal ─────────────────────────────────────────────────
 
@@ -107,7 +420,7 @@ function DeleteModal({
   const monthLabel = (() => {
     const parts = row.year_month.split('-');
     const m = Number(parts[1]);
-    const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
     return `${MESES[(m - 1) % 12] ?? ''} ${parts[0] ?? ''}`;
   })();
 
@@ -212,6 +525,357 @@ function DeleteModal({
   );
 }
 
+// ── Table mode (2+ rows) ──────────────────────────────────────────────────────
+
+const SOURCE_TYPES = Object.keys(ETIQUETAS_FUENTE) as EmissionSourceType[];
+
+const tdStyle: React.CSSProperties = {
+  padding: '4px 6px',
+  verticalAlign: 'middle',
+};
+
+function TableMode({
+  rows,
+  suppliers,
+  jsonEntries,
+  isPending,
+  validCount,
+  pendingDelete,
+  onAddRow,
+  onUpdateRow,
+  onChangeSourceType,
+  onRequestDelete,
+  onConfirmDelete,
+  onCancelDelete,
+}: {
+  rows: EntryRow[];
+  suppliers: Supplier[];
+  jsonEntries: string;
+  isPending: boolean;
+  validCount: number;
+  pendingDelete: number | null;
+  onAddRow: () => void;
+  onUpdateRow: (idx: number, patch: Partial<EntryRow>) => void;
+  onChangeSourceType: (idx: number, st: EmissionSourceType) => void;
+  onRequestDelete: (idx: number) => void;
+  onConfirmDelete: (idx: number) => void;
+  onCancelDelete: () => void;
+}) {
+  const hasGresbRows = rows.some(
+    (r) => r.source_type === 'water_use' || r.source_type === 'waste',
+  );
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+      <style>{`
+        @keyframes ringSpin { to { transform: rotate(360deg); } }
+        .builder-row:hover .builder-del { opacity: 1 !important; }
+        .builder-input, .builder-select {
+          padding: 5px 7px;
+          background: var(--color-surface-0);
+          border: 1px solid var(--color-border);
+          border-radius: var(--radius-md);
+          font-size: var(--text-xs);
+          color: var(--color-ink-1);
+          font-family: var(--font-sans);
+          width: 100%;
+          box-sizing: border-box;
+        }
+        .builder-input:focus, .builder-select:focus {
+          outline: 1px solid var(--color-accent);
+          border-color: var(--color-accent);
+        }
+        .builder-select {
+          appearance: none;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+          background-repeat: no-repeat;
+          background-position: right 7px center;
+          padding-right: 22px;
+        }
+      `}</style>
+
+      {hasGresbRows && (
+        <p
+          style={{
+            fontSize: 'var(--text-xs)',
+            color: 'var(--color-ink-3)',
+            margin: 0,
+            padding: 'var(--space-2) var(--space-3)',
+            background: 'var(--color-surface-2)',
+            borderRadius: 'var(--radius-md)',
+          }}
+        >
+          Filas con agua / residuos se registran para GRESB pero no afectan el total de CO₂e.
+        </p>
+      )}
+
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
+          <thead>
+            <tr style={{ background: 'var(--color-surface-2)' }}>
+              {['Proveedor', 'Mes', null, 'Secundario', 'Cantidad', 'Unidad', 'Notas', ''].map(
+                (h, i) => (
+                  <th
+                    key={i}
+                    style={{
+                      padding: '6px 8px',
+                      fontSize: 'var(--text-xs)',
+                      fontWeight: 600,
+                      color: 'var(--color-ink-2)',
+                      textAlign: 'left',
+                      borderBottom: '1px solid var(--color-border)',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {h === null ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        Fuente
+                        <HelpTooltip
+                          content="Fuente de emisión según GHG Protocol. Alcance 1: combustión, fugitivas. Alcance 2: electricidad, vapor. GRESB: agua, residuos."
+                          title="Fuentes de emisión"
+                        />
+                      </span>
+                    ) : (
+                      h
+                    )}
+                  </th>
+                ),
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, idx) => {
+              const secs = OPCIONES_SECUNDARIAS[row.source_type] ?? [];
+              const units = UNIDADES_POR_FUENTE[row.source_type];
+              const secLabel = labelSecundarioPara(row.source_type);
+              return (
+                <tr
+                  key={row._id}
+                  className="builder-row"
+                  style={{ borderBottom: '1px solid var(--color-border)' }}
+                >
+                  <td style={tdStyle}>
+                    <select
+                      className="builder-select"
+                      value={row.supplier_id}
+                      onChange={(e) => onUpdateRow(idx, { supplier_id: e.target.value })}
+                      aria-label="Proveedor"
+                      style={{ minWidth: '140px' }}
+                    >
+                      {suppliers.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  </td>
+
+                  <td style={tdStyle}>
+                    <MonthYearSelect
+                      value={row.year_month}
+                      onChange={(v) => onUpdateRow(idx, { year_month: v })}
+                      style={{ minWidth: '200px' }}
+                    />
+                  </td>
+
+                  <td style={tdStyle}>
+                    <select
+                      className="builder-select"
+                      value={row.source_type}
+                      onChange={(e) => onChangeSourceType(idx, e.target.value as EmissionSourceType)}
+                      aria-label="Fuente"
+                      style={{ minWidth: '150px' }}
+                    >
+                      {SOURCE_TYPES.map((st) => (
+                        <option key={st} value={st}>{ETIQUETAS_FUENTE[st]}</option>
+                      ))}
+                    </select>
+                  </td>
+
+                  <td style={tdStyle}>
+                    {secs.length > 0 ? (
+                      <select
+                        className="builder-select"
+                        value={row.secondary}
+                        onChange={(e) => onUpdateRow(idx, { secondary: e.target.value })}
+                        aria-label={secLabel}
+                        style={{ minWidth: '130px' }}
+                      >
+                        {secs.map((o) => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span
+                        style={{
+                          fontSize: 'var(--text-xs)',
+                          color: 'var(--color-ink-3)',
+                          padding: '5px 7px',
+                          display: 'block',
+                        }}
+                      >
+                        —
+                      </span>
+                    )}
+                  </td>
+
+                  <td style={tdStyle}>
+                    <input
+                      type="number"
+                      step="any"
+                      min="0"
+                      className="builder-input"
+                      value={row.raw_quantity}
+                      onChange={(e) => onUpdateRow(idx, { raw_quantity: e.target.value })}
+                      placeholder="0.00"
+                      aria-label="Cantidad"
+                      style={{ minWidth: '80px', fontFamily: 'var(--font-mono)' }}
+                    />
+                  </td>
+
+                  <td style={tdStyle}>
+                    <select
+                      className="builder-select"
+                      value={row.raw_unit}
+                      onChange={(e) => onUpdateRow(idx, { raw_unit: e.target.value })}
+                      aria-label="Unidad"
+                      style={{ minWidth: '110px' }}
+                    >
+                      {units.map(({ unit }) => (
+                        <option key={unit} value={unit}>
+                          {etiquetaUnidad(unit as Unit)}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+
+                  <td style={tdStyle}>
+                    <input
+                      type="text"
+                      className="builder-input"
+                      value={row.notes}
+                      onChange={(e) => onUpdateRow(idx, { notes: e.target.value })}
+                      placeholder="Opcional"
+                      aria-label="Notas"
+                      style={{ minWidth: '120px' }}
+                    />
+                  </td>
+
+                  <td style={{ ...tdStyle, width: '28px' }}>
+                    <button
+                      type="button"
+                      className="builder-del"
+                      onClick={() => onRequestDelete(idx)}
+                      aria-label="Eliminar fila"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--color-signal-hi)',
+                        fontSize: '16px',
+                        lineHeight: 1,
+                        padding: '2px 4px',
+                        opacity: 0,
+                        transition: 'opacity 120ms',
+                      }}
+                    >
+                      ×
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          onClick={onAddRow}
+          style={{
+            padding: 'var(--space-2) var(--space-4)',
+            background: 'none',
+            border: '1px dashed var(--color-border-strong)',
+            borderRadius: 'var(--radius-md)',
+            fontSize: 'var(--text-sm)',
+            color: 'var(--color-ink-2)',
+            cursor: 'pointer',
+            transition: 'border-color 120ms, color 120ms',
+          }}
+        >
+          + Agregar fila
+        </button>
+
+        <form id="bulk-form-table" action={undefined} style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
+          <input type="hidden" name="json_entries" value={jsonEntries} form="bulk-form-table" />
+          <button
+            type="submit"
+            form="bulk-form-table"
+            disabled={isPending || validCount === 0}
+            style={{
+              padding: 'var(--space-2) var(--space-4)',
+              background:
+                isPending || validCount === 0 ? 'var(--color-ink-3)' : 'var(--color-accent)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 'var(--radius-md)',
+              fontSize: 'var(--text-sm)',
+              fontWeight: 600,
+              cursor: isPending || validCount === 0 ? 'not-allowed' : 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 'var(--space-2)',
+              transition: 'opacity 150ms',
+            }}
+          >
+            {isPending ? (
+              <>
+                <span
+                  style={{
+                    width: '12px',
+                    height: '12px',
+                    border: '2px solid rgba(255,255,255,0.3)',
+                    borderTopColor: 'white',
+                    borderRadius: '50%',
+                    display: 'inline-block',
+                    animation: 'ringSpin 0.7s linear infinite',
+                  }}
+                />
+                Importando…
+              </>
+            ) : (
+              `Importar ${validCount} fila${validCount !== 1 ? 's' : ''}`
+            )}
+          </button>
+        </form>
+
+        {rows.length > 1 && (
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)' }}>
+            {rows.length} filas · {validCount} completas
+          </span>
+        )}
+      </div>
+
+      {pendingDelete !== null && rows[pendingDelete] !== undefined && (
+        <DeleteModal
+          row={rows[pendingDelete]!}
+          supplierName={
+            suppliers.find((s) => s.id === rows[pendingDelete!]?.supplier_id)?.name ?? ''
+          }
+          onConfirm={() => onConfirmDelete(pendingDelete)}
+          onCancel={onCancelDelete}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Main BulkEntryBuilder ─────────────────────────────────────────────────────
+
+interface BulkEntryBuilderProps {
+  suppliers: Supplier[];
+  defaultSupplierId?: string | undefined;
+}
+
 export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuilderProps) {
   const ym = currentYearMonth();
   const initialSupplierId = defaultSupplierId ?? suppliers[0]?.id ?? '';
@@ -224,6 +888,8 @@ export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuil
     null,
   );
   const { toast } = useToast();
+
+  const isCardMode = rows.length === 1;
 
   useEffect(() => {
     if (!state?.submittedAt) return;
@@ -256,25 +922,30 @@ export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuil
     });
   }
 
+  function updateRow(idx: number, patch: Partial<EntryRow>) {
+    setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+  }
+
+  function updateSingleRow(patch: Partial<EntryRow>) {
+    setRows((prev) => prev.map((r, i) => (i === 0 ? { ...r, ...patch } : r)));
+  }
+
+  function changeSourceType(idx: number, st: EmissionSourceType) {
+    setRows((prev) => prev.map((r, i) => (i === idx ? updateSourceType(r, st) : r)));
+  }
+
+  function changeSingleSourceType(st: EmissionSourceType) {
+    setRows((prev) => prev.map((r, i) => (i === 0 ? updateSourceType(r, st) : r)));
+  }
+
   function requestDelete(idx: number) {
+    if (rows.length === 1) return; // card mode doesn't delete last row
     setPendingDelete(idx);
   }
 
   function confirmDelete(idx: number) {
     setRows((prev) => prev.filter((_, i) => i !== idx));
     setPendingDelete(null);
-  }
-
-  function cancelDelete() {
-    setPendingDelete(null);
-  }
-
-  function updateRow(idx: number, patch: Partial<EntryRow>) {
-    setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
-  }
-
-  function changeSourceType(idx: number, st: EmissionSourceType) {
-    setRows((prev) => prev.map((r, i) => (i === idx ? updateSourceType(r, st) : r)));
   }
 
   const validCount = rows.filter(
@@ -295,279 +966,48 @@ export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuil
       })),
   );
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-      <style>{`
-        @keyframes ringSpin { to { transform: rotate(360deg); } }
-        .builder-row:hover .builder-del { opacity: 1 !important; }
-        .builder-input, .builder-select {
-          padding: 5px 7px;
-          background: var(--color-surface-0);
-          border: 1px solid var(--color-border);
-          border-radius: var(--radius-md);
-          font-size: var(--text-xs);
-          color: var(--color-ink-1);
-          font-family: var(--font-sans);
-          width: 100%;
-          box-sizing: border-box;
-        }
-        .builder-input:focus, .builder-select:focus {
-          outline: 1px solid var(--color-accent);
-          border-color: var(--color-accent);
-        }
-        .builder-select {
-          appearance: none;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-          background-repeat: no-repeat;
-          background-position: right 7px center;
-          padding-right: 22px;
-        }
-      `}</style>
-
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
-          <thead>
-            <tr style={{ background: 'var(--color-surface-2)' }}>
-              {['Proveedor', 'Mes', 'Fuente', labelSecundarioPara('stationary_combustion'), 'Cantidad', 'Unidad', 'Notas', ''].map((h, i) => (
-                <th
-                  key={i}
-                  style={{
-                    padding: '6px 8px',
-                    fontSize: 'var(--text-xs)',
-                    fontWeight: 600,
-                    color: 'var(--color-ink-2)',
-                    textAlign: 'left',
-                    borderBottom: '1px solid var(--color-border)',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, idx) => {
-              const secs = OPCIONES_SECUNDARIAS[row.source_type] ?? [];
-              const units = UNIDADES_POR_FUENTE[row.source_type];
-              const secLabel = labelSecundarioPara(row.source_type);
-              return (
-                <tr
-                  key={row._id}
-                  className="builder-row"
-                  style={{ borderBottom: '1px solid var(--color-border)' }}
-                >
-                  {/* Proveedor */}
-                  <td style={tdStyle}>
-                    <select
-                      className="builder-select"
-                      value={row.supplier_id}
-                      onChange={(e) => updateRow(idx, { supplier_id: e.target.value })}
-                      aria-label="Proveedor"
-                      style={{ minWidth: '140px' }}
-                    >
-                      {suppliers.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-
-                  {/* Mes */}
-                  <td style={tdStyle}>
-                    <MonthYearSelect
-                      value={row.year_month}
-                      onChange={(v) => updateRow(idx, { year_month: v })}
-                      style={{ minWidth: '200px' }}
-                    />
-                  </td>
-
-                  {/* Fuente */}
-                  <td style={tdStyle}>
-                    <select
-                      className="builder-select"
-                      value={row.source_type}
-                      onChange={(e) => changeSourceType(idx, e.target.value as EmissionSourceType)}
-                      aria-label="Fuente"
-                      style={{ minWidth: '150px' }}
-                    >
-                      {SOURCE_TYPES.map((st) => (
-                        <option key={st} value={st}>
-                          {ETIQUETAS_FUENTE[st]}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-
-                  {/* Secundario */}
-                  <td style={tdStyle}>
-                    {secs.length > 0 ? (
-                      <select
-                        className="builder-select"
-                        value={row.secondary}
-                        onChange={(e) => updateRow(idx, { secondary: e.target.value })}
-                        aria-label={secLabel}
-                        style={{ minWidth: '130px' }}
-                      >
-                        {secs.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', padding: '5px 7px', display: 'block' }}>
-                        —
-                      </span>
-                    )}
-                  </td>
-
-                  {/* Cantidad */}
-                  <td style={tdStyle}>
-                    <input
-                      type="number"
-                      step="any"
-                      min="0"
-                      className="builder-input"
-                      value={row.raw_quantity}
-                      onChange={(e) => updateRow(idx, { raw_quantity: e.target.value })}
-                      placeholder="0.00"
-                      aria-label="Cantidad"
-                      style={{ minWidth: '80px', fontFamily: 'var(--font-mono)' }}
-                    />
-                  </td>
-
-                  {/* Unidad */}
-                  <td style={tdStyle}>
-                    <select
-                      className="builder-select"
-                      value={row.raw_unit}
-                      onChange={(e) => updateRow(idx, { raw_unit: e.target.value })}
-                      aria-label="Unidad"
-                      style={{ minWidth: '110px' }}
-                    >
-                      {units.map(({ unit }) => (
-                        <option key={unit} value={unit}>
-                          {etiquetaUnidad(unit as Unit)}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-
-                  {/* Notas */}
-                  <td style={tdStyle}>
-                    <input
-                      type="text"
-                      className="builder-input"
-                      value={row.notes}
-                      onChange={(e) => updateRow(idx, { notes: e.target.value })}
-                      placeholder="Opcional"
-                      aria-label="Notas"
-                      style={{ minWidth: '120px' }}
-                    />
-                  </td>
-
-                  {/* Eliminar */}
-                  <td style={{ ...tdStyle, width: '28px' }}>
-                    <button
-                      type="button"
-                      className="builder-del"
-                      onClick={() => requestDelete(idx)}
-                      aria-label="Eliminar fila"
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: 'var(--color-signal-hi)',
-                        fontSize: '16px',
-                        lineHeight: 1,
-                        padding: '2px 4px',
-                        opacity: rows.length === 1 ? 0.2 : 0,
-                        pointerEvents: rows.length === 1 ? 'none' : 'auto',
-                        transition: 'opacity 120ms',
-                      }}
-                    >
-                      ×
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Add row + import */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
-        <button
-          type="button"
-          onClick={addRow}
-          style={{
-            padding: 'var(--space-2) var(--space-4)',
-            background: 'none',
-            border: '1px dashed var(--color-border-strong)',
-            borderRadius: 'var(--radius-md)',
-            fontSize: 'var(--text-sm)',
-            color: 'var(--color-ink-2)',
-            cursor: 'pointer',
-            transition: 'border-color 120ms, color 120ms',
-          }}
-        >
-          + Agregar fila
-        </button>
-
-        <form action={formAction} noValidate style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
+  // Shared form element for card mode
+  if (isCardMode) {
+    const row = rows[0]!;
+    return (
+      <>
+        {/* Hidden form that the card submit button targets */}
+        <form id="bulk-form-card" action={formAction} noValidate style={{ display: 'none' }}>
           <input type="hidden" name="json_entries" value={jsonEntries} />
-          <button
-            type="submit"
-            disabled={isPending || validCount === 0}
-            style={{
-              padding: 'var(--space-2) var(--space-4)',
-              background: isPending || validCount === 0 ? 'var(--color-ink-3)' : 'var(--color-accent)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 'var(--radius-md)',
-              fontSize: 'var(--text-sm)',
-              fontWeight: 600,
-              cursor: isPending || validCount === 0 ? 'not-allowed' : 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 'var(--space-2)',
-              transition: 'opacity 150ms',
-            }}
-          >
-            {isPending ? (
-              <>
-                <span style={{ width: '12px', height: '12px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'ringSpin 0.7s linear infinite' }} />
-                Importando…
-              </>
-            ) : (
-              `Importar ${validCount} fila${validCount !== 1 ? 's' : ''}`
-            )}
-          </button>
         </form>
-
-        {rows.length > 1 && (
-          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)' }}>
-            {rows.length} filas · {validCount} completas
-          </span>
-        )}
-      </div>
-
-      {pendingDelete !== null && rows[pendingDelete] !== undefined && (
-        <DeleteModal
-          row={rows[pendingDelete]!}
-          supplierName={suppliers.find((s) => s.id === rows[pendingDelete!]?.supplier_id)?.name ?? ''}
-          onConfirm={() => confirmDelete(pendingDelete)}
-          onCancel={cancelDelete}
+        <CardMode
+          row={row}
+          suppliers={suppliers}
+          jsonEntries={jsonEntries}
+          isPending={isPending}
+          validCount={validCount}
+          onAddRow={addRow}
+          onUpdateRow={updateSingleRow}
+          onChangeSourceType={changeSingleSourceType}
         />
-      )}
-    </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <form id="bulk-form-table" action={formAction} noValidate style={{ display: 'none' }}>
+        <input type="hidden" name="json_entries" value={jsonEntries} />
+      </form>
+      <TableMode
+        rows={rows}
+        suppliers={suppliers}
+        jsonEntries={jsonEntries}
+        isPending={isPending}
+        validCount={validCount}
+        pendingDelete={pendingDelete}
+        onAddRow={addRow}
+        onUpdateRow={updateRow}
+        onChangeSourceType={changeSourceType}
+        onRequestDelete={requestDelete}
+        onConfirmDelete={confirmDelete}
+        onCancelDelete={() => setPendingDelete(null)}
+      />
+    </>
   );
 }
-
-const tdStyle: React.CSSProperties = {
-  padding: '4px 6px',
-  verticalAlign: 'middle',
-};

@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useRef, useActionState, useEffect } from 'react';
-import { Upload, FileText, X, Table2, Download, Plus } from 'lucide-react';
-import { ActivityForm } from './ActivityForm';
+import { Upload, FileText, X, Table2, Download } from 'lucide-react';
 import { importActivityCsv, importActivityXlsx } from '@/actions/activity';
 import type { CsvImportState } from '@/actions/activity';
 import { parseCsvText, getCsvTemplate } from '@/lib/csv';
@@ -20,7 +19,7 @@ interface BulkImportPanelProps {
   defaultSupplierId?: string | undefined;
 }
 
-type Tab = 'individual' | 'constructor' | 'archivo';
+type Tab = 'manual' | 'archivo';
 
 // ── Template downloads ────────────────────────────────────────────────────────
 
@@ -38,7 +37,13 @@ function downloadCsvTemplate() {
 
 const CABECERAS_PREVIEW = ['Fila', 'Proveedor', 'Mes', 'Fuente', 'Cant.', 'Unidad', 'Estado'];
 
-function CsvPreview({ rows, supplierMap }: { rows: ParsedCsvRow[]; supplierMap: Map<string, string> }) {
+function CsvPreview({
+  rows,
+  supplierMap,
+}: {
+  rows: ParsedCsvRow[];
+  supplierMap: Map<string, string>;
+}) {
   const validas = rows.filter((r) => r.errors.length === 0).length;
   const conError = rows.filter((r) => r.errors.length > 0).length;
   return (
@@ -53,12 +58,29 @@ function CsvPreview({ rows, supplierMap }: { rows: ParsedCsvRow[]; supplierMap: 
           </>
         )}
       </p>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)' }}>
-          <thead>
+      <div style={{ overflowX: 'auto', maxHeight: '320px', overflowY: 'auto' }}>
+        <table
+          style={{
+            width: '100%',
+            borderCollapse: 'collapse',
+            fontSize: 'var(--text-xs)',
+            fontFamily: 'var(--font-mono)',
+          }}
+        >
+          <thead style={{ position: 'sticky', top: 0, background: 'var(--color-surface-1)' }}>
             <tr>
               {CABECERAS_PREVIEW.map((h) => (
-                <th key={h} style={{ textAlign: 'left', padding: '4px 8px', color: 'var(--color-ink-3)', fontWeight: 600, borderBottom: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}>
+                <th
+                  key={h}
+                  style={{
+                    textAlign: 'left',
+                    padding: '4px 8px',
+                    color: 'var(--color-ink-3)',
+                    fontWeight: 600,
+                    borderBottom: '1px solid var(--color-border)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
                   {h}
                 </th>
               ))}
@@ -69,7 +91,10 @@ function CsvPreview({ rows, supplierMap }: { rows: ParsedCsvRow[]; supplierMap: 
               <tr key={row.rowIndex}>
                 <td style={tdPrev}>{row.rowIndex}</td>
                 <td style={tdPrev}>
-                  {row.data ? (supplierMap.get(row.data.supplier_id) ?? row.data.supplier_id.slice(0, 8) + '…') : '—'}
+                  {row.data
+                    ? (supplierMap.get(row.data.supplier_id) ??
+                      row.data.supplier_id.slice(0, 8) + '…')
+                    : '—'}
                 </td>
                 <td style={tdPrev}>{row.data?.year_month ?? '—'}</td>
                 <td style={tdPrev}>{row.data?.source_type ?? '?'}</td>
@@ -79,7 +104,10 @@ function CsvPreview({ rows, supplierMap }: { rows: ParsedCsvRow[]; supplierMap: 
                   {row.errors.length === 0 ? (
                     <span style={{ color: 'var(--color-accent)' }}>✓</span>
                   ) : (
-                    <span style={{ color: 'var(--color-signal-hi)' }} title={row.errors.join('; ')}>
+                    <span
+                      style={{ color: 'var(--color-signal-hi)' }}
+                      title={row.errors.join('; ')}
+                    >
                       ✗ {row.errors[0]}
                     </span>
                   )}
@@ -103,15 +131,17 @@ const tdPrev: React.CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
-// ── File upload tab ───────────────────────────────────────────────────────────
+// ── Archivo tab ───────────────────────────────────────────────────────────────
 
 function ArchivoTab({ suppliers }: { suppliers: Supplier[] }) {
   const supplierMap = new Map(suppliers.map((s) => [s.id, s.name]));
   const [csvState, csvAction, csvPending] = useActionState<CsvImportState | null, FormData>(
-    importActivityCsv, null,
+    importActivityCsv,
+    null,
   );
   const [xlsxState, xlsxAction, xlsxPending] = useActionState<CsvImportState | null, FormData>(
-    importActivityXlsx, null,
+    importActivityXlsx,
+    null,
   );
   const [csvText, setCsvText] = useState('');
   const [preview, setPreview] = useState<ParsedCsvRow[]>([]);
@@ -121,16 +151,17 @@ function ArchivoTab({ suppliers }: { suppliers: Supplier[] }) {
   const [xlsxDownloading, setXlsxDownloading] = useState(false);
   const { toast } = useToast();
 
-  // Two separate file inputs: one for CSV, one for XLSX (inside the XLSX form)
   const csvPickerRef = useRef<HTMLInputElement>(null);
   const xlsxInputRef = useRef<HTMLInputElement>(null);
-  const xlsxFormRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (!csvState?.submittedAt) return;
     if (csvState.success) {
       const n = csvState.imported ?? 0;
-      toast(`${n} registro${n !== 1 ? 's' : ''} importado${n !== 1 ? 's' : ''}${(csvState.skipped ?? 0) > 0 ? ` · ${csvState.skipped} omitidos` : ''}`, 'success');
+      toast(
+        `${n} registro${n !== 1 ? 's' : ''} importado${n !== 1 ? 's' : ''}${(csvState.skipped ?? 0) > 0 ? ` · ${csvState.skipped} omitidos` : ''}`,
+        'success',
+      );
     } else if (csvState.error) {
       toast(csvState.error, 'error');
     }
@@ -140,7 +171,10 @@ function ArchivoTab({ suppliers }: { suppliers: Supplier[] }) {
     if (!xlsxState?.submittedAt) return;
     if (xlsxState.success) {
       const n = xlsxState.imported ?? 0;
-      toast(`${n} registro${n !== 1 ? 's' : ''} importado${n !== 1 ? 's' : ''}${(xlsxState.skipped ?? 0) > 0 ? ` · ${xlsxState.skipped} omitidos` : ''}`, 'success');
+      toast(
+        `${n} registro${n !== 1 ? 's' : ''} importado${n !== 1 ? 's' : ''}${(xlsxState.skipped ?? 0) > 0 ? ` · ${xlsxState.skipped} omitidos` : ''}`,
+        'success',
+      );
       setFileName(null);
       setFileType(null);
       if (xlsxInputRef.current) xlsxInputRef.current.value = '';
@@ -155,7 +189,6 @@ function ArchivoTab({ suppliers }: { suppliers: Supplier[] }) {
       setFileType('xlsx');
       setCsvText('');
       setPreview([]);
-      // Transfer file to XLSX form input using DataTransfer
       const dt = new DataTransfer();
       dt.items.add(file);
       if (xlsxInputRef.current) xlsxInputRef.current.files = dt.files;
@@ -207,7 +240,9 @@ function ArchivoTab({ suppliers }: { suppliers: Supplier[] }) {
     try {
       const { generateXlsxTemplate } = await import('@/lib/xlsx');
       const uint8 = await generateXlsxTemplate(suppliers);
-      const blob = new Blob([uint8 as unknown as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const blob = new Blob([uint8 as unknown as BlobPart], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -224,7 +259,7 @@ function ArchivoTab({ suppliers }: { suppliers: Supplier[] }) {
   const csvValidCount = preview.filter((r) => r.errors.length === 0).length;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
       <style>{`
         @keyframes ringSpin { to { transform: rotate(360deg); } }
         .drop-zone:hover { border-color: var(--color-accent) !important; background: var(--color-accent-soft) !important; }
@@ -232,157 +267,292 @@ function ArchivoTab({ suppliers }: { suppliers: Supplier[] }) {
         .tmpl-btn:hover { border-color: var(--color-accent) !important; color: var(--color-accent) !important; }
       `}</style>
 
-      {/* Template downloads */}
-      <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', alignItems: 'center' }}>
-        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', fontWeight: 500 }}>Plantillas:</span>
-        <button type="button" className="tmpl-btn" onClick={downloadCsvTemplate} style={btnTmpl}>
-          <Download size={11} /> CSV
-        </button>
-        <button
-          type="button"
-          className="tmpl-btn"
-          onClick={handleXlsxDownload}
-          disabled={xlsxDownloading}
-          style={{ ...btnTmpl, ...(xlsxDownloading ? { opacity: 0.6 } : {}) }}
-        >
-          {xlsxDownloading ? (
-            <span style={{ width: '10px', height: '10px', border: '1.5px solid var(--color-ink-3)', borderTopColor: 'var(--color-accent)', borderRadius: '50%', display: 'inline-block', animation: 'ringSpin 0.7s linear infinite' }} />
-          ) : (
-            <Download size={11} />
-          )}
-          Excel
-        </button>
-      </div>
-
-      {/* Invisible pickers */}
-      <input ref={csvPickerRef} type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={handlePickerChange} style={{ display: 'none' }} />
-
-      {/* Drop zone */}
-      {fileName ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: 'var(--space-3) var(--space-4)', background: 'var(--color-accent-soft)', border: '1px solid var(--color-accent)', borderRadius: 'var(--radius-md)' }}>
-          <FileText size={16} style={{ color: 'var(--color-accent)', flexShrink: 0 }} />
-          <span style={{ flex: 1, fontSize: 'var(--text-sm)', color: 'var(--color-accent)', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {fileName}
-            <span style={{ marginLeft: '8px', fontSize: 'var(--text-xs)', opacity: 0.7 }}>({fileType === 'xlsx' ? 'Excel' : 'CSV'})</span>
-          </span>
-          <button type="button" onClick={clearFile} aria-label="Quitar archivo" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: 'var(--color-ink-3)', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-            <X size={14} />
-          </button>
-        </div>
-      ) : (
+      {/* Plantillas + drop zone */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
         <div
-          className={`drop-zone${dragOver ? ' drag-over' : ''}`}
-          onClick={() => csvPickerRef.current?.click()}
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={handleDrop}
-          style={{ border: '1.5px dashed var(--color-border-strong)', borderRadius: 'var(--radius-md)', padding: 'var(--space-6)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer', transition: 'border-color 150ms, background 150ms', background: 'var(--color-surface-0)' }}
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 'var(--space-2)',
+          }}
         >
-          <Upload size={20} style={{ color: 'var(--color-ink-3)' }} />
-          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-2)', textAlign: 'center' }}>
-            Arrastra o <span style={{ color: 'var(--color-accent)', fontWeight: 500 }}>selecciona un archivo</span>
+          <span
+            style={{
+              fontSize: 'var(--text-sm)',
+              color: 'var(--color-ink-2)',
+              fontWeight: 500,
+            }}
+          >
+            Subir archivo
           </span>
-          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', fontFamily: 'var(--font-mono)' }}>.csv · .xlsx — hasta 5 MB</span>
+          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)' }}>
+              Plantillas:
+            </span>
+            <button type="button" className="tmpl-btn" onClick={downloadCsvTemplate} style={btnTmpl}>
+              <Download size={11} /> CSV
+            </button>
+            <button
+              type="button"
+              className="tmpl-btn"
+              onClick={handleXlsxDownload}
+              disabled={xlsxDownloading}
+              style={{ ...btnTmpl, ...(xlsxDownloading ? { opacity: 0.6 } : {}) }}
+            >
+              {xlsxDownloading ? (
+                <span
+                  style={{
+                    width: '10px',
+                    height: '10px',
+                    border: '1.5px solid var(--color-ink-3)',
+                    borderTopColor: 'var(--color-accent)',
+                    borderRadius: '50%',
+                    display: 'inline-block',
+                    animation: 'ringSpin 0.7s linear infinite',
+                  }}
+                />
+              ) : (
+                <Download size={11} />
+              )}
+              Excel
+            </button>
+          </div>
         </div>
-      )}
+
+        {/* Invisible pickers */}
+        <input
+          ref={csvPickerRef}
+          type="file"
+          accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          onChange={handlePickerChange}
+          style={{ display: 'none' }}
+        />
+
+        {/* Drop zone or file chip */}
+        {fileName ? (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-3)',
+              padding: 'var(--space-4)',
+              background: 'var(--color-accent-soft)',
+              border: '1px solid var(--color-accent)',
+              borderRadius: 'var(--radius-md)',
+            }}
+          >
+            <FileText size={18} style={{ color: 'var(--color-accent)', flexShrink: 0 }} />
+            <span
+              style={{
+                flex: 1,
+                fontSize: 'var(--text-sm)',
+                color: 'var(--color-accent)',
+                fontFamily: 'var(--font-mono)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {fileName}
+              <span style={{ marginLeft: '8px', fontSize: 'var(--text-xs)', opacity: 0.7 }}>
+                ({fileType === 'xlsx' ? 'Excel' : 'CSV'})
+              </span>
+            </span>
+            <button
+              type="button"
+              onClick={clearFile}
+              aria-label="Quitar archivo"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '2px',
+                color: 'var(--color-ink-3)',
+                display: 'flex',
+                alignItems: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <X size={14} />
+            </button>
+          </div>
+        ) : (
+          <div
+            className={`drop-zone${dragOver ? ' drag-over' : ''}`}
+            onClick={() => csvPickerRef.current?.click()}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+            style={{
+              border: '1.5px dashed var(--color-border-strong)',
+              borderRadius: 'var(--radius-md)',
+              padding: 'var(--space-10)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 'var(--space-3)',
+              cursor: 'pointer',
+              transition: 'border-color 150ms, background 150ms',
+              background: 'var(--color-surface-0)',
+            }}
+          >
+            <Upload size={28} style={{ color: 'var(--color-ink-3)' }} />
+            <div style={{ textAlign: 'center' }}>
+              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-2)' }}>
+                Arrastra tu archivo o{' '}
+                <span style={{ color: 'var(--color-accent)', fontWeight: 500 }}>
+                  selecciona uno
+                </span>
+              </span>
+              <p
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--color-ink-3)',
+                  fontFamily: 'var(--font-mono)',
+                  margin: 'var(--space-1) 0 0',
+                }}
+              >
+                .csv · .xlsx — hasta 5 MB
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* CSV preview */}
       {preview.length > 0 && <CsvPreview rows={preview} supplierMap={supplierMap} />}
-
-      {/* Paste CSV */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-        <label htmlFor="bulk-csv-area" style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-2)', fontWeight: 500 }}>
-          O pega el CSV
-        </label>
-        <textarea
-          id="bulk-csv-area"
-          rows={5}
-          value={csvText}
-          onChange={(e) => handleTextChange(e.target.value)}
-          placeholder={getCsvTemplate()}
-          style={{ padding: 'var(--space-2) var(--space-3)', background: 'var(--color-surface-0)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', color: 'var(--color-ink-1)', resize: 'vertical' }}
-        />
-      </div>
 
       {/* CSV submit */}
       {(csvText.trim() || fileType === 'csv') && csvValidCount > 0 && (
         <form action={csvAction} noValidate>
           <input type="hidden" name="csv_text" value={csvText} />
-          <SubmitBtn disabled={csvPending || csvValidCount === 0} pending={csvPending} label={`Importar ${csvValidCount} fila${csvValidCount !== 1 ? 's' : ''} desde CSV`} />
+          <SubmitBtn
+            disabled={csvPending || csvValidCount === 0}
+            pending={csvPending}
+            label={`Importar ${csvValidCount} fila${csvValidCount !== 1 ? 's' : ''} desde CSV`}
+          />
         </form>
       )}
 
-      {/* XLSX form — file input lives here, populated via DataTransfer on file selection */}
-      <form ref={xlsxFormRef} action={xlsxAction} noValidate style={{ display: fileType === 'xlsx' ? 'block' : 'none' }}>
+      {/* XLSX form */}
+      <form
+        action={xlsxAction}
+        noValidate
+        style={{ display: fileType === 'xlsx' ? 'block' : 'none' }}
+      >
         <input ref={xlsxInputRef} type="file" name="xlsx_file" accept=".xlsx" style={{ display: 'none' }} />
         <SubmitBtn disabled={xlsxPending} pending={xlsxPending} label="Importar desde Excel" />
       </form>
+
+      {/* Paste CSV (collapsible-ish — always visible but labeled clearly) */}
+      <details>
+        <summary
+          style={{
+            fontSize: 'var(--text-sm)',
+            color: 'var(--color-ink-3)',
+            cursor: 'pointer',
+            userSelect: 'none',
+            listStyle: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-2)',
+          }}
+        >
+          <span style={{ fontSize: '10px' }}>▶</span>
+          Pegar CSV manualmente
+        </summary>
+        <div style={{ marginTop: 'var(--space-3)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+          <textarea
+            id="bulk-csv-area"
+            rows={6}
+            value={csvText}
+            onChange={(e) => handleTextChange(e.target.value)}
+            placeholder={getCsvTemplate()}
+            style={{
+              padding: 'var(--space-2) var(--space-3)',
+              background: 'var(--color-surface-0)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-md)',
+              fontSize: 'var(--text-xs)',
+              fontFamily: 'var(--font-mono)',
+              color: 'var(--color-ink-1)',
+              resize: 'vertical',
+            }}
+          />
+        </div>
+      </details>
     </div>
   );
 }
 
 // ── Main BulkImportPanel ──────────────────────────────────────────────────────
 
-const TABS: { val: Tab; Icon: React.ElementType; label: string; desc: string }[] = [
-  { val: 'individual', Icon: Plus, label: 'Un registro', desc: 'Consumo único' },
-  { val: 'constructor', Icon: Table2, label: 'Constructor', desc: 'Tabla editable' },
-  { val: 'archivo', Icon: Upload, label: 'Subir archivo', desc: 'CSV · Excel' },
+const TABS: { val: Tab; Icon: React.ElementType; label: string }[] = [
+  { val: 'manual', Icon: Table2, label: 'Manual' },
+  { val: 'archivo', Icon: Upload, label: 'Importar archivo' },
 ];
 
 export function BulkImportPanel({ suppliers, defaultSupplierId }: BulkImportPanelProps) {
-  const [tab, setTab] = useState<Tab>('individual');
+  const [tab, setTab] = useState<Tab>('manual');
 
   return (
-    <div style={{ display: 'flex', minHeight: '420px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
       <style>{`
         @keyframes ringSpin { to { transform: rotate(360deg); } }
-        .act-tab { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; width: 100%; text-align: left; background: transparent; border: none; border-radius: var(--radius-md); cursor: pointer; font-family: var(--font-sans); transition: background 120ms; }
-        .act-tab:hover { background: var(--color-surface-2); }
-        .act-tab.active { background: var(--color-accent-soft); }
-        .act-tab .at-icon { color: var(--color-ink-3); flex-shrink: 0; margin-top: 2px; transition: color 120ms; }
-        .act-tab.active .at-icon { color: var(--color-accent); }
-        .at-label { display: block; font-size: var(--text-sm); color: var(--color-ink-2); line-height: 1.3; transition: color 120ms; }
-        .act-tab.active .at-label { color: var(--color-accent); font-weight: 600; }
-        .at-desc { display: block; font-size: 10px; color: var(--color-ink-3); font-family: var(--font-mono); margin-top: 1px; }
+        .act-tab-h {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 16px;
+          background: transparent;
+          border: none;
+          border-bottom: 2px solid transparent;
+          cursor: pointer;
+          font-family: var(--font-sans);
+          font-size: var(--text-sm);
+          color: var(--color-ink-3);
+          transition: color 120ms, border-color 120ms;
+          white-space: nowrap;
+        }
+        .act-tab-h:hover { color: var(--color-ink-1); }
+        .act-tab-h.active { color: var(--color-accent); border-bottom-color: var(--color-accent); font-weight: 600; }
         .tmpl-btn:hover { border-color: var(--color-accent) !important; color: var(--color-accent) !important; }
         .drop-zone:hover { border-color: var(--color-accent) !important; background: var(--color-accent-soft) !important; }
         .drop-zone.drag-over { border-color: var(--color-accent) !important; background: var(--color-accent-soft) !important; }
+        details > summary::-webkit-details-marker { display: none; }
+        details[open] > summary > span:first-child { transform: rotate(90deg); display: inline-block; }
       `}</style>
 
-      {/* Vertical tab sidebar */}
+      {/* Horizontal tabs */}
       <div
         style={{
-          width: '160px',
-          flexShrink: 0,
-          borderRight: '1px solid var(--color-border)',
-          padding: 'var(--space-3)',
           display: 'flex',
-          flexDirection: 'column',
+          borderBottom: '1px solid var(--color-border)',
+          padding: '0 var(--space-4)',
           gap: 'var(--space-1)',
         }}
       >
-        {TABS.map(({ val, Icon, label, desc }) => (
+        {TABS.map(({ val, Icon, label }) => (
           <button
             key={val}
             type="button"
-            className={`act-tab${tab === val ? ' active' : ''}`}
+            className={`act-tab-h${tab === val ? ' active' : ''}`}
             onClick={() => setTab(val)}
           >
-            <span className="at-icon">
-              <Icon size={15} />
-            </span>
-            <span>
-              <span className="at-label">{label}</span>
-              <span className="at-desc">{desc}</span>
-            </span>
+            <Icon size={14} />
+            {label}
           </button>
         ))}
       </div>
 
-      {/* Content area */}
-      <div style={{ flex: 1, padding: 'var(--space-6)', overflowX: 'auto' }}>
-        {tab === 'individual' && <ActivityForm suppliers={suppliers} />}
-        {tab === 'constructor' && (
+      {/* Content */}
+      <div style={{ padding: 'var(--space-6)' }}>
+        {tab === 'manual' && (
           <BulkEntryBuilder suppliers={suppliers} defaultSupplierId={defaultSupplierId} />
         )}
         {tab === 'archivo' && <ArchivoTab suppliers={suppliers} />}
@@ -408,19 +578,51 @@ const btnTmpl: React.CSSProperties = {
   transition: 'border-color 120ms, color 120ms',
 };
 
-function SubmitBtn({ disabled, pending, label }: { disabled: boolean; pending: boolean; label: string }) {
+function SubmitBtn({
+  disabled,
+  pending,
+  label,
+}: {
+  disabled: boolean;
+  pending: boolean;
+  label: string;
+}) {
   return (
     <button
       type="submit"
       disabled={disabled}
-      style={{ padding: 'var(--space-3) var(--space-5)', background: disabled ? 'var(--color-ink-3)' : 'var(--color-accent)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', fontWeight: 600, cursor: disabled ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' }}
+      style={{
+        padding: 'var(--space-3) var(--space-5)',
+        background: disabled ? 'var(--color-ink-3)' : 'var(--color-accent)',
+        color: '#fff',
+        border: 'none',
+        borderRadius: 'var(--radius-md)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 600,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 'var(--space-2)',
+      }}
     >
       {pending ? (
         <>
-          <span style={{ width: '12px', height: '12px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'ringSpin 0.7s linear infinite' }} />
+          <span
+            style={{
+              width: '12px',
+              height: '12px',
+              border: '2px solid rgba(255,255,255,0.3)',
+              borderTopColor: 'white',
+              borderRadius: '50%',
+              display: 'inline-block',
+              animation: 'ringSpin 0.7s linear infinite',
+            }}
+          />
           Importando…
         </>
-      ) : label}
+      ) : (
+        label
+      )}
     </button>
   );
 }

@@ -235,7 +235,7 @@ export default async function ActividadPage() {
         <section>
           <CabeceraSección
             titulo="Registro de consumo"
-            subtitulo="Un registro individual, constructor visual por lote, o importa desde CSV / Excel."
+            subtitulo="Registra consumos manualmente o importa desde CSV / Excel."
           />
           <div
             style={{
