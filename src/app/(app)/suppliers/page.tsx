@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { createServerClient } from '@/services/supabase/server';
 import { TopBar } from '@/components/shell/TopBar';
 import { SupplierTable } from '@/components/suppliers/SupplierTable';
@@ -12,11 +13,12 @@ export default async function ProveedoresPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
 
   const { data: rawMemberships } = await supabase
     .from('memberships')
     .select('organization_id, role')
-    .eq('user_id', user?.id ?? '');
+    .eq('user_id', user.id);
   const memberships = (rawMemberships ?? []) as Pick<MembershipRow, 'organization_id' | 'role'>[];
 
   const orgIds = [
@@ -24,11 +26,22 @@ export default async function ProveedoresPage() {
   ];
   const primaryOrgId = orgIds[0] ?? '';
 
+  const orgsData: { id: string; name: string }[] = [];
+  if (orgIds.length > 1) {
+    const { data } = await supabase
+      .from('organizations')
+      .select('id, name')
+      .in('id', orgIds);
+    if (data) orgsData.push(...(data as { id: string; name: string }[]));
+  }
+
   const suppliersData: SupplierRow[] = [];
   if (orgIds.length) {
     const { data } = await supabase
       .from('suppliers')
-      .select('id, name, category, contact_email, ruc, organization_id, created_at, updated_at, archived_at')
+      .select(
+        'id, name, category, contact_email, ruc, organization_id, created_at, updated_at, archived_at',
+      )
       .in('organization_id', orgIds)
       .is('archived_at', null)
       .order('name', { ascending: true });
@@ -70,8 +83,7 @@ export default async function ProveedoresPage() {
             Registro de proveedores
           </h2>
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-2)', margin: 0 }}>
-            {nProveedores}{' '}
-            {nProveedores !== 1 ? 'proveedores activos' : 'proveedor activo'} en tu
+            {nProveedores} {nProveedores !== 1 ? 'proveedores activos' : 'proveedor activo'} en tu
             {orgIds.length > 1 ? 's organizaciones' : ' organización'}.
           </p>
         </section>
@@ -115,13 +127,24 @@ export default async function ProveedoresPage() {
               >
                 Sin organización asociada
               </p>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-3)', margin: 0, maxWidth: '40ch' }}>
+              <p
+                style={{
+                  fontSize: 'var(--text-sm)',
+                  color: 'var(--color-ink-3)',
+                  margin: 0,
+                  maxWidth: '40ch',
+                }}
+              >
                 Tu cuenta no está asociada a ninguna organización. Contacta al administrador.
               </p>
             </div>
           </div>
         ) : (
-          <SupplierTable suppliers={suppliersData} organizationId={primaryOrgId} />
+          <SupplierTable
+            suppliers={suppliersData}
+            organizationId={primaryOrgId}
+            {...(orgsData.length > 1 ? { organizations: orgsData } : {})}
+          />
         )}
       </main>
     </>

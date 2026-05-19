@@ -3,10 +3,17 @@
 import { createHash } from 'crypto';
 import { z } from 'zod';
 import { createServerClient } from '@/services/supabase/server';
-import type { MembershipRow, EmissionResultRow, ActivityEntryRow, ReportingPeriodRow, SupplierRow } from '@/types/database';
+import type {
+  MembershipRow,
+  EmissionResultRow,
+  ActivityEntryRow,
+  ReportingPeriodRow,
+  SupplierRow,
+} from '@/types/database';
 
 const exportSchema = z.object({
   period_ids: z.string().min(1, 'Selecciona al menos un periodo'),
+  year: z.string().regex(/^\d{4}$/).optional(),
 });
 
 export interface ExportCsvState {
@@ -27,7 +34,10 @@ export async function exportCsv(
   } = await supabase.auth.getUser();
   if (!user) return { error: 'No autenticado' };
 
-  const parsed = exportSchema.safeParse({ period_ids: formData.get('period_ids') });
+  const parsed = exportSchema.safeParse({
+    period_ids: formData.get('period_ids'),
+    year: formData.get('year') ?? undefined,
+  });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? 'Error de validación' };
   }
@@ -35,13 +45,20 @@ export async function exportCsv(
   const periodIds = parsed.data.period_ids.split(',').filter(Boolean);
   if (periodIds.length === 0) return { error: 'Selecciona al menos un periodo' };
 
+  const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (periodIds.some((id) => !uuidRe.test(id))) {
+    return { error: 'ID de periodo inválido' };
+  }
+
   // Verify membership
   const { data: rawMemberships } = await supabase
     .from('memberships')
     .select('organization_id')
     .eq('user_id', user.id);
   const memberships = (rawMemberships ?? []) as Pick<MembershipRow, 'organization_id'>[];
-  const orgIds = memberships.map((m) => m.organization_id).filter(Boolean);
+  const orgIds = memberships
+    .map((m) => m.organization_id)
+    .filter((id): id is string => id !== null);
   if (orgIds.length === 0) return { error: 'Sin organizaciones asociadas' };
 
   // Fetch period + supplier info
@@ -62,9 +79,7 @@ export async function exportCsv(
 
   // Authorization: periods must belong to user's orgs
   const allowedSupplierIds = new Set(
-    suppliers
-      .filter((s) => orgIds.includes(s.organization_id))
-      .map((s) => s.id),
+    suppliers.filter((s) => orgIds.includes(s.organization_id)).map((s) => s.id),
   );
   const authorizedPeriodIds = periods
     .filter((p) => allowedSupplierIds.has(p.supplier_id))
@@ -156,8 +171,10 @@ export async function exportCsv(
 
   const csvContent = csvRows.join('\n');
   const sha256 = createHash('sha256').update(csvContent, 'utf8').digest('hex');
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  const filename = `earthlink-export-${timestamp}.csv`;
+  const annualYear = parsed.data.year;
+  const filename = annualYear
+    ? `earthlink-${annualYear}-reporte.csv`
+    : `earthlink-export-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.csv`;
 
   // Save one export record per org covered by the authorized periods
   const authorizedPeriods = periods.filter((p) => authorizedPeriodIds.includes(p.id));

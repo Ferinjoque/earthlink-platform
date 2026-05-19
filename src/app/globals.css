@@ -165,3 +165,37 @@ button {
   background: var(--color-border-strong);
   border: 0;
 }
+
+/* ── Print: hide app chrome, fix overflow ── */
+@media print {
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  [data-app-root] {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  [data-app-root] > aside {
+    display: none !important;
+  }
+
+  [data-app-main] {
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  header {
+    display: none !important;
+  }
+
+  [data-no-print] {
+    display: none !important;
+  }
+}

@@ -6,7 +6,7 @@
  *   - factorKey()   — each subclass knows the (activity_type, region) tuple for factor lookup
  *   - scope()       — returns the GHG Protocol scope for this source type
  */
-import type { Unit, GhgScope, ActivityKind, GridRegion } from '../calc/types';
+import type { Unit, GhgScope, ActivityKind, GridRegion, WaterSubtype, WasteSubtype } from '../calc/types';
 
 export type ValidationResult = { valid: true } | { valid: false; reason: string };
 
@@ -42,18 +42,22 @@ abstract class Scope1Source extends EmissionSource {
 export class StationaryCombustionSource extends Scope1Source {
   readonly activityKind: ActivityKind;
 
-  constructor(readonly fuel: 'natural_gas' | 'diesel' | 'lpg') {
+  constructor(
+    readonly fuel: 'natural_gas' | 'diesel' | 'lpg' | 'fuel_oil_no2' | 'propane',
+  ) {
     super();
     this.activityKind = { kind: 'stationary_combustion', fuel };
   }
 
   allowedUnits(): readonly Unit[] {
-    if (this.fuel === 'natural_gas') return ['m3_ng', 'ft3_ng', 'kWh', 'GJ', 'therms', 'MMBtu'];
-    return ['L', 'gallon', 'imp_gallon'];
+    if (this.fuel === 'natural_gas') return ['m3_ng', 'ft3_ng', 'kWh', 'GJ', 'therms', 'MMBtu', 'kBtu'];
+    if (this.fuel === 'fuel_oil_no2') return ['L', 'gallon', 'imp_gallon', 'kBtu'];
+    if (this.fuel === 'propane') return ['L', 'gallon', 'imp_gallon', 'kBtu'];
+    return ['L', 'gallon', 'imp_gallon', 'kBtu'];
   }
 
   requiredEvidence(): string {
-    return 'Utility invoice or fuel delivery receipt';
+    return 'Factura de suministro o comprobante de entrega de combustible';
   }
 
   factorKey(): string {
@@ -74,7 +78,7 @@ export class MobileCombustionSource extends Scope1Source {
   }
 
   requiredEvidence(): string {
-    return 'Fuel purchase receipts or fleet mileage log';
+    return 'Recibos de combustible o registro de kilometraje de flota';
   }
 
   factorKey(): string {
@@ -91,11 +95,11 @@ export class FugitiveEmissionSource extends Scope1Source {
   }
 
   allowedUnits(): readonly Unit[] {
-    return ['kg'];
+    return ['kg', 'lb'];
   }
 
   requiredEvidence(): string {
-    return 'Refrigerant purchase/top-up log or leak inspection report';
+    return 'Registro de recarga de refrigerante o informe de inspección de fugas';
   }
 
   factorKey(): string {
@@ -124,7 +128,7 @@ export class PurchasedElectricitySource extends Scope2Source {
   }
 
   requiredEvidence(): string {
-    return 'Electricity utility invoice';
+    return 'Factura de suministro eléctrico';
   }
 
   factorKey(): string {
@@ -140,10 +144,61 @@ export class PurchasedSteamSource extends Scope2Source {
   }
 
   requiredEvidence(): string {
-    return 'Steam/heat supplier invoice';
+    return 'Factura del proveedor de vapor / calor';
   }
 
   factorKey(): string {
     return 'purchased_steam.default';
+  }
+}
+
+// ── No-scope (water, waste) ───────────────────────────────────────────────────
+// Consumo rastreado para GRESB pero sin GHG directo en Alcances 1 y 2.
+
+abstract class NoScopeSource extends EmissionSource {
+  scope(): GhgScope {
+    return 'none';
+  }
+}
+
+export class WaterUseSource extends NoScopeSource {
+  readonly activityKind: ActivityKind;
+
+  constructor(readonly subtype: WaterSubtype) {
+    super();
+    this.activityKind = { kind: 'water_use', subtype };
+  }
+
+  allowedUnits(): readonly Unit[] {
+    return ['kgal_us', 'megaliter', 'm3', 'L', 'gallon'];
+  }
+
+  requiredEvidence(): string {
+    return 'Factura de servicio de agua o lectura de medidor';
+  }
+
+  factorKey(): string {
+    return `water_use.${this.subtype}`;
+  }
+}
+
+export class WasteSource extends NoScopeSource {
+  readonly activityKind: ActivityKind;
+
+  constructor(readonly subtype: WasteSubtype) {
+    super();
+    this.activityKind = { kind: 'waste', subtype };
+  }
+
+  allowedUnits(): readonly Unit[] {
+    return ['ton_us', 'tonne', 'kg', 'lb'];
+  }
+
+  requiredEvidence(): string {
+    return 'Manifiesto de residuos o certificado del gestor';
+  }
+
+  factorKey(): string {
+    return `waste.${this.subtype}`;
   }
 }

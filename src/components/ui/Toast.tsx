@@ -48,13 +48,7 @@ const VARIANT_STYLES: Record<ToastVariant, { background: string; color: string; 
     },
   };
 
-function ToastBubble({
-  item,
-  onDismiss,
-}: {
-  item: ToastItem;
-  onDismiss: (id: number) => void;
-}) {
+function ToastBubble({ item, onDismiss }: { item: ToastItem; onDismiss: (id: number) => void }) {
   const styles = VARIANT_STYLES[item.variant];
 
   return (
@@ -136,18 +130,19 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
+    const timers = timersRef.current;
     return () => {
-      for (const timer of timersRef.current.values()) clearTimeout(timer);
+      for (const timer of timers.values()) clearTimeout(timer);
     };
   }, []);
 
-  const container =
-    typeof document !== 'undefined' ? document.getElementById('toast-root') : null;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   return (
     <ToastContext.Provider value={{ toast }}>
       {children}
-      {container &&
+      {mounted &&
         createPortal(
           <div
             style={{
@@ -168,7 +163,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               </div>
             ))}
           </div>,
-          container,
+          document.getElementById('toast-root') ?? document.body,
         )}
     </ToastContext.Provider>
   );

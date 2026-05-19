@@ -1,9 +1,10 @@
-/** Stub — implemented in feat/phase-3-domain-repos */
 import { SupabaseRepository } from './SupabaseRepository';
 import { Supplier } from '../domain/Supplier';
 
 export class SupplierRepository extends SupabaseRepository<Supplier> {
   protected readonly tableName = 'suppliers';
+  protected override readonly selectColumns =
+    'id, organization_id, name, category, contact_email, created_at';
 
   protected toEntity(row: Record<string, unknown>): Supplier {
     return new Supplier({

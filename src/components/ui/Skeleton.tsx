@@ -7,7 +7,12 @@ interface SkeletonProps {
   style?: CSSProperties;
 }
 
-export function Skeleton({ width = '100%', height = '1rem', borderRadius = 'var(--radius-sm)', style }: SkeletonProps) {
+export function Skeleton({
+  width = '100%',
+  height = '1rem',
+  borderRadius = 'var(--radius-sm)',
+  style,
+}: SkeletonProps) {
   return (
     <span
       aria-hidden="true"

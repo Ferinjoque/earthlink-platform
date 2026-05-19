@@ -7,16 +7,39 @@
 
 export type GridRegion = 'SEIN_PERU' | 'LATAM_AVG' | 'US_AVERAGE' | 'EU_AVERAGE';
 
+// ── Water use subtypes ────────────────────────────────────────────────────────
+
+export type WaterSubtype =
+  | 'all_sources'    // Total de todas las fuentes
+  | 'potable_mixed'  // Potable mixto (interior/exterior)
+  | 'potable_indoor' // Potable solo interior
+  | 'reclaimed_mixed'// Recuperada mixta
+  | 'well_outdoor'   // Pozo — exterior
+  | 'other_mixed';   // Otra fuente mixta
+
+// ── Waste subtypes ────────────────────────────────────────────────────────────
+
+export type WasteSubtype =
+  | 'disposed_trash' // Basura dispuesta (vertedero)
+  | 'recycled'       // Materiales reciclados
+  | 'composted';     // Materiales compostados
+
 // ── Activity kinds (discriminated union, exhaustive) ─────────────────────────
 
 export type ActivityKind =
-  | { readonly kind: 'stationary_combustion'; readonly fuel: 'natural_gas' | 'diesel' | 'lpg' }
+  | {
+      readonly kind: 'stationary_combustion';
+      readonly fuel: 'natural_gas' | 'diesel' | 'lpg' | 'fuel_oil_no2' | 'propane';
+    }
   | { readonly kind: 'mobile_combustion'; readonly fuel: 'diesel' | 'gasoline' | 'lpg' }
   | { readonly kind: 'purchased_electricity'; readonly gridRegion: GridRegion }
   | { readonly kind: 'purchased_steam' }
-  | { readonly kind: 'fugitive'; readonly refrigerant: 'R410A' | 'R134A' | 'R32' };
+  | { readonly kind: 'fugitive'; readonly refrigerant: 'R410A' | 'R134A' | 'R32' }
+  | { readonly kind: 'water_use'; readonly subtype: WaterSubtype }
+  | { readonly kind: 'waste'; readonly subtype: WasteSubtype };
 
-export type GhgScope = 'scope1' | 'scope2';
+// Scope 'none' = consumption tracked but no direct GHG (water, waste recycled/composted)
+export type GhgScope = 'scope1' | 'scope2' | 'none';
 
 // ── Units (accepted input + canonical normalized units) ───────────────────────
 
@@ -31,17 +54,24 @@ export type Unit =
   | 'MMBtu'
   | 'MBtu'
   | 'BTU'
+  | 'kBtu'       // Mil BTU — gas natural / combustibles en EE.UU. (GRESB)
   // Natural gas volume
   | 'm3_ng'
   | 'ft3_ng'
-  // Liquid fuels — standard for diesel, LPG, gasoline
+  // Liquid fuels — standard for diesel, LPG, gasoline, fuel oil
   | 'L'
   | 'gallon'
   | 'imp_gallon'
   // Mass — standard for refrigerants
   | 'kg'
   | 'tonne'
-  | 'lb';
+  | 'lb'
+  // Water
+  | 'kgal_us'    // Mil galones US (estándar GRESB agua)
+  | 'megaliter'  // Megalitros (estándar GRESB internacional)
+  | 'm3'         // Metros cúbicos (agua)
+  // Waste
+  | 'ton_us';    // Tonelada corta US (estándar GRESB residuos)
 
 export const STANDARD_UNITS: Record<ActivityKind['kind'], Unit> = {
   stationary_combustion: 'L',
@@ -49,6 +79,8 @@ export const STANDARD_UNITS: Record<ActivityKind['kind'], Unit> = {
   purchased_electricity: 'kWh',
   purchased_steam: 'kWh',
   fugitive: 'kg',
+  water_use: 'kgal_us',
+  waste: 'ton_us',
 };
 
 // ── Input / output types ──────────────────────────────────────────────────────

@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef, useEffect, useActionState } from 'react';
+import { useRef, useEffect, useActionState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Leaf, Shield, BarChart3, ArrowRight, CheckCircle } from 'lucide-react';
 import { signIn } from './actions';
@@ -104,9 +105,7 @@ function ParticleField() {
 
         if (p.r > 2.8 || p.bright) {
           ctx.shadowBlur = p.bright ? 22 : 14;
-          ctx.shadowColor = p.bright
-            ? 'rgba(80, 230, 160, 0.85)'
-            : 'rgba(55, 210, 140, 0.65)';
+          ctx.shadowColor = p.bright ? 'rgba(80, 230, 160, 0.85)' : 'rgba(55, 210, 140, 0.65)';
         }
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r * pulse, 0, Math.PI * 2);
@@ -135,9 +134,22 @@ function ParticleField() {
     <canvas
       ref={ref}
       aria-hidden="true"
-      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+      }}
     />
   );
+}
+
+/* ─── Hidden next-redirect input (must be in Suspense for SSR) ──────── */
+function NextRedirectInput() {
+  const searchParams = useSearchParams();
+  const next = searchParams.get('next') ?? '';
+  return next ? <input type="hidden" name="next" value={next} /> : null;
 }
 
 /* ─── Page ─────────────────────────────────────────────────────────── */
@@ -202,9 +214,9 @@ export default function LoginPage() {
           style={{
             display: 'none',
             flexDirection: 'column',
-            justifyContent: 'flex-end',
+            justifyContent: 'center',
             padding: 'clamp(2.5rem, 5vw, 5rem)',
-            paddingTop: 'clamp(2rem, 4vw, 4rem)',
+            paddingTop: 'clamp(6rem, 10vw, 9rem)',
             background: 'oklch(10% 0.048 162)',
             position: 'relative',
             overflow: 'hidden',
@@ -215,15 +227,24 @@ export default function LoginPage() {
           <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
             <div
               style={{
-                position: 'absolute', top: '-30%', right: '-20%',
-                width: '75%', paddingBottom: '75%', borderRadius: '50%',
-                background: 'radial-gradient(circle, oklch(48% 0.18 162 / 14%) 0%, transparent 65%)',
+                position: 'absolute',
+                top: '-30%',
+                right: '-20%',
+                width: '75%',
+                paddingBottom: '75%',
+                borderRadius: '50%',
+                background:
+                  'radial-gradient(circle, oklch(48% 0.18 162 / 14%) 0%, transparent 65%)',
               }}
             />
             <div
               style={{
-                position: 'absolute', bottom: '-10%', left: '-15%',
-                width: '55%', paddingBottom: '55%', borderRadius: '50%',
+                position: 'absolute',
+                bottom: '-10%',
+                left: '-15%',
+                width: '55%',
+                paddingBottom: '55%',
+                borderRadius: '50%',
                 background: 'radial-gradient(circle, oklch(62% 0.12 75 / 10%) 0%, transparent 65%)',
               }}
             />
@@ -237,16 +258,23 @@ export default function LoginPage() {
               position: 'absolute',
               top: 'clamp(1.75rem, 3.5vw, 3rem)',
               left: 'clamp(1.75rem, 3.5vw, 3rem)',
-              display: 'flex', alignItems: 'center', gap: '10px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
               zIndex: 2,
             }}
           >
             <span
               style={{
-                width: '33px', height: '33px', borderRadius: '8px',
+                width: '33px',
+                height: '33px',
+                borderRadius: '8px',
                 background: 'oklch(55% 0.22 162)',
-                display: 'grid', placeItems: 'center', flexShrink: 0,
-                boxShadow: '0 0 0 1px oklch(68% 0.18 162 / 40%), 0 8px 24px oklch(48% 0.20 162 / 50%)',
+                display: 'grid',
+                placeItems: 'center',
+                flexShrink: 0,
+                boxShadow:
+                  '0 0 0 1px oklch(68% 0.18 162 / 40%), 0 8px 24px oklch(48% 0.20 162 / 50%)',
               }}
             >
               <Leaf size={16} color="oklch(12% 0.05 160)" />
@@ -265,16 +293,6 @@ export default function LoginPage() {
           </motion.div>
 
           <div style={{ position: 'relative', zIndex: 2, maxWidth: '50ch' }}>
-            <motion.p
-              className="eyebrow"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease, delay: 0.18 }}
-              style={{ color: 'oklch(60% 0.16 162)', marginBottom: 'var(--space-5)' }}
-            >
-              Auditoría ESG · Alcances 1 y 2
-            </motion.p>
-
             <motion.h1
               initial={{ opacity: 0, y: 32 }}
               animate={{ opacity: 1, y: 0 }}
@@ -309,8 +327,8 @@ export default function LoginPage() {
                 margin: '0 0 var(--space-8)',
               }}
             >
-              Rastrea, calcula y certifica las emisiones de tu cadena de suministro con
-              trazabilidad inmutable y motor verificado GHG Protocol.
+              Rastrea, calcula y certifica las emisiones de tu cadena de suministro con trazabilidad
+              inmutable y motor verificado GHG Protocol.
             </motion.p>
 
             <motion.ul
@@ -318,16 +336,21 @@ export default function LoginPage() {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5, ease, delay: 0.54 }}
               style={{
-                listStyle: 'none', padding: 0,
-                margin: '0 0 var(--space-8)',
-                display: 'flex', flexDirection: 'column', gap: 'var(--space-3)',
+                listStyle: 'none',
+                padding: 0,
+                margin: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--space-3)',
               }}
             >
               {PILARES.map(({ icono, texto }) => (
                 <li
                   key={texto}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--space-3)',
                     color: 'oklch(72% 0.06 165)',
                     fontSize: 'var(--text-sm)',
                   }}
@@ -338,31 +361,6 @@ export default function LoginPage() {
               ))}
             </motion.ul>
 
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, ease, delay: 0.64 }}
-              style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}
-            >
-              {['GHG Protocol', 'ISO 14064', 'Alcance 1–2'].map((badge) => (
-                <span
-                  key={badge}
-                  style={{
-                    padding: '4px 11px',
-                    borderRadius: 'var(--radius-pill)',
-                    background: 'oklch(55% 0.20 162 / 15%)',
-                    border: '1px solid oklch(58% 0.18 162 / 35%)',
-                    fontSize: 'var(--text-xs)',
-                    fontFamily: 'var(--font-mono)',
-                    fontWeight: 600,
-                    color: 'oklch(70% 0.14 162)',
-                    letterSpacing: '0.05em',
-                  }}
-                >
-                  {badge}
-                </span>
-              ))}
-            </motion.div>
           </div>
         </div>
 
@@ -387,16 +385,21 @@ export default function LoginPage() {
             <div
               className="logo-mobile"
               style={{
-                display: 'flex', alignItems: 'center',
-                gap: 'var(--space-3)', marginBottom: 'var(--space-10)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-3)',
+                marginBottom: 'var(--space-10)',
               }}
             >
               <span
                 style={{
-                  width: '30px', height: '30px',
+                  width: '30px',
+                  height: '30px',
                   borderRadius: 'var(--radius-md)',
                   background: 'var(--color-accent)',
-                  display: 'grid', placeItems: 'center', flexShrink: 0,
+                  display: 'grid',
+                  placeItems: 'center',
+                  flexShrink: 0,
                   boxShadow: 'var(--shadow-glow)',
                 }}
               >
@@ -436,6 +439,9 @@ export default function LoginPage() {
               action={action}
               style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}
             >
+              <Suspense fallback={null}>
+                <NextRedirectInput />
+              </Suspense>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
                 <label
                   htmlFor="email"
@@ -530,7 +536,8 @@ export default function LoginPage() {
                   <>
                     <span
                       style={{
-                        width: '14px', height: '14px',
+                        width: '14px',
+                        height: '14px',
                         border: '2px solid rgba(255,255,255,0.3)',
                         borderTopColor: 'white',
                         borderRadius: '50%',

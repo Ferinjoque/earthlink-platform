@@ -11,17 +11,17 @@ const createPeriodSchema = z
     fecha_inicio: z.string().min(1, 'La fecha de inicio es obligatoria'),
     fecha_fin: z.string().min(1, 'La fecha de fin es obligatoria'),
   })
-  .refine(
-    (d) => new Date(d.fecha_fin) > new Date(d.fecha_inicio),
-    { message: 'La fecha de fin debe ser posterior a la fecha de inicio', path: ['fecha_fin'] },
-  );
+  .refine((d) => new Date(d.fecha_fin) > new Date(d.fecha_inicio), {
+    message: 'La fecha de fin debe ser posterior a la fecha de inicio',
+    path: ['fecha_fin'],
+  });
 
 export interface PeriodActionState {
   error?: string;
   success?: boolean;
 }
 
-export type { PeriodActionState as CreatePeriodState };
+export type CreatePeriodState = PeriodActionState;
 
 type SupplierData = { organization_id: string };
 type MembershipData = { role: string };
@@ -31,7 +31,9 @@ export async function createPeriod(
   formData: FormData,
 ): Promise<PeriodActionState> {
   const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return { error: 'No autenticado' };
 
   const parsed = createPeriodSchema.safeParse({
