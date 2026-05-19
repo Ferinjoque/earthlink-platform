@@ -19,9 +19,11 @@ export const metadata: Metadata = { title: 'Detalle de proveedor' };
 const FUENTE_LABELS: Record<string, string> = {
   stationary_combustion: 'Combustión estacionaria',
   mobile_combustion: 'Combustión móvil',
-  electricity: 'Electricidad',
-  steam: 'Vapor',
-  fugitive: 'Fugitivo',
+  purchased_electricity: 'Electricidad',
+  purchased_steam: 'Vapor',
+  fugitive: 'Fugitivas',
+  water_use: 'Agua',
+  waste: 'Residuos',
 };
 
 const ESTADO_LABELS: Record<string, string> = {

@@ -1,6 +1,12 @@
+import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 import { createServerClient } from '@/services/supabase/server';
 import { Sidebar } from '@/components/shell/Sidebar';
+import { PageTransition } from '@/components/shell/PageTransition';
 import { ToastProvider } from '@/components/ui/Toast';
 import { SearchProvider } from '@/components/shell/SearchContext';
 import type { MembershipRow } from '@/types/database';
@@ -56,7 +62,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div data-app-root style={{ display: 'flex', height: '100dvh', overflow: 'hidden' }}>
           <Sidebar anomaliaCount={anomaliaCount} />
           <div data-app-main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
-            {children}
+            <PageTransition>{children}</PageTransition>
           </div>
         </div>
         <div id="toast-root" />
