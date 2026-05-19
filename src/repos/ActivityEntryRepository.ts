@@ -1,19 +1,20 @@
 import { SupabaseRepository } from './SupabaseRepository';
 import { ActivityEntry } from '../domain/ActivityEntry';
+import type { DataQuality } from '../domain/ActivityEntry';
 import type { ActivityKind, Unit } from '../calc/types';
 import type { ActivityEntryStatus, EmissionSourceType } from '../types/database';
 
+const COLS =
+  'id, reporting_period_id, source_type, activity_kind, raw_quantity, raw_unit, status, submitted_at, submitted_by, created_at, data_quality';
+
 export class ActivityEntryRepository extends SupabaseRepository<ActivityEntry> {
   protected readonly tableName = 'activity_entries';
-  protected override readonly selectColumns =
-    'id, reporting_period_id, source_type, activity_kind, raw_quantity, raw_unit, status, submitted_at, submitted_by, created_at';
+  protected override readonly selectColumns = COLS;
 
   async findByPeriodId(periodId: string): Promise<readonly ActivityEntry[]> {
     const { data, error } = await this.client
       .from(this.tableName)
-      .select(
-        'id, reporting_period_id, source_type, activity_kind, raw_quantity, raw_unit, status, submitted_at, submitted_by, created_at',
-      )
+      .select(COLS)
       .eq('reporting_period_id', periodId)
       .is('voided_at', null)
       .order('created_at', { ascending: true });
@@ -25,9 +26,7 @@ export class ActivityEntryRepository extends SupabaseRepository<ActivityEntry> {
     if (periodIds.length === 0) return [];
     const { data, error } = await this.client
       .from(this.tableName)
-      .select(
-        'id, reporting_period_id, source_type, activity_kind, raw_quantity, raw_unit, status, submitted_at, submitted_by, created_at',
-      )
+      .select(COLS)
       .in('reporting_period_id', periodIds)
       .is('voided_at', null)
       .order('created_at', { ascending: true });
@@ -41,9 +40,7 @@ export class ActivityEntryRepository extends SupabaseRepository<ActivityEntry> {
   ): Promise<readonly ActivityEntry[]> {
     const { data, error } = await this.client
       .from(this.tableName)
-      .select(
-        'id, reporting_period_id, source_type, activity_kind, raw_quantity, raw_unit, status, submitted_at, submitted_by, created_at',
-      )
+      .select(COLS)
       .eq('reporting_period_id', periodId)
       .eq('status', status);
     if (error ?? !data) return [];
@@ -62,6 +59,7 @@ export class ActivityEntryRepository extends SupabaseRepository<ActivityEntry> {
       submittedAt: row['submitted_at'] ? new Date(row['submitted_at'] as string) : null,
       submittedBy: (row['submitted_by'] as string | null) ?? null,
       createdAt: new Date(row['created_at'] as string),
+      dataQuality: (row['data_quality'] as DataQuality | null) ?? 'measured',
     });
   }
 
@@ -77,6 +75,7 @@ export class ActivityEntryRepository extends SupabaseRepository<ActivityEntry> {
       submitted_at: entity.submittedAt?.toISOString() ?? null,
       submitted_by: entity.submittedBy,
       created_at: entity.createdAt.toISOString(),
+      data_quality: entity.dataQuality,
     };
   }
 }

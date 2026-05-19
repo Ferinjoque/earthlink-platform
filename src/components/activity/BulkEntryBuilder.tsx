@@ -31,6 +31,7 @@ interface EntryRow {
   secondary: string;
   raw_quantity: string;
   raw_unit: string;
+  data_quality: string;
   notes: string;
 }
 
@@ -59,6 +60,7 @@ function defaultRow(suppliers: Supplier[], yearMonth = currentYearMonth()): Entr
     secondary: secs[0]?.value ?? '',
     raw_quantity: '',
     raw_unit: units[0]?.unit ?? '',
+    data_quality: 'measured',
     notes: '',
   };
 }
@@ -297,6 +299,25 @@ function CardMode({
             ))}
           </select>
         </div>
+      </div>
+
+      {/* Calidad del dato */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+        <FieldLabel
+          htmlFor="card-dq"
+          label="Calidad del dato"
+          ayuda="Indica cómo se obtuvo el valor: Medido (medidor/factura directa), Estimado (proxy o interpolación), Calculado (derivado de otros datos)."
+        />
+        <select
+          id="card-dq"
+          value={row.data_quality}
+          onChange={(e) => onUpdateRow({ data_quality: e.target.value })}
+          style={estiloSelect()}
+        >
+          <option value="measured">Medido</option>
+          <option value="estimated">Estimado</option>
+          <option value="calculated">Calculado</option>
+        </select>
       </div>
 
       {/* Notas */}
@@ -612,7 +633,7 @@ function TableMode({
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
           <thead>
             <tr style={{ background: 'var(--color-surface-2)' }}>
-              {['Proveedor', 'Mes', null, 'Secundario', 'Cantidad', 'Unidad', 'Notas', ''].map(
+              {['Proveedor', 'Mes', null, 'Secundario', 'Cantidad', 'Unidad', 'Calidad', 'Notas', ''].map(
                 (h, i) => (
                   <th
                     key={i}
@@ -743,6 +764,20 @@ function TableMode({
                           {etiquetaUnidad(unit as Unit)}
                         </option>
                       ))}
+                    </select>
+                  </td>
+
+                  <td style={tdStyle}>
+                    <select
+                      className="builder-select"
+                      value={row.data_quality}
+                      onChange={(e) => onUpdateRow(idx, { data_quality: e.target.value })}
+                      aria-label="Calidad del dato"
+                      style={{ minWidth: '110px' }}
+                    >
+                      <option value="measured">Medido</option>
+                      <option value="estimated">Estimado</option>
+                      <option value="calculated">Calculado</option>
                     </select>
                   </td>
 
@@ -954,13 +989,14 @@ export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuil
   const jsonEntries = JSON.stringify(
     rows
       .filter((r) => r.supplier_id && r.year_month && r.source_type && r.raw_quantity && r.raw_unit)
-      .map(({ supplier_id, year_month, source_type, secondary, raw_quantity, raw_unit, notes }) => ({
+      .map(({ supplier_id, year_month, source_type, secondary, raw_quantity, raw_unit, data_quality, notes }) => ({
         supplier_id,
         year_month,
         source_type,
         secondary,
         raw_quantity: Number(raw_quantity),
         raw_unit,
+        data_quality,
         notes,
       })),
   );

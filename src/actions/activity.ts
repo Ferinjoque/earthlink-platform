@@ -25,6 +25,8 @@ const SOURCE_TYPES_ENUM = [
   'waste',
 ] as const;
 
+const DATA_QUALITY_VALUES = ['measured', 'estimated', 'calculated'] as const;
+
 const createEntrySchema = z.object({
   supplier_id: z.string().uuid('ID de proveedor inválido'),
   year_month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Formato de mes inválido (YYYY-MM)'),
@@ -32,6 +34,7 @@ const createEntrySchema = z.object({
   secondary: z.string().default(''),
   raw_quantity: z.coerce.number().positive('La cantidad debe ser positiva'),
   raw_unit: z.string().min(1, 'La unidad es obligatoria'),
+  data_quality: z.enum(DATA_QUALITY_VALUES).default('measured'),
   notes: z.string().optional(),
 });
 
@@ -231,7 +234,7 @@ export async function createActivityEntry(
     return { fieldErrors };
   }
 
-  const { supplier_id, year_month, source_type, secondary, raw_quantity, raw_unit } = parsed.data;
+  const { supplier_id, year_month, source_type, secondary, raw_quantity, raw_unit, data_quality } = parsed.data;
 
   const accessCheck = await verifySupplierAccess(supabase, supplier_id, user.id);
   if ('error' in accessCheck) return { error: accessCheck.error, submittedAt: Date.now() };
@@ -264,6 +267,7 @@ export async function createActivityEntry(
     submittedAt: now,
     submittedBy: user.id,
     createdAt: now,
+    dataQuality: data_quality,
   });
 
   try {
@@ -399,6 +403,7 @@ const bulkEntrySchema = z.array(
     secondary: z.string().default(''),
     raw_quantity: z.coerce.number().positive('La cantidad debe ser positiva'),
     raw_unit: z.string().min(1, 'Unidad obligatoria'),
+    data_quality: z.enum(DATA_QUALITY_VALUES).default('measured'),
     notes: z.string().optional(),
   }),
 ).min(1, 'Se requiere al menos una fila');
@@ -460,6 +465,7 @@ export async function importActivityBulk(
       submittedAt: now,
       submittedBy: user.id,
       createdAt: now,
+      dataQuality: row.data_quality,
     });
 
     try {
