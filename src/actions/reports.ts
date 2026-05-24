@@ -61,13 +61,18 @@ export async function exportCsv(
     .filter((id): id is string => id !== null);
   if (orgIds.length === 0) return { error: 'Sin organizaciones asociadas' };
 
-  // Cargar periodos y proveedores
+  // Cargar periodos exportables — solo estados auditados (under_review o locked)
   type FilaPeriodo = Pick<ReportingPeriodRow, 'id' | 'label' | 'supplier_id'>;
   const { data: periodsRaw } = await supabase
     .from('reporting_periods')
     .select('id, label, supplier_id')
-    .in('id', periodIds);
+    .in('id', periodIds)
+    .in('status', ['under_review', 'locked']);
   const periods = (periodsRaw ?? []) as FilaPeriodo[];
+
+  if (periods.length === 0) {
+    return { error: 'Los periodos seleccionados no están disponibles para exportación (deben estar en revisión o bloqueados)' };
+  }
 
   const supplierIds = [...new Set(periods.map((p) => p.supplier_id))];
   type FilaSupplier = Pick<SupplierRow, 'id' | 'name' | 'organization_id'>;
@@ -203,8 +208,10 @@ export async function exportCsv(
 }
 
 function csvEscape(val: string): string {
-  if (val.includes(',') || val.includes('"') || val.includes('\n')) {
-    return `"${val.replace(/"/g, '""')}"`;
+  // Prevenir inyección de fórmulas en hojas de cálculo (Excel, Sheets, LibreOffice)
+  const safe = /^[=+\-@\t\r]/.test(val) ? `'${val}` : val;
+  if (safe.includes(',') || safe.includes('"') || safe.includes('\n')) {
+    return `"${safe.replace(/"/g, '""')}"`;
   }
-  return val;
+  return safe;
 }
