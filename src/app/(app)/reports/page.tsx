@@ -155,7 +155,7 @@ export default async function ReportesPage() {
           maxWidth: 'var(--max-w-content)',
         }}
       >
-        {/* Editorial header — hidden in print (replaced by cover page inside ReportsPanel) */}
+        {/* Cabecera editorial — oculta en impresión (reemplazada por portada dentro de ReportsPanel) */}
         <div data-no-print className="animate-fade-up stagger-1" style={{ marginBottom: 'var(--space-8)' }}>
           <p className="eyebrow" style={{ marginBottom: 'var(--space-3)' }}>
             Protocolo GHG · Exportación de datos

@@ -6,6 +6,7 @@ import type { ActivityFormState, CsvImportState } from '../../../src/actions/act
 const mocks = vi.hoisted(() => ({
   save: vi.fn().mockResolvedValue(undefined),
   findByPeriodId: vi.fn().mockResolvedValue([]),
+  findByPeriodIds: vi.fn().mockResolvedValue([]),
   anomalySave: vi.fn().mockResolvedValue(undefined),
   detect: vi.fn().mockReturnValue([]),
 }));
@@ -29,6 +30,7 @@ vi.mock('../../../src/repos/ActivityEntryRepository', () => ({
   ActivityEntryRepository: class {
     save = mocks.save;
     findByPeriodId = mocks.findByPeriodId;
+    findByPeriodIds = mocks.findByPeriodIds;
   },
 }));
 vi.mock('../../../src/repos/AnomalyFlagRepository', () => ({
@@ -80,6 +82,19 @@ function makeInsertChain(data: unknown, error: unknown = null) {
   return c;
 }
 
+/** Chain for: .select(...).eq(...).gte(...).lte(...) — awaited directly (no terminal method) */
+function makeArrayChain(data: unknown) {
+  const p = Promise.resolve({ data, error: null });
+  const c: Record<string, unknown> = {};
+  c['select'] = () => c;
+  c['eq'] = () => c;
+  c['gte'] = () => c;
+  c['lte'] = () => c;
+  c['then'] = p.then.bind(p);
+  c['catch'] = p.catch.bind(p);
+  return c;
+}
+
 function makeFormData(fields: Record<string, string>): FormData {
   const fd = new FormData();
   for (const [k, v] of Object.entries(fields)) fd.append(k, v);
@@ -92,6 +107,7 @@ function makeFormData(fields: Record<string, string>): FormData {
  *   from(2) memberships → access ok
  *   from(3) reporting_periods maybeSingle → null (no existing period)
  *   from(4) reporting_periods insert → new period created
+ *   from(5) reporting_periods select → prior-year period IDs for anomaly baseline
  */
 function mockAuthenticatedClient(userId = 'user-abc') {
   const mockSupabase = {
@@ -100,7 +116,8 @@ function mockAuthenticatedClient(userId = 'user-abc') {
       .mockReturnValueOnce(makeMaybeSingleChain({ organization_id: 'org-001' }))
       .mockReturnValueOnce(makeMaybeSingleChain({ role: 'admin' }))
       .mockReturnValueOnce(makeMaybeSingleChain(null))
-      .mockReturnValueOnce(makeInsertChain({ id: PERIOD_ID })),
+      .mockReturnValueOnce(makeInsertChain({ id: PERIOD_ID }))
+      .mockReturnValueOnce(makeArrayChain([{ id: PERIOD_ID }])),
   };
   vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
   return mockSupabase;
@@ -713,6 +730,31 @@ describe('voidActivityEntry — validación de ID', () => {
     const fd = makeFormData({ entry_id: VALID_UUID, void_reason: '' });
     const result = await voidActivityEntry(null, fd);
     expect(result.error).toMatch(/razón/i);
+  });
+
+  it('returns error when period is in calculating status', async () => {
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+      from: vi.fn().mockImplementation(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({
+          data: {
+            voided_at: null,
+            reporting_period_id: PERIOD_ID,
+            reporting_periods: {
+              status: 'calculating',
+              suppliers: { organization_id: 'org-001' },
+            },
+          },
+        }),
+      })),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
+
+    const fd = makeFormData({ entry_id: VALID_UUID, void_reason: 'corrección' });
+    const result = await voidActivityEntry(null, fd);
+    expect(result.error).toMatch(/calculad/i);
   });
 });
 

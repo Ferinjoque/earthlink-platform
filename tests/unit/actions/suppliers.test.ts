@@ -208,11 +208,18 @@ describe('archiveSupplier', () => {
     expect(result.error).toMatch(/administrador/i);
   });
 
-  it('rejects missing id', async () => {
+  it('rejects missing or invalid id', async () => {
     mockClient();
     const fd = makeFormData({ id: '' });
     const result = await archiveSupplier(null, fd);
-    expect(result.error).toMatch(/requerido/i);
+    expect(result.error).toMatch(/inválido/i);
+  });
+
+  it('rejects non-UUID id format', async () => {
+    mockClient();
+    const fd = makeFormData({ id: 'not-a-uuid' });
+    const result = await archiveSupplier(null, fd);
+    expect(result.error).toMatch(/inválido/i);
   });
 
   it('returns error when supplier not found', async () => {

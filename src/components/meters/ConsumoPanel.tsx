@@ -223,7 +223,7 @@ function OverviewChart({ summaries, year, suppliers, filteredSupplierIds, svgRef
 
   return (
     <>
-      {/* Y-axis label */}
+      {/* Etiqueta eje Y */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-1)' }}>
         <span style={{
           fontSize: '10px', color: 'var(--color-ink-3)', fontFamily: 'var(--font-mono)',
@@ -242,7 +242,7 @@ function OverviewChart({ summaries, year, suppliers, filteredSupplierIds, svgRef
         aria-label={`Tendencia mensual de consumo — ${year}`}
         style={{ maxHeight: '260px', display: 'block', overflow: 'visible' }}
       >
-        {/* Grid lines + Y axis labels */}
+        {/* Líneas de cuadrícula + etiquetas eje Y */}
         {gridFracs.map(([frac, label]) => {
           const y = TOP_PAD + CHART_H - (frac as number) * CHART_H;
           return (
@@ -265,7 +265,7 @@ function OverviewChart({ summaries, year, suppliers, filteredSupplierIds, svgRef
           );
         })}
 
-        {/* One line per meter */}
+        {/* Una línea por medidor */}
         {summaries.map((s, idx) => {
           const color = meterColor(idx);
           const maxVal = globalMax ?? Math.max(...Object.values(s.monthly), 1);
@@ -307,7 +307,7 @@ function OverviewChart({ summaries, year, suppliers, filteredSupplierIds, svgRef
           );
         })}
 
-        {/* Month labels */}
+        {/* Etiquetas de mes */}
         {MONTH_LABELS.map((lbl, i) => {
           const x = LEFT_PAD + i * slotW + slotW / 2;
           return (
@@ -319,7 +319,7 @@ function OverviewChart({ summaries, year, suppliers, filteredSupplierIds, svgRef
         })}
       </svg>
 
-      {/* Legend */}
+      {/* Leyenda */}
       <div style={{
         display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3) var(--space-5)',
         marginTop: 'var(--space-4)',

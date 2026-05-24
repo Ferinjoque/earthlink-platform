@@ -34,7 +34,7 @@ export function MonthlyChart({ summary }: MonthlyChartProps) {
       aria-label={`Consumo mensual — ${summary.meter.label}`}
       style={{ maxHeight: '200px', display: 'block' }}
     >
-      {/* Gridlines + Y labels */}
+      {/* Líneas de cuadrícula + etiquetas Y */}
       {gridFracs.map((frac) => {
         const y = TOP_PAD + CHART_H - frac * CHART_H;
         return (
@@ -66,7 +66,7 @@ export function MonthlyChart({ summary }: MonthlyChartProps) {
         );
       })}
 
-      {/* Bars */}
+      {/* Barras */}
       {Array.from({ length: 12 }, (_, i) => {
         const m = i + 1;
         const val = summary.monthly[m] ?? 0;

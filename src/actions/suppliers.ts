@@ -177,7 +177,8 @@ export async function archiveSupplier(
   if (!user) return { error: 'No autenticado' };
 
   const id = formData.get('id');
-  if (typeof id !== 'string' || !id) return { error: 'ID de proveedor requerido' };
+  if (typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
+    return { error: 'ID de proveedor inválido' };
 
   const { data: rawSupplier } = await supabase
     .from('suppliers')

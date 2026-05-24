@@ -1167,7 +1167,7 @@ export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuil
     const row = rows[0]!;
     return (
       <>
-        {/* Hidden form that the card submit button targets */}
+        {/* Formulario oculto al que apunta el botón submit de la tarjeta */}
         <form id="bulk-form-card" action={formAction} noValidate style={{ display: 'none' }}>
           <input type="hidden" name="json_entries" value={jsonEntries} />
         </form>

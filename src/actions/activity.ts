@@ -30,9 +30,9 @@ const createEntrySchema = z.object({
   supplier_id: z.string().uuid('ID de proveedor inválido'),
   year_month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Formato de mes inválido (YYYY-MM)'),
   source_type: z.enum(SOURCE_TYPES_ENUM),
-  secondary: z.string().default(''),
+  secondary: z.string().max(100, 'El subtipo no puede superar 100 caracteres').default(''),
   raw_quantity: z.coerce.number().positive('La cantidad debe ser positiva'),
-  raw_unit: z.string().min(1, 'La unidad es obligatoria'),
+  raw_unit: z.string().min(1, 'La unidad es obligatoria').max(50, 'La unidad no puede superar 50 caracteres'),
   data_quality: z.enum(DATA_QUALITY_VALUES).default('measured'),
   notes: z.string().max(1000, 'Las notas no pueden superar 1000 caracteres').optional(),
 });
@@ -273,13 +273,22 @@ export async function createActivityEntry(
   }
 
   // Detección de anomalías — no crítica, no bloquea si falla
+  // Línea base: entradas del año anterior del mismo proveedor (igual que calculatePeriod)
   try {
-    const historical = await entryRepo.findByPeriodId(reporting_period_id);
+    const entryYear = Number(year_month.split('-')[0]);
+    const priorYear = entryYear - 1;
+    const { data: priorPeriodsRaw } = await supabase
+      .from('reporting_periods')
+      .select('id')
+      .eq('supplier_id', supplier_id)
+      .gte('start_date', `${priorYear}-01-01`)
+      .lte('start_date', `${priorYear}-12-31`);
+    const priorPeriodIds = (priorPeriodsRaw ?? []).map((p: { id: string }) => p.id);
+    const historical = priorPeriodIds.length > 0
+      ? await entryRepo.findByPeriodIds(priorPeriodIds)
+      : [];
     const svc = new AnomalyService();
-    const anomalies = svc.detect(
-      [newEntry],
-      historical.filter((e) => e.id !== newEntry.id),
-    );
+    const anomalies = svc.detect([newEntry], historical);
 
     for (const a of anomalies) {
       const flag = new AnomalyFlag({
@@ -396,9 +405,9 @@ const bulkEntrySchema = z.array(
     supplier_id: z.string().uuid('UUID de proveedor inválido'),
     year_month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Formato YYYY-MM inválido'),
     source_type: z.enum(SOURCE_TYPES_ENUM),
-    secondary: z.string().default(''),
+    secondary: z.string().max(100, 'El subtipo no puede superar 100 caracteres').default(''),
     raw_quantity: z.coerce.number().positive('La cantidad debe ser positiva'),
-    raw_unit: z.string().min(1, 'Unidad obligatoria'),
+    raw_unit: z.string().min(1, 'Unidad obligatoria').max(50, 'La unidad no puede superar 50 caracteres'),
     data_quality: z.enum(DATA_QUALITY_VALUES).default('measured'),
     notes: z.string().max(1000, 'Las notas no pueden superar 1000 caracteres').optional(),
   }),
@@ -537,6 +546,9 @@ export async function voidActivityEntry(
   const mem = memRaw as { role: string } | null;
   if (!mem) return { error: 'Sin permisos para este registro' };
 
+  if (periodStatus === 'calculating') {
+    return { error: 'No se puede anular registros mientras el periodo está siendo calculado' };
+  }
   if (periodStatus === 'locked' && mem.role !== 'admin') {
     return { error: 'Solo administradores pueden anular registros en periodos bloqueados' };
   }
