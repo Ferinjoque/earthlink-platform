@@ -501,7 +501,7 @@ export async function voidActivityEntry(
 
   const entryId = formData.get('entry_id');
   const reason = formData.get('void_reason');
-  if (typeof entryId !== 'string' || !/^[0-9a-f-]{36}$/i.test(entryId))
+  if (typeof entryId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entryId))
     return { error: 'ID de registro inválido' };
   if (typeof reason !== 'string' || !reason.trim()) {
     return { error: 'La razón de anulación es obligatoria' };
@@ -573,7 +573,7 @@ export async function deleteActivityEntry(
   if (!user) return { error: 'No autenticado' };
 
   const entryId = formData.get('entry_id');
-  if (typeof entryId !== 'string' || !/^[0-9a-f-]{36}$/i.test(entryId))
+  if (typeof entryId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entryId))
     return { error: 'ID de registro inválido' };
 
   // Obtener estado del periodo y org mediante join

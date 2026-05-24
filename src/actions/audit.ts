@@ -129,7 +129,7 @@ export async function calculatePeriod(
       await supabase.from('anomaly_flags').insert(
         anomalies.map((a) => ({
           activity_entry_id: a.entryId,
-          detector: 'z-score-v1',
+          detector: 'zscore_monthly',
           severity: a.severity,
           z_score: a.zScore,
           message: a.message,
@@ -433,7 +433,7 @@ export async function calculateYear(
           await supabase.from('anomaly_flags').insert(
             anomalies.map((a) => ({
               activity_entry_id: a.entryId,
-              detector: 'z-score-v1',
+              detector: 'zscore_monthly',
               severity: a.severity,
               z_score: a.zScore,
               message: a.message,
