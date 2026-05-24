@@ -140,8 +140,8 @@ CREATE TABLE public.anomaly_flags (
   )
 );
 
-COMMENT ON TABLE  public.anomaly_flags IS 'Automated anomaly detection results. Seeded with one planted high-severity anomaly for demo.';
-COMMENT ON COLUMN public.anomaly_flags.z_score IS 'Standard deviations from period baseline; NULL for rule-based detectors.';
+COMMENT ON TABLE  public.anomaly_flags IS 'Resultados de detección automatizada de anomalías. El seed incluye una anomalía de alta severidad para demo.';
+COMMENT ON COLUMN public.anomaly_flags.z_score IS 'Desviaciones estándar respecto a la línea base del periodo; NULL para detectores basados en reglas.';
 
 CREATE INDEX idx_anomalies_entry    ON public.anomaly_flags (activity_entry_id);
 CREATE INDEX idx_anomalies_severity ON public.anomaly_flags (severity) WHERE NOT is_resolved;
