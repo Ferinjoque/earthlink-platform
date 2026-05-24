@@ -51,6 +51,7 @@ export class EvaluationService {
       if (NO_GHG_KINDS.has(record.activity.kind)) {
         const calcResult = calculate(record, factors, conversions);
         if (calcResult.ok) noGhgResults.push(calcResult.value);
+        else errors.push({ entryId: entry.id, message: `Calc error: ${calcResult.error.type}` });
         continue;
       }
 

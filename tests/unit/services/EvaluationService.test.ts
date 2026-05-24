@@ -387,4 +387,22 @@ describe('EvaluationService.evaluate()', () => {
     expect(totals.byScope['scope2']).toBe(0);
     expect(totals.byScope['scope1'] + totals.byScope['scope2']).toBeCloseTo(totals.totalCo2eKg, 4);
   });
+
+  it('water_use entry with invalid rawValue propagates error (not silently dropped)', async () => {
+    const badWater = makeEntry({
+      id: 'bad-water',
+      sourceType: 'water_use',
+      activityKind: { kind: 'water_use', subtype: 'potable_mixed' },
+      rawQuantity: -1,
+      rawUnit: 'kgal_us',
+    });
+    const { service, emissionResultRepo } = makeService({ entries: [badWater], factors: new Map() });
+    const { totals, errors } = await service.evaluate('period-001');
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]!.entryId).toBe('bad-water');
+    expect(errors[0]!.message).toMatch(/INVALID_VALUE/);
+    expect(totals.recordCount).toBe(0);
+    expect(emissionResultRepo.insertMany).not.toHaveBeenCalled();
+  });
 });
