@@ -311,6 +311,7 @@ export async function createActivityEntry(
   }
 
   revalidatePath('/activity');
+  revalidatePath('/audit');
   return { success: true, submittedAt: Date.now() };
 }
 
@@ -395,6 +396,7 @@ export async function importActivityCsv(
   }
 
   revalidatePath('/activity');
+  revalidatePath('/audit');
   return { success: true, imported, skipped, submittedAt: Date.now() };
 }
 
@@ -488,6 +490,7 @@ export async function importActivityBulk(
   }
 
   revalidatePath('/activity');
+  revalidatePath('/audit');
   return { success: true, imported: importedCount, skipped: skippedCount, entryIds: createdIds, submittedAt: Date.now() };
 }
 
@@ -626,6 +629,7 @@ export async function deleteActivityEntry(
   if (deleteError) return { error: 'Error al eliminar el registro. Intenta nuevamente.' };
 
   revalidatePath('/activity');
+  revalidatePath('/audit');
   revalidatePath('/suppliers');
   revalidatePath('/dashboard');
   return { success: true };
@@ -712,5 +716,6 @@ export async function importActivityXlsx(
   }
 
   revalidatePath('/activity');
+  revalidatePath('/audit');
   return { success: true, imported: importedCount, skipped, submittedAt: Date.now() };
 }
