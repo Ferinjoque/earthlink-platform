@@ -61,11 +61,11 @@ export type Unit =
   | 'kg'
   | 'tonne'
   | 'lb'
-  // Water
+  // Agua
   | 'kgal_us'    // Mil galones US (estándar GRESB agua)
   | 'megaliter'  // Megalitros (estándar GRESB internacional)
   | 'm3'         // Metros cúbicos (agua)
-  // Waste
+  // Residuos
   | 'ton_us';    // Tonelada corta US (estándar GRESB residuos)
 
 export const STANDARD_UNITS: Record<ActivityKind['kind'], Unit> = {
