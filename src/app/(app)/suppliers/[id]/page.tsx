@@ -34,7 +34,7 @@ const ESTADO_LABELS: Record<string, string> = {
 };
 
 function formatearCo2e(kg: number): string {
-  if (kg >= 1_000_000) return `${(kg / 1_000_000).toFixed(2)} MtCO₂e`;
+  if (kg >= 1_000_000) return `${(kg / 1_000_000).toFixed(2)} ktCO₂e`;
   if (kg >= 1_000) return `${(kg / 1_000).toFixed(3)} tCO₂e`;
   return `${kg.toFixed(1)} kg CO₂e`;
 }

@@ -45,7 +45,7 @@ const FUENTE_LABELS: Record<string, string> = {
 
 function formatearKg(kg: number): string {
   if (kg === 0) return '—';
-  if (kg >= 1_000_000) return `${(kg / 1_000_000).toFixed(3)} MtCO₂e`;
+  if (kg >= 1_000_000) return `${(kg / 1_000_000).toFixed(3)} ktCO₂e`;
   if (kg >= 1_000) return `${(kg / 1_000).toFixed(3)} tCO₂e`;
   return `${kg.toFixed(2)} kg CO₂e`;
 }

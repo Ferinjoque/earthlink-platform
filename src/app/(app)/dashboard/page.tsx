@@ -15,7 +15,7 @@ export const metadata: Metadata = { title: 'Panel' };
 
 export function formatearCo2e(kg: number): { valor: string; unidad: string } {
   if (kg === 0) return { valor: '0', unidad: 'kg' };
-  if (kg >= 1_000_000) return { valor: (kg / 1_000_000).toFixed(2), unidad: 'MtCO₂e' };
+  if (kg >= 1_000_000) return { valor: (kg / 1_000_000).toFixed(2), unidad: 'ktCO₂e' };
   if (kg >= 1_000) return { valor: (kg / 1_000).toFixed(3), unidad: 'tCO₂e' };
   return { valor: kg.toFixed(1), unidad: 'kg CO₂e' };
 }
