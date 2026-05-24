@@ -528,6 +528,7 @@ function ResultadosPanel({
 
 function RecalculateButton({ periodId }: { periodId: string }) {
   const { toast } = useToast();
+  const router = useRouter();
   const [confirm, setConfirm] = useState(false);
   const [state, formAction, isPending] = useActionState<RecalculateState | null, FormData>(
     recalculatePeriod,
@@ -538,12 +539,13 @@ function RecalculateButton({ periodId }: { periodId: string }) {
     if (state?.success) {
       toast('Periodo recalculado correctamente', 'success');
       setConfirm(false);
+      router.refresh();
     }
     if (state?.error) {
       toast(state.error, 'error');
       setConfirm(false);
     }
-  }, [state?.success, state?.error, toast]);
+  }, [state?.success, state?.error, toast, router]);
 
   if (confirm) {
     return (
