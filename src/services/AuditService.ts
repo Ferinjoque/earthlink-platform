@@ -24,6 +24,11 @@ export class AuditService {
     return locked;
   }
 
+  private static readonly TRANSICIONES_VALIDAS: Record<'calculating' | 'under_review', string[]> = {
+    calculating: ['open'],
+    under_review: ['calculating'],
+  };
+
   async transitionStatus(
     periodId: string,
     targetStatus: 'calculating' | 'under_review',
@@ -32,6 +37,13 @@ export class AuditService {
     const period = await this.reportingPeriodRepo.findById(periodId);
     if (!period) throw new Error(`Periodo de reporte "${periodId}" no encontrado`);
     if (period.isLocked()) throw new Error(`El periodo de reporte "${periodId}" está bloqueado`);
+
+    const estadosPermitidos = AuditService.TRANSICIONES_VALIDAS[targetStatus];
+    if (!estadosPermitidos.includes(period.status)) {
+      throw new Error(
+        `Transición inválida: "${period.status}" → "${targetStatus}". Estado requerido: ${estadosPermitidos.join(' o ')}.`,
+      );
+    }
 
     const updated = await this.reportingPeriodRepo.updateStatus(periodId, targetStatus);
     await this.auditLogRepo.log('STATUS_CHANGE', 'reporting_periods', periodId, userId, {

@@ -161,6 +161,7 @@ export async function uploadEvidence(
 
   revalidatePath('/activity');
   revalidatePath('/audit');
+  revalidatePath('/suppliers');
 
   return { success: true, fileId: inserted.id };
 }
@@ -379,14 +380,13 @@ export async function deleteEvidence(
     }
   }
 
-  // Borrar de Storage — si falla, no eliminar el registro para mantener consistencia
-  const admin = createAdminClient();
-  const { error: storageError } = await admin.storage.from('evidence').remove([file.storage_path]);
-  if (storageError) return { error: 'Error al eliminar el archivo del almacenamiento. Intenta nuevamente.' };
-
-  // Borrar registro BD
+  // Borrar registro BD primero: si falla, el archivo en Storage sigue intacto (recuperable)
   const { error: dbError } = await supabase.from('evidence_files').delete().eq('id', fileId);
   if (dbError) return { error: 'Error al eliminar el registro. Intenta nuevamente.' };
+
+  // Borrar de Storage — si falla, el registro ya fue eliminado (archivo huérfano recuperable)
+  const admin = createAdminClient();
+  await admin.storage.from('evidence').remove([file.storage_path]);
 
   revalidatePath('/activity');
   revalidatePath('/audit');

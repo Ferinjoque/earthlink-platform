@@ -93,10 +93,8 @@ export async function calculatePeriod(
   let outcome: Awaited<ReturnType<EvaluationService['evaluate']>>;
   try {
     outcome = await evalSvc.evaluate(periodId);
-  } catch (err) {
-    return {
-      error: `Error en la evaluación: ${err instanceof Error ? err.message : 'error desconocido'}`,
-    };
+  } catch {
+    return { error: 'Error al calcular las emisiones del periodo. Intenta nuevamente.' };
   }
 
   // Detección de anomalías usando entradas del año anterior como línea base
@@ -149,6 +147,7 @@ export async function calculatePeriod(
 
   revalidatePath('/audit');
   revalidatePath('/dashboard');
+  revalidatePath('/suppliers');
   return {
     success: true,
     totals: {
@@ -209,14 +208,13 @@ export async function lockPeriod(
 
   try {
     await auditSvc.lock(periodId, user.id);
-  } catch (err) {
-    return {
-      error: `Error al bloquear el periodo: ${err instanceof Error ? err.message : 'error desconocido'}`,
-    };
+  } catch {
+    return { error: 'Error al bloquear el periodo. Intenta nuevamente.' };
   }
 
   revalidatePath('/audit');
   revalidatePath('/dashboard');
+  revalidatePath('/suppliers');
   return { success: true };
 }
 
@@ -253,14 +251,7 @@ export async function recalculatePeriod(
   const period = await periodRepo.findById(periodId);
   if (!period) return { error: 'Periodo de reporte no encontrado' };
 
-  // Solo periodos bloqueados o en revisión pueden recalcularse
-  if (period.status !== 'locked' && period.status !== 'under_review') {
-    return {
-      error: `El periodo está en estado "${period.status}" — solo los periodos bloqueados o en revisión pueden recalcularse`,
-    };
-  }
-
-  // Verificar que el usuario pertenece a la org propietaria del periodo
+  // Verificar que el usuario pertenece a la org propietaria del periodo (antes de revelar estado)
   type SupplierOrg = { organization_id: string };
   const { data: supplierRaw } = await supabase
     .from('suppliers')
@@ -277,6 +268,13 @@ export async function recalculatePeriod(
     .in('role', ['admin'])
     .maybeSingle();
   if (!memRaw) return { error: 'Solo administradores pueden recalcular periodos bloqueados' };
+
+  // Solo periodos bloqueados o en revisión pueden recalcularse
+  if (period.status !== 'locked' && period.status !== 'under_review') {
+    return {
+      error: `El periodo está en estado "${period.status}" — solo los periodos bloqueados o en revisión pueden recalcularse`,
+    };
+  }
 
   // Borrar resultados previos del periodo para recalcular desde cero.
   // emission_results es append-only (trigger bloquea DELETE directo).
@@ -299,10 +297,8 @@ export async function recalculatePeriod(
   let outcome: Awaited<ReturnType<EvaluationService['evaluate']>>;
   try {
     outcome = await evalSvc.evaluate(periodId);
-  } catch (err) {
-    return {
-      error: `Error en la evaluación: ${err instanceof Error ? err.message : 'error desconocido'}`,
-    };
+  } catch {
+    return { error: 'Error al recalcular las emisiones del periodo. Intenta nuevamente.' };
   }
 
   await auditLogRepo.log('RECALCULATE', 'reporting_periods', periodId, user.id, {
@@ -312,6 +308,7 @@ export async function recalculatePeriod(
 
   revalidatePath('/audit');
   revalidatePath('/dashboard');
+  revalidatePath('/suppliers');
   return {
     success: true,
     totals: {
@@ -469,6 +466,7 @@ export async function calculateYear(
 
   revalidatePath('/audit');
   revalidatePath('/dashboard');
+  revalidatePath('/suppliers');
   return { success: true, calculated, skipped, errors: errores };
 }
 
@@ -564,6 +562,7 @@ export async function closeYear(
 
   revalidatePath('/audit');
   revalidatePath('/dashboard');
+  revalidatePath('/suppliers');
   return { success: true, calculated: bloqueados, skipped, errors: errores };
 }
 
@@ -693,6 +692,7 @@ export async function unlockPeriod(
 
   revalidatePath('/audit');
   revalidatePath('/dashboard');
+  revalidatePath('/suppliers');
   return { success: true };
 }
 

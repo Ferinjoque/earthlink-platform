@@ -163,6 +163,7 @@ export async function updateSupplier(
   if (error) return { error: 'Error al guardar el proveedor. Intenta nuevamente.' };
 
   revalidatePath('/suppliers');
+  revalidatePath(`/suppliers/${id}`);
   return { success: true };
 }
 
@@ -198,6 +199,17 @@ export async function archiveSupplier(
 
   if (!membership || membership.role !== 'admin') {
     return { error: 'Solo un administrador puede archivar proveedores' };
+  }
+
+  // Bloquear archivado si hay periodos en estados activos
+  const { data: activePeriods } = await supabase
+    .from('reporting_periods')
+    .select('id')
+    .eq('supplier_id', id)
+    .in('status', ['open', 'calculating'])
+    .limit(1);
+  if (activePeriods && activePeriods.length > 0) {
+    return { error: 'No se puede archivar un proveedor con periodos abiertos o en cálculo. Completa o cierra todos los periodos primero.' };
   }
 
   const { error } = await supabase

@@ -283,7 +283,7 @@ describe('lockPeriod', () => {
     mocks.findById.mockResolvedValueOnce(makePeriod('under_review'));
     mocks.lock.mockRejectedValueOnce('string error');
     const result = await lockPeriod(null, makeFormData({ period_id: VALID_UUID }));
-    expect(result.error).toMatch(/error desconocido/i);
+    expect(result.error).toMatch(/bloquear/i);
   });
 
   it('returns error when supplier not found (lockPeriod ownership)', async () => {
@@ -330,7 +330,7 @@ describe('calculatePeriod — error paths', () => {
     mocks.transitionStatus.mockResolvedValueOnce(makePeriod('calculating'));
     mocks.evaluate.mockRejectedValueOnce(new Error('factor table empty'));
     const result = await calculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
-    expect(result.error).toMatch(/evaluación/i);
+    expect(result.error).toMatch(/calcular.*emisiones/i);
   });
 
   it('returns error when second transitionStatus (under_review) throws', async () => {
@@ -350,7 +350,7 @@ describe('calculatePeriod — error paths', () => {
     mocks.transitionStatus.mockResolvedValueOnce(makePeriod('calculating'));
     mocks.evaluate.mockRejectedValueOnce('unexpected string');
     const result = await calculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
-    expect(result.error).toMatch(/error desconocido/i);
+    expect(result.error).toMatch(/calcular.*emisiones/i);
   });
 
   it('returns error when supplier not found (calculatePeriod ownership)', async () => {
@@ -620,7 +620,7 @@ describe('recalculatePeriod', () => {
     mockRecalculateClient();
     mocks.evaluate.mockRejectedValueOnce(new Error('factor not found'));
     const result = await recalculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
-    expect(result.error).toMatch(/evaluación/i);
+    expect(result.error).toMatch(/recalcular.*emisiones/i);
   });
 
   it('returns success with updated totals', async () => {
