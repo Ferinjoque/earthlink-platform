@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createServerClient } from '@/services/supabase/server';
+import { getEvidenceFilesBatch } from '@/actions/evidence';
 import { TopBar } from '@/components/shell/TopBar';
 import { ActivityList } from '@/components/activity/ActivityList';
 import { BulkImportPanel } from '@/components/activity/BulkImportPanel';
@@ -128,28 +129,21 @@ export default async function ActividadPage({ searchParams }: PageProps) {
     'activity_entry_id' | 'severity' | 'z_score' | 'message'
   >[] = [];
 
-  const evidenceCountMap = new Map<string, number>();
+  // Carga anomalías y archivos de evidencia en paralelo
+  let evidenceBatchMap = new Map<string, import('@/actions/evidence').EvidenceFileView[]>();
 
   if (entryIds.length) {
-    const [flagsResult, evidenceResult] = await Promise.all([
+    const [flagsResult, evidenceMap] = await Promise.all([
       supabase
         .from('anomaly_flags')
         .select('activity_entry_id, severity, z_score, message')
         .in('activity_entry_id', entryIds)
         .eq('is_resolved', false)
         .order('flagged_at', { ascending: false }),
-      supabase
-        .from('evidence_files')
-        .select('activity_entry_id')
-        .in('activity_entry_id', entryIds),
+      getEvidenceFilesBatch(entryIds),
     ]);
     if (flagsResult.data) flagsData.push(...flagsResult.data);
-    for (const ev of evidenceResult.data ?? []) {
-      evidenceCountMap.set(
-        ev.activity_entry_id,
-        (evidenceCountMap.get(ev.activity_entry_id) ?? 0) + 1,
-      );
-    }
+    evidenceBatchMap = evidenceMap;
   }
 
   const flagMap = new Map<
@@ -166,22 +160,26 @@ export default async function ActividadPage({ searchParams }: PageProps) {
     }
   }
 
-  const entries: ActivityEntryView[] = entriesData.map((e) => ({
-    id: e.id,
-    period_id: e.reporting_period_id,
-    period_label: periodLabelMap.get(e.reporting_period_id) ?? '—',
-    period_status: periodStatusMap.get(e.reporting_period_id),
-    source_type: e.source_type,
-    raw_quantity: e.raw_quantity,
-    raw_unit: e.raw_unit,
-    status: e.status as ActivityEntryStatus,
-    submitted_at: e.submitted_at,
-    notes: e.notes,
-    voided_at: e.voided_at,
-    void_reason: e.void_reason,
-    evidence_count: evidenceCountMap.get(e.id) ?? 0,
-    anomaly: flagMap.get(e.id),
-  }));
+  const entries: ActivityEntryView[] = entriesData.map((e) => {
+    const evidenceFiles = evidenceBatchMap.get(e.id) ?? [];
+    return {
+      id: e.id,
+      period_id: e.reporting_period_id,
+      period_label: periodLabelMap.get(e.reporting_period_id) ?? '—',
+      period_status: periodStatusMap.get(e.reporting_period_id),
+      source_type: e.source_type,
+      raw_quantity: e.raw_quantity,
+      raw_unit: e.raw_unit,
+      status: e.status as ActivityEntryStatus,
+      submitted_at: e.submitted_at,
+      notes: e.notes,
+      voided_at: e.voided_at,
+      void_reason: e.void_reason,
+      evidence_count: evidenceFiles.length,
+      evidence_files: evidenceFiles,
+      anomaly: flagMap.get(e.id),
+    };
+  });
 
   const nEntradas = totalEntries;
 
