@@ -138,33 +138,42 @@ export default async function DetallePeriodoPage({
   const results = (resultsRaw.data ?? []) as FilaResultado[];
   const auditLog = (auditLogRaw.data ?? []) as FilaAuditLog[];
 
-  // Fetch paralelo: detalle de entradas y anomaly_flags (ambos dependen de los entryIds)
-  const entryIds = [...new Set(results.map((r) => r.activity_entry_id))];
   type FilaEntrada = Pick<ActivityEntryRow, 'id' | 'source_type' | 'raw_quantity' | 'raw_unit'>;
   type FilaFlag = Pick<
     AnomalyFlagRow,
     'id' | 'activity_entry_id' | 'severity' | 'z_score' | 'message' | 'flagged_at'
   >;
 
-  const [entriesRaw, flagsRaw] = entryIds.length
-    ? await Promise.all([
-        supabase
-          .from('activity_entries')
-          .select('id, source_type, raw_quantity, raw_unit')
-          .in('id', entryIds),
-        supabase
-          .from('anomaly_flags')
-          .select('id, activity_entry_id, severity, z_score, message, flagged_at')
-          .in('activity_entry_id', entryIds)
-          .eq('is_resolved', false)
-          .order('flagged_at', { ascending: false }),
-      ])
-    : [{ data: [] as FilaEntrada[] }, { data: [] as FilaFlag[] }];
+  // IDs de entradas con resultados (para tabla de emisiones)
+  const resultEntryIds = [...new Set(results.map((r) => r.activity_entry_id))];
+
+  // Todas las entradas del periodo (para sección de evidencias — incluye no calculadas)
+  const { data: allEntriesRaw } = await supabase
+    .from('activity_entries')
+    .select('id, source_type, raw_quantity, raw_unit')
+    .eq('reporting_period_id', periodId)
+    .order('created_at', { ascending: true });
+
+  const allEntries = (allEntriesRaw ?? []) as FilaEntrada[];
+  const entryIds = allEntries.map((e) => e.id);
+
+  const flagsRaw = entryIds.length
+    ? await supabase
+        .from('anomaly_flags')
+        .select('id, activity_entry_id, severity, z_score, message, flagged_at')
+        .in('activity_entry_id', entryIds)
+        .eq('is_resolved', false)
+        .order('flagged_at', { ascending: false })
+    : { data: [] as FilaFlag[] };
 
   const entryMap = new Map<string, FilaEntrada>();
-  for (const e of (entriesRaw.data ?? []) as FilaEntrada[]) {
+  for (const e of allEntries) {
     entryMap.set(e.id, e);
   }
+
+  // Mapa limitado a entradas con resultados (para tabla de emisiones)
+  void resultEntryIds;
+
   const flagsData = (flagsRaw.data ?? []) as FilaFlag[];
 
   // Totales agregados
@@ -721,7 +730,7 @@ export default async function DetallePeriodoPage({
                           </span>
                         }
                       >
-                        <EvidenceSection entryId={eid} />
+                        <EvidenceSection entryId={eid} readOnly />
                       </Suspense>
                     </div>
                   </div>

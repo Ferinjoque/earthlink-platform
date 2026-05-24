@@ -51,6 +51,7 @@ export interface CsvImportState {
   skipped?: number | undefined;
   success?: boolean | undefined;
   submittedAt?: number | undefined;
+  entryIds?: string[] | undefined;
 }
 
 
@@ -439,6 +440,7 @@ export async function importActivityBulk(
   let importedCount = 0;
   let skippedCount = 0;
   const now = new Date();
+  const createdIds: string[] = [];
 
   for (const row of bulkRows) {
     const periodResult = await findOrCreatePeriod(supabase, row.supplier_id, row.year_month);
@@ -447,8 +449,9 @@ export async function importActivityBulk(
     const activityKind = buildActivityKind(row.source_type, row.secondary);
     if (!activityKind) { skippedCount++; continue; }
 
+    const entryId = crypto.randomUUID();
     const entry = new ActivityEntry({
-      id: crypto.randomUUID(),
+      id: entryId,
       reportingPeriodId: periodResult.periodId,
       sourceType: row.source_type,
       activityKind,
@@ -464,13 +467,14 @@ export async function importActivityBulk(
     try {
       await entryRepo.save(entry);
       importedCount++;
+      createdIds.push(entryId);
     } catch {
       skippedCount++;
     }
   }
 
   revalidatePath('/activity');
-  return { success: true, imported: importedCount, skipped: skippedCount, submittedAt: Date.now() };
+  return { success: true, imported: importedCount, skipped: skippedCount, entryIds: createdIds, submittedAt: Date.now() };
 }
 
 
