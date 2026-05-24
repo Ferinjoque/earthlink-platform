@@ -177,6 +177,32 @@ export async function getEvidenceFiles(entryId: string): Promise<EvidenceFileVie
   } = await supabase.auth.getUser();
   if (!user) return [];
 
+  // Verificar que el usuario tiene acceso a la entry (aislamiento de tenant)
+  const { data: entryCheck } = await supabase
+    .from('activity_entries')
+    .select('id, reporting_periods(supplier_id, suppliers(organization_id))')
+    .eq('id', entryId)
+    .maybeSingle();
+
+  if (!entryCheck) return [];
+
+  type PeriodoConSupplierLectura = {
+    supplier_id: string;
+    suppliers: { organization_id: string } | null;
+  };
+  const periodoLectura = entryCheck.reporting_periods as PeriodoConSupplierLectura | null;
+  const orgIdLectura = periodoLectura?.suppliers?.organization_id;
+  if (!orgIdLectura) return [];
+
+  const { data: memCheckLectura } = await supabase
+    .from('memberships')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('organization_id', orgIdLectura)
+    .maybeSingle();
+
+  if (!memCheckLectura) return [];
+
   const { data: rows } = await supabase
     .from('evidence_files')
     .select('id, original_name, mime_type, file_size_bytes, sha256, uploaded_at, storage_path')
@@ -212,6 +238,8 @@ export async function getEvidenceFiles(entryId: string): Promise<EvidenceFileVie
  */
 const UUID_BATCH_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const MAX_BATCH_EVIDENCIA = 200;
+
 export async function getEvidenceFilesBatch(
   entryIds: string[],
 ): Promise<Map<string, EvidenceFileView[]>> {
@@ -221,16 +249,47 @@ export async function getEvidenceFilesBatch(
   const validIds = entryIds.filter((id) => UUID_BATCH_RE.test(id));
   if (!validIds.length) return new Map();
 
+  // Limitar tamaño del lote para prevenir DoS por consultas masivas
+  if (validIds.length > MAX_BATCH_EVIDENCIA) return new Map();
+
   const supabase = await createServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return new Map();
 
+  // Verificar aislamiento de tenant: solo entries de orgs del usuario
+  const { data: membershipData } = await supabase
+    .from('memberships')
+    .select('organization_id')
+    .eq('user_id', user.id);
+  const userOrgIds = new Set(
+    (membershipData ?? []).map((m) => m.organization_id).filter((id): id is string => id !== null),
+  );
+  if (userOrgIds.size === 0) return new Map();
+
+  type EntryOrg = {
+    id: string;
+    reporting_periods: { suppliers: { organization_id: string } | null } | null;
+  };
+  const { data: entryChecks } = await supabase
+    .from('activity_entries')
+    .select('id, reporting_periods(suppliers(organization_id))')
+    .in('id', validIds);
+
+  const authorizedEntryIds = ((entryChecks ?? []) as EntryOrg[])
+    .filter((e) => {
+      const orgId = e.reporting_periods?.suppliers?.organization_id;
+      return orgId ? userOrgIds.has(orgId) : false;
+    })
+    .map((e) => e.id);
+
+  if (authorizedEntryIds.length === 0) return new Map();
+
   const { data: rows } = await supabase
     .from('evidence_files')
     .select('id, original_name, mime_type, file_size_bytes, sha256, uploaded_at, storage_path, activity_entry_id')
-    .in('activity_entry_id', validIds)
+    .in('activity_entry_id', authorizedEntryIds)
     .order('uploaded_at', { ascending: true });
 
   if (!rows?.length) return new Map();

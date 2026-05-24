@@ -342,19 +342,40 @@ describe('getEvidenceFilesBatch — filtro de UUIDs inválidos', () => {
 
   it('filtra IDs inválidos y consulta solo los válidos', async () => {
     const client = mockAuthClient();
-    const fromMock = vi.fn().mockReturnValue({
-      select: vi.fn().mockReturnThis(),
-      in: vi.fn().mockReturnThis(),
-      order: vi.fn().mockResolvedValue({ data: [] }),
-    });
-    client.from = fromMock;
+
+    // Mock por tabla para soportar el flujo completo de autorización de tenant
+    const evidenceInMock = vi.fn().mockReturnThis();
+    client.from = vi.fn().mockImplementation((table: string) => {
+      if (table === 'memberships') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockResolvedValue({ data: [{ organization_id: VALID_ORG }] }),
+        };
+      }
+      if (table === 'activity_entries') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          in: vi.fn().mockResolvedValue({
+            data: [
+              { id: VALID_UUID, reporting_periods: { suppliers: { organization_id: VALID_ORG } } },
+              { id: VALID_SUPPLIER, reporting_periods: { suppliers: { organization_id: VALID_ORG } } },
+            ],
+          }),
+        };
+      }
+      // evidence_files
+      return {
+        select: vi.fn().mockReturnThis(),
+        in: evidenceInMock,
+        order: vi.fn().mockResolvedValue({ data: [] }),
+      };
+    }) as typeof client.from;
     vi.mocked(createServerClient).mockResolvedValue(client as never);
 
     await getEvidenceFilesBatch([VALID_UUID, 'invalid-id', VALID_SUPPLIER]);
 
-    // Verificar que el .in() fue llamado solo con los UUIDs válidos
-    const inCall = fromMock().select().in as ReturnType<typeof vi.fn>;
-    const inCallArgs = inCall.mock?.calls ?? [];
+    // Verificar que evidence_files solo recibe UUIDs válidos autorizados
+    const inCallArgs = evidenceInMock.mock?.calls ?? [];
     if (inCallArgs.length > 0) {
       const ids = inCallArgs[0]?.[1] as string[];
       expect(ids).not.toContain('invalid-id');

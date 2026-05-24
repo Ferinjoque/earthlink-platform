@@ -650,7 +650,7 @@ export async function importActivityXlsx(
 
   // Verificar magic bytes de ZIP/XLSX (PK\x03\x04) para rechazar binarios arbitrarios
   const magic = new Uint8Array(buffer.slice(0, 4));
-  if (magic[0] !== 0x50 || magic[1] !== 0x4b || magic[2] !== 0x03 || magic[3] !== 0x04) {
+  if (magic.length < 4 || magic[0] !== 0x50 || magic[1] !== 0x4b || magic[2] !== 0x03 || magic[3] !== 0x04) {
     return { error: 'El archivo no es un Excel válido (.xlsx)', submittedAt: Date.now() };
   }
 

@@ -449,7 +449,8 @@ describe('exportCsv', () => {
 
     const fd = makeFormData({ period_ids: PERIOD_ID });
     const result = await exportCsv(null, fd);
-    expect(result.error).toMatch(/acceso/i);
+    // Con reporting_periods null/vacío, el servidor rechaza por falta de periodos exportables
+    expect(result.error).toBeTruthy();
   });
 
   it('handles null suppliers response from Supabase (defensive ?? [])', async () => {
@@ -560,5 +561,94 @@ describe('exportCsv', () => {
     const lines = result.csvContent?.split('\n') ?? [];
     expect(lines).toHaveLength(1);
     expect(lines[0]).toContain('periodo');
+  });
+
+  it('rechaza periodos en estado open (solo under_review y locked exportables)', async () => {
+    // El mock devuelve lista vacía para reporting_periods porque el filtro de status lo excluye
+    const baseData: Record<string, unknown> = {
+      memberships: [{ organization_id: ORG_ID }],
+      reporting_periods: [], // open periods filtrados por status
+      suppliers: [{ id: SUPPLIER_ID, name: 'Test Corp', organization_id: ORG_ID }],
+      emission_results: [],
+      activity_entries: [],
+      report_exports: [],
+    };
+
+    function chain(table: string) {
+      const data = table in baseData ? baseData[table] : [];
+      const resolved = Promise.resolve({ data });
+      const c: Record<string, unknown> = {
+        select: () => c, eq: () => c, in: () => c,
+        insert: vi.fn().mockResolvedValue({ error: null }),
+        order: () => resolved,
+        then: resolved.then.bind(resolved),
+        catch: resolved.catch.bind(resolved),
+      };
+      return c;
+    }
+
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: USER_ID } } }) },
+      from: vi.fn().mockImplementation((table: string) => chain(table)),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
+
+    const fd = makeFormData({ period_ids: PERIOD_ID });
+    const result = await exportCsv(null, fd);
+    expect(result.error).toMatch(/disponibles para exportación|revisión|bloqueados/i);
+  });
+
+  it('previene inyección de fórmulas CSV en nombre de proveedor', async () => {
+    const resultsData = [
+      {
+        id: RESULT_ID,
+        activity_entry_id: ENTRY_ID,
+        reporting_period_id: PERIOD_ID,
+        scope: 1,
+        co2e_kg: 10,
+        factor_used: 1,
+        factor_unit: 'kg CO2/unit',
+        calc_hash: 'abc',
+        calc_version: '1.0.0',
+        calculated_at: '2026-01-15T10:00:00Z',
+      },
+    ];
+    const dataMap: Record<string, unknown[]> = {
+      memberships: [{ organization_id: ORG_ID }],
+      reporting_periods: [{ id: PERIOD_ID, label: 'Q1-2026', supplier_id: SUPPLIER_ID }],
+      // Nombre de proveedor con prefijo de fórmula potencialmente malicioso
+      suppliers: [{ id: SUPPLIER_ID, name: '=SUM(A1:A100)', organization_id: ORG_ID }],
+      emission_results: resultsData,
+      activity_entries: [{ id: ENTRY_ID, source_type: 'stationary_combustion', raw_quantity: 100, raw_unit: 'kWh' }],
+      report_exports: [],
+    };
+
+    function chain(table: string) {
+      const resolved = Promise.resolve({ data: dataMap[table] ?? [] });
+      const c: Record<string, unknown> = {
+        select: () => c, eq: () => c, in: () => c,
+        insert: vi.fn().mockResolvedValue({ error: null }),
+        order: () => resolved,
+        then: resolved.then.bind(resolved),
+        catch: resolved.catch.bind(resolved),
+      };
+      return c;
+    }
+
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: USER_ID } } }) },
+      from: vi.fn().mockImplementation((table: string) => chain(table)),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
+
+    const fd = makeFormData({ period_ids: PERIOD_ID });
+    const result = await exportCsv(null, fd);
+    expect(result.success).toBe(true);
+    // El CSV debe tener el valor escapado con comilla simple prefijada
+    expect(result.csvContent).toContain("'=SUM(A1:A100)");
+    // No debe aparecer como fórmula directa (sin prefijo de escape)
+    const lines = result.csvContent?.split('\n') ?? [];
+    const dataRow = lines[1] ?? '';
+    expect(dataRow).not.toMatch(/,=SUM/); // sin coma seguida de = sin escape
   });
 });

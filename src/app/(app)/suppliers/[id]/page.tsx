@@ -56,7 +56,7 @@ export default async function DetalleProveedorPage({
     .from('suppliers')
     .select('id, name, category, contact_email, ruc, organization_id, created_at')
     .eq('id', id)
-    .single();
+    .maybeSingle();
 
   if (!rawSupplier) notFound();
   const supplier = rawSupplier as Pick<
