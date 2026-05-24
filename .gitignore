@@ -54,3 +54,8 @@ lighthouse-*.json
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# borradores temporales de PR y scripts de diagnóstico local
+pr-body.md
+pr*.md
+scripts/diag.ts
