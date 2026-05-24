@@ -299,6 +299,12 @@ export async function recalculatePeriod(
   try {
     outcome = await evalSvc.evaluate(periodId);
   } catch {
+    // Los resultados ya fueron eliminados — restablecer a under_review para que
+    // el periodo no quede bloqueado sin resultados y pueda recalcularse.
+    await adminClient
+      .from('reporting_periods')
+      .update({ status: 'under_review' })
+      .eq('id', periodId);
     return { error: 'Error al recalcular las emisiones del periodo. Intenta nuevamente.' };
   }
 

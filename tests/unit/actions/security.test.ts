@@ -419,10 +419,11 @@ describe('Errores genéricos — sin leakage de mensajes de BD', () => {
           };
         }
         if (callCount === 2) {
-          // memberships SELECT
+          // memberships SELECT (incluye .in() por el filtro de rol)
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            in: vi.fn().mockReturnThis(),
             maybeSingle: vi.fn().mockResolvedValue({ data: { role: 'admin' } }),
           };
         }
