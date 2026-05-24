@@ -45,7 +45,7 @@ export default async function DetallePeriodoPage({
   params: Promise<{ periodId: string }>;
 }) {
   const { periodId } = await params;
-  if (!periodId || !/^[0-9a-f-]{36}$/i.test(periodId)) notFound();
+  if (!periodId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(periodId)) notFound();
 
   const supabase = await createServerClient();
   const {

@@ -30,7 +30,7 @@ vi.mock('../../../src/services/supabase/server', () => {
 });
 
 import { createServerClient } from '../../../src/services/supabase/server';
-import { getEvidenceFiles, getEvidenceFilesBatch } from '../../../src/actions/evidence';
+import { getEvidenceFiles, getEvidenceFilesBatch, deleteEvidence } from '../../../src/actions/evidence';
 
 type MockClient = Awaited<ReturnType<typeof createServerClient>>;
 
@@ -49,10 +49,9 @@ function makeSelectChain(data: unknown) {
     maybeSingle: vi.fn().mockResolvedValue({ data, error: null }),
     then: undefined as unknown,
   };
-  (chain as unknown as Promise<unknown>)[Symbol.iterator] = undefined as unknown;
   return {
     ...chain,
-    [Symbol.asyncIterator]: undefined,
+    [Symbol.asyncIterator]: undefined as unknown,
   };
 }
 
@@ -239,8 +238,8 @@ describe('getEvidenceFiles', () => {
 
     expect(mocks.createSignedUrls).toHaveBeenCalledWith([row.storage_path], 3600);
     expect(result).toHaveLength(1);
-    expect(result[0].signedUrl).toBe('https://example.com/signed');
-    expect(result[0].id).toBe('file-001');
+    expect(result[0]?.signedUrl).toBe('https://example.com/signed');
+    expect(result[0]?.id).toBe('file-001');
   });
 
   it('usa null como signedUrl cuando createSignedUrls falla para un archivo', async () => {
@@ -281,7 +280,7 @@ describe('getEvidenceFiles', () => {
     mocks.createSignedUrls.mockResolvedValue({ data: null, error: { message: 'Storage error' } });
 
     const result = await getEvidenceFiles(ENTRY_ID);
-    expect(result[0].signedUrl).toBeNull();
+    expect(result[0]?.signedUrl).toBeNull();
   });
 });
 
@@ -371,7 +370,132 @@ describe('getEvidenceFilesBatch', () => {
     );
     expect(result.get(ENTRY_ID)).toHaveLength(1);
     expect(result.get(ENTRY_ID_2)).toHaveLength(1);
-    expect(result.get(ENTRY_ID)?.[0].signedUrl).toBe('https://example.com/signed1');
-    expect(result.get(ENTRY_ID_2)?.[0].signedUrl).toBe('https://example.com/signed2');
+    expect(result.get(ENTRY_ID)?.[0]?.signedUrl).toBe('https://example.com/signed1');
+    expect(result.get(ENTRY_ID_2)?.[0]?.signedUrl).toBe('https://example.com/signed2');
+  });
+});
+
+// ── deleteEvidence ────────────────────────────────────────────────────────────
+
+const FILE_ID = '00000000-0000-4000-8000-aaaaaaaaaaaa';
+const USER_ID = 'user-uploader';
+const OTHER_USER_ID = 'user-other';
+
+const MOCK_FILE = {
+  id: FILE_ID,
+  storage_path: `evidence/${ORG_ID}/${ENTRY_ID}/${FILE_ID}.pdf`,
+  uploaded_by: USER_ID,
+  activity_entry_id: ENTRY_ID,
+};
+
+const MOCK_ENTRY_ORG = {
+  reporting_periods: { suppliers: { organization_id: ORG_ID } },
+};
+
+function buildDeleteFromMock(opts: {
+  file: typeof MOCK_FILE | null;
+  entryOrg: typeof MOCK_ENTRY_ORG | null;
+  membershipRole: string | null;
+}) {
+  let evidenceSelectCalled = 0;
+  return vi.fn().mockImplementation((table: string) => {
+    if (table === 'evidence_files') {
+      evidenceSelectCalled += 1;
+      if (evidenceSelectCalled === 1) {
+        // Primera llamada: SELECT para leer el archivo
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({ data: opts.file, error: null }),
+        };
+      }
+      // Segunda llamada: DELETE
+      return {
+        delete: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+        }),
+      };
+    }
+    if (table === 'activity_entries') {
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: opts.entryOrg, error: null }),
+      };
+    }
+    if (table === 'memberships') {
+      const memData = opts.membershipRole ? { role: opts.membershipRole } : null;
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: memData, error: null }),
+      };
+    }
+    return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), maybeSingle: vi.fn().mockResolvedValue({ data: null }) };
+  });
+}
+
+describe('deleteEvidence — autorización', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.storageRemove.mockResolvedValue({ data: null, error: null });
+  });
+
+  it('rechaza ID de archivo inválido', async () => {
+    const fd = new FormData();
+    const result = await deleteEvidence('not-a-uuid', null, fd);
+    expect(result.error).toMatch(/inválido/i);
+  });
+
+  it('rechaza cuando no hay sesión autenticada', async () => {
+    vi.mocked(createServerClient).mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null } }) },
+      from: vi.fn(),
+    } as unknown as MockClient);
+    const fd = new FormData();
+    const result = await deleteEvidence(FILE_ID, null, fd);
+    expect(result.error).toMatch(/autenticado/i);
+  });
+
+  it('rechaza cuando el uploader ya no tiene membresía activa en la org', async () => {
+    // Mismo usuario que subió el archivo, pero ya no tiene membresía → debe rechazarse
+    vi.mocked(createServerClient).mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: USER_ID } } }) },
+      from: buildDeleteFromMock({ file: MOCK_FILE, entryOrg: MOCK_ENTRY_ORG, membershipRole: null }),
+    } as unknown as MockClient);
+    const fd = new FormData();
+    const result = await deleteEvidence(FILE_ID, null, fd);
+    expect(result.error).toMatch(/permisos/i);
+  });
+
+  it('rechaza cuando usuario externo tiene rol consultant (no admin)', async () => {
+    vi.mocked(createServerClient).mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: OTHER_USER_ID } } }) },
+      from: buildDeleteFromMock({ file: MOCK_FILE, entryOrg: MOCK_ENTRY_ORG, membershipRole: 'consultant' }),
+    } as unknown as MockClient);
+    const fd = new FormData();
+    const result = await deleteEvidence(FILE_ID, null, fd);
+    expect(result.error).toMatch(/permisos/i);
+  });
+
+  it('permite que admin de la org borre archivo de otro usuario', async () => {
+    vi.mocked(createServerClient).mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: OTHER_USER_ID } } }) },
+      from: buildDeleteFromMock({ file: MOCK_FILE, entryOrg: MOCK_ENTRY_ORG, membershipRole: 'admin' }),
+    } as unknown as MockClient);
+    const fd = new FormData();
+    const result = await deleteEvidence(FILE_ID, null, fd);
+    expect(result.success).toBe(true);
+    expect(result.error).toBeUndefined();
+  });
+
+  it('rechaza cuando el archivo no existe', async () => {
+    vi.mocked(createServerClient).mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: USER_ID } } }) },
+      from: buildDeleteFromMock({ file: null, entryOrg: MOCK_ENTRY_ORG, membershipRole: 'admin' }),
+    } as unknown as MockClient);
+    const fd = new FormData();
+    const result = await deleteEvidence(FILE_ID, null, fd);
+    expect(result.error).toMatch(/encontrado/i);
   });
 });

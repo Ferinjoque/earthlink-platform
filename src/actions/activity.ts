@@ -328,6 +328,7 @@ export async function createActivityEntry(
 
   revalidatePath('/activity');
   revalidatePath('/audit');
+  revalidatePath('/dashboard');
   return { success: true, submittedAt: Date.now() };
 }
 

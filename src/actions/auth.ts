@@ -26,13 +26,18 @@ export async function signIn(
   }
 
   const next = formData.get('next');
-  const destination =
-    typeof next === 'string' &&
-    next.startsWith('/') &&
-    !next.startsWith('//') &&
-    !next.startsWith('/\\')
-      ? next
-      : '/dashboard';
+  let destination = '/dashboard';
+  if (typeof next === 'string' && next.length > 0) {
+    try {
+      // Normalizar con URL para neutralizar codificaciones /%09, /\\ y similares
+      const url = new URL(next, 'http://localhost');
+      if (url.host === 'localhost' && url.pathname.startsWith('/')) {
+        destination = url.pathname + url.search;
+      }
+    } catch {
+      // ruta inválida — usar destino por defecto
+    }
+  }
   redirect(destination);
 }
 

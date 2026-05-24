@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createServerClient } from '@/services/supabase/server';
 import { TopBar } from '@/components/shell/TopBar';
@@ -50,7 +50,7 @@ export default async function DetalleProveedorPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) notFound();
+  if (!user) redirect('/login');
 
   const { data: rawSupplier } = await supabase
     .from('suppliers')
