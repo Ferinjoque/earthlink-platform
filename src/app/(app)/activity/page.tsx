@@ -127,14 +127,28 @@ export default async function ActividadPage({ searchParams }: PageProps) {
     AnomalyFlagRow,
     'activity_entry_id' | 'severity' | 'z_score' | 'message'
   >[] = [];
+  const evidenceCountMap = new Map<string, number>();
+
   if (entryIds.length) {
-    const { data } = await supabase
-      .from('anomaly_flags')
-      .select('activity_entry_id, severity, z_score, message')
-      .in('activity_entry_id', entryIds)
-      .eq('is_resolved', false)
-      .order('flagged_at', { ascending: false });
-    if (data) flagsData.push(...data);
+    const [flagsResult, evidenceResult] = await Promise.all([
+      supabase
+        .from('anomaly_flags')
+        .select('activity_entry_id, severity, z_score, message')
+        .in('activity_entry_id', entryIds)
+        .eq('is_resolved', false)
+        .order('flagged_at', { ascending: false }),
+      supabase
+        .from('evidence_files')
+        .select('activity_entry_id')
+        .in('activity_entry_id', entryIds),
+    ]);
+    if (flagsResult.data) flagsData.push(...flagsResult.data);
+    for (const ev of evidenceResult.data ?? []) {
+      evidenceCountMap.set(
+        ev.activity_entry_id,
+        (evidenceCountMap.get(ev.activity_entry_id) ?? 0) + 1,
+      );
+    }
   }
 
   const flagMap = new Map<
@@ -164,6 +178,7 @@ export default async function ActividadPage({ searchParams }: PageProps) {
     notes: e.notes,
     voided_at: e.voided_at,
     void_reason: e.void_reason,
+    evidence_count: evidenceCountMap.get(e.id) ?? 0,
     anomaly: flagMap.get(e.id),
   }));
 

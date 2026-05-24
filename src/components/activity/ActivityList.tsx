@@ -3,6 +3,7 @@
 import { Fragment, useState, useActionState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Paperclip } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { AnomalyBadge } from '@/components/activity/AnomalyBadge';
 import { traducirMensajeAnomalia } from '@/lib/anomaly';
@@ -23,6 +24,7 @@ export interface ActivityEntryView {
   notes: string | null;
   voided_at?: string | null;
   void_reason?: string | null;
+  evidence_count?: number;
   anomaly?:
     | {
         severity: AnomalySeverity;
@@ -347,13 +349,31 @@ function EntradaFila({
         <td
           style={{
             ...estiloCelda,
-            width: '52px',
-            textAlign: 'center',
+            width: '72px',
+            textAlign: 'right',
             paddingLeft: 'var(--space-2)',
-            paddingRight: 'var(--space-2)',
+            paddingRight: 'var(--space-3)',
           }}
         >
-          {!isVoided && <VoidEntryButton entryId={entry.id} />}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', justifyContent: 'flex-end' }}>
+            {(entry.evidence_count ?? 0) > 0 && (
+              <span
+                title={`${entry.evidence_count} archivo${(entry.evidence_count ?? 0) !== 1 ? 's' : ''} adjunto${(entry.evidence_count ?? 0) !== 1 ? 's' : ''}`}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '2px',
+                  fontSize: '10px',
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--color-accent)',
+                }}
+              >
+                <Paperclip size={10} aria-hidden="true" />
+                {entry.evidence_count}
+              </span>
+            )}
+            {!isVoided && <VoidEntryButton entryId={entry.id} />}
+          </div>
         </td>
       </tr>
 
