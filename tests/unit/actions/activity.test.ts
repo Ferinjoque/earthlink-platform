@@ -664,6 +664,19 @@ describe('importActivityCsv — ownership check', () => {
   });
 });
 
+/** Mock para importActivityBulk con un proveedor y periodo existente */
+function mockBulkImportClient() {
+  const mockSupabase = {
+    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+    from: vi.fn()
+      .mockReturnValueOnce(makeMaybeSingleChain({ organization_id: 'org-001' }))   // verifySupplierAccess → suppliers
+      .mockReturnValueOnce(makeMaybeSingleChain({ role: 'admin', supplier_id: null })) // verifySupplierAccess → memberships
+      .mockReturnValueOnce(makeMaybeSingleChain({ id: PERIOD_ID, status: 'open' })),  // findOrCreatePeriod → existing period
+  };
+  vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
+  return mockSupabase;
+}
+
 // ── importActivityBulk — validación de tamaño ────────────────────────────────
 
 describe('importActivityBulk — límite de tamaño', () => {
@@ -719,6 +732,26 @@ describe('importActivityBulk — límite de tamaño', () => {
     const fd = makeFormData({ json_entries: JSON.stringify(bigArray) });
     const result = await importActivityBulk(null, fd);
     expect(result.error).toMatch(/500/);
+  });
+
+  it('returns success with imported count for valid single row', async () => {
+    mockBulkImportClient();
+    const rows = [
+      {
+        supplier_id: VALID_UUID,
+        year_month: VALID_YM,
+        source_type: 'purchased_electricity',
+        secondary: 'SEIN_PERU',
+        raw_quantity: 1000,
+        raw_unit: 'kWh',
+      },
+    ];
+    const fd = makeFormData({ json_entries: JSON.stringify(rows) });
+    const result = await importActivityBulk(null, fd);
+    expect(result.success).toBe(true);
+    expect(result.imported).toBe(1);
+    expect(result.skipped).toBe(0);
+    expect(result.entryIds).toHaveLength(1);
   });
 });
 
