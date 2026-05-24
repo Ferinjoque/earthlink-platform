@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/Toast';
 interface EvidenceUploaderProps {
   entryId: string;
   files: EvidenceFileView[];
+  onSuccess?: () => void;
 }
 
 function iconoPorMime(mime: string) {
@@ -56,7 +57,7 @@ function EvidenceDeleteButton({ fileId }: { fileId: string }) {
   );
 }
 
-export function EvidenceUploader({ entryId, files }: EvidenceUploaderProps) {
+export function EvidenceUploader({ entryId, files, onSuccess }: EvidenceUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
@@ -73,8 +74,9 @@ export function EvidenceUploader({ entryId, files }: EvidenceUploaderProps) {
     } else if (state?.success) {
       toast('Evidencia adjuntada', 'success');
       formRef.current?.reset();
+      onSuccess?.();
     }
-  }, [state, toast]);
+  }, [state, toast, onSuccess]);
 
   function handleFileChange() {
     const file = inputRef.current?.files?.[0];
