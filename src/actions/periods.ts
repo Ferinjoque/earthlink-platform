@@ -35,7 +35,7 @@ export interface PeriodActionState {
 
 export type CreatePeriodState = PeriodActionState;
 
-type SupplierData = { organization_id: string };
+type SupplierData = { organization_id: string; archived_at: string | null };
 type MembershipData = { role: string };
 
 export async function createPeriod(
@@ -62,11 +62,12 @@ export async function createPeriod(
 
   const { data: rawSupplier } = await supabase
     .from('suppliers')
-    .select('organization_id')
+    .select('organization_id, archived_at')
     .eq('id', supplier_id)
     .maybeSingle();
   const supplier = rawSupplier as SupplierData | null;
   if (!supplier) return { error: 'Proveedor no encontrado' };
+  if (supplier.archived_at) return { error: 'No se puede crear periodos en un proveedor archivado' };
 
   const { data: rawMembership } = await supabase
     .from('memberships')
