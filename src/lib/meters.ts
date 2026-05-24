@@ -7,13 +7,13 @@ export interface EntryWithPeriod {
   secondary: string;
   raw_quantity: number;
   raw_unit: string;
-  period_start: string; // ISO date string YYYY-MM-DD
+  period_start: string; // Fecha ISO YYYY-MM-DD
   supplier_name: string;
   supplier_id: string;
 }
 
 export interface VirtualMeter {
-  id: string; // `${source_type}::${secondary}::${raw_unit}`
+  id: string; // clave: `${source_type}::${secondary}::${raw_unit}`
   source_type: EmissionSourceType;
   secondary: string;
   unit: string;
@@ -22,7 +22,7 @@ export interface VirtualMeter {
   supplier_id: string;
 }
 
-export type MonthData = Record<number, number>; // month (1–12) → quantity sum
+export type MonthData = Record<number, number>; // mes (1–12) → suma de cantidad
 
 export interface MeterYearSummary {
   meter: VirtualMeter;
@@ -89,7 +89,7 @@ export function aggregateByMonth(
 
   for (const e of yearEntries) {
     const id = meterId(e);
-    const month = parsePeriodDate(e.period_start)!.month; // 1–12
+    const month = parsePeriodDate(e.period_start)!.month; // 1–12 (enero–diciembre)
 
     if (!meterMap.has(id)) {
       meterMap.set(id, {

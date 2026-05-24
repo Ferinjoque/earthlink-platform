@@ -1,17 +1,17 @@
 -- =============================================================================
--- Migration 005: Triggers, Append-Only Guards, Auto-Audit, and RLS
+-- Migración 005: Triggers, guardias solo-append, auto-auditoría y RLS
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
--- Append-only mutation guard
--- Blocks UPDATE and DELETE on emission_results, audit_log, report_exports.
--- Defense-in-depth: RLS alone is insufficient since service_role bypasses it.
+-- Guardia de mutación solo-append
+-- Bloquea UPDATE y DELETE en emission_results, audit_log, report_exports.
+-- Defensa en profundidad: RLS solo no es suficiente porque service_role lo bypasea.
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_prevent_mutation()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
   RAISE EXCEPTION
-    'Table "%" is append-only. Mutating record "%" is not permitted.',
+    'La tabla "%" es solo-append. No está permitido mutar el registro "%".',
     TG_TABLE_NAME, OLD.id
     USING ERRCODE = 'restrict_violation';
 END;
@@ -45,9 +45,9 @@ CREATE TRIGGER trg_report_exports_no_delete
   FOR EACH ROW EXECUTE FUNCTION public.fn_prevent_mutation();
 
 -- ---------------------------------------------------------------------------
--- Auto-audit trigger
--- Writes a row to audit_log whenever activity_entries or reporting_periods
--- are mutated. Runs as SECURITY DEFINER so it can always insert to audit_log.
+-- Trigger de auto-auditoría
+-- Escribe una fila en audit_log cuando activity_entries o reporting_periods
+-- son mutados. Corre como SECURITY DEFINER para poder insertar en audit_log.
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_audit_changes()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
@@ -78,12 +78,12 @@ CREATE TRIGGER trg_audit_anomaly_flags
   FOR EACH ROW EXECUTE FUNCTION public.fn_audit_changes();
 
 -- ---------------------------------------------------------------------------
--- Row Level Security
--- Phase 1: open policies (no auth yet — tightened in Phase 4 feat/phase-4-auth-rls).
--- All tables have RLS enabled so the policies are ready to swap.
+-- Row Level Security (RLS)
+-- Fase 1: políticas abiertas (sin auth aún — endurecidas en Fase 4 feat/phase-4-auth-rls).
+-- Todas las tablas tienen RLS habilitado para que las políticas sean fáciles de reemplazar.
 -- ---------------------------------------------------------------------------
 
--- Reference tables: public read, no write from client
+-- Tablas de referencia: lectura pública, sin escritura desde el cliente
 ALTER TABLE public.fuel_types      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.refrigerants    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.grid_regions    ENABLE ROW LEVEL SECURITY;
@@ -96,17 +96,17 @@ CREATE POLICY "ref_read_all"  ON public.grid_regions     FOR SELECT USING (true)
 CREATE POLICY "ref_read_all"  ON public.emission_factors FOR SELECT USING (true);
 CREATE POLICY "ref_read_all"  ON public.unit_conversions FOR SELECT USING (true);
 
--- Access tables
+-- Tablas de acceso
 ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.suppliers     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.memberships   ENABLE ROW LEVEL SECURITY;
 
--- Phase 1 open policy — replaced in Phase 4
+-- Política abierta Fase 1 — reemplazada en Fase 4
 CREATE POLICY "phase1_open" ON public.organizations USING (true) WITH CHECK (true);
 CREATE POLICY "phase1_open" ON public.suppliers     USING (true) WITH CHECK (true);
 CREATE POLICY "phase1_open" ON public.memberships   USING (true) WITH CHECK (true);
 
--- Transactional tables
+-- Tablas transaccionales
 ALTER TABLE public.reporting_periods ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.activity_entries  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.emission_results  ENABLE ROW LEVEL SECURITY;
@@ -119,12 +119,12 @@ CREATE POLICY "phase1_open" ON public.emission_results  USING (true) WITH CHECK 
 CREATE POLICY "phase1_open" ON public.evidence_files    USING (true) WITH CHECK (true);
 CREATE POLICY "phase1_open" ON public.anomaly_flags     USING (true) WITH CHECK (true);
 
--- Audit tables: SELECT only from client; INSERT via SECURITY DEFINER trigger only
+-- Tablas de auditoría: solo SELECT desde el cliente; INSERT solo vía trigger SECURITY DEFINER
 ALTER TABLE public.audit_log      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.report_exports ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "audit_log_read"      ON public.audit_log      FOR SELECT USING (true);
 CREATE POLICY "report_exports_read" ON public.report_exports FOR SELECT USING (true);
--- Phase 1: allow anon insert for seeding (locked down in Phase 4)
+-- Fase 1: permite inserción anónima para seed (restringido en Fase 4)
 CREATE POLICY "audit_log_insert_phase1"      ON public.audit_log      FOR INSERT WITH CHECK (true);
 CREATE POLICY "report_exports_insert_phase1" ON public.report_exports FOR INSERT WITH CHECK (true);

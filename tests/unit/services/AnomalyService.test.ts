@@ -301,10 +301,10 @@ describe('AnomalyService._internals', () => {
     expect(z).toBeCloseTo(2.0, 5);
   });
 
-  it('zScore value is absolute (below mean still returns positive z)', () => {
-    // 8 is 2σ below mean 10 — absolute z should be 2.0
+  it('zScore is signed (below mean returns negative z)', () => {
+    // 8 is 2σ below mean 10 — signed z should be -2.0
     const z = AnomalyService._internals.zScore(8, [9, 10, 11]);
-    expect(z).toBeCloseTo(2.0, 5);
+    expect(z).toBeCloseTo(-2.0, 5);
   });
 
   it('mean computes correctly', () => {
@@ -334,6 +334,12 @@ describe('AnomalyService._internals', () => {
     expect(AnomalyService._internals.severityFor(AnomalyService.Z_THRESHOLD_MEDIUM)).toBe('medium');
     // At exactly Z_THRESHOLD_HIGH → high
     expect(AnomalyService._internals.severityFor(AnomalyService.Z_THRESHOLD_HIGH)).toBe('high');
+  });
+
+  it('severityFor works correctly for negative z-scores (below baseline)', () => {
+    expect(AnomalyService._internals.severityFor(-1.5)).toBe('low');
+    expect(AnomalyService._internals.severityFor(-3.5)).toBe('medium');
+    expect(AnomalyService._internals.severityFor(-5.0)).toBe('high');
   });
 });
 

@@ -43,7 +43,7 @@ function validateActivity(record: ActivityRecord): CalcResult<ActivityRecord> {
     return err({
       type: 'INVALID_VALUE',
       value: record.rawValue,
-      reason: 'rawValue must be a finite non-negative number',
+      reason: 'rawValue debe ser un número finito no negativo',
     });
   }
   return ok(record);

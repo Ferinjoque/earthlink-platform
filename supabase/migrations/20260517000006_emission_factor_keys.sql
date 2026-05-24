@@ -1,13 +1,13 @@
--- Migration 006: derived lookup columns on emission_factors
--- activity_key, set_id, set_version are computed automatically by the trigger
--- so the calc engine can build a FactorTable without runtime joins.
+-- Migración 006: columnas derivadas de lookup en emission_factors
+-- activity_key, set_id, set_version se calculan automáticamente por el trigger
+-- para que el motor de cálculo pueda construir un FactorTable sin joins en tiempo de ejecución.
 
 ALTER TABLE public.emission_factors
   ADD COLUMN IF NOT EXISTS activity_key text,
   ADD COLUMN IF NOT EXISTS set_id       text,
   ADD COLUMN IF NOT EXISTS set_version  text;
 
--- ── Auto-compute trigger ──────────────────────────────────────────────────────
+-- ── Trigger de cómputo automático ────────────────────────────────────────────
 
 CREATE OR REPLACE FUNCTION public.fn_compute_ef_key()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$

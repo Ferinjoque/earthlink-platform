@@ -63,12 +63,12 @@ function makeService(period: ReportingPeriod | null = makePeriod()) {
 describe('AuditService.lock()', () => {
   it('throws when period not found', async () => {
     const { service } = makeService(null);
-    await expect(service.lock('period-001', 'user-001')).rejects.toThrow('not found');
+    await expect(service.lock('period-001', 'user-001')).rejects.toThrow('no encontrado');
   });
 
   it('throws when period already locked', async () => {
     const { service } = makeService(makePeriod('locked'));
-    await expect(service.lock('period-001', 'user-001')).rejects.toThrow('already locked');
+    await expect(service.lock('period-001', 'user-001')).rejects.toThrow('ya está bloqueado');
   });
 
   it('updates period status to locked', async () => {
@@ -109,13 +109,13 @@ describe('AuditService.transitionStatus()', () => {
     const { service } = makeService(null);
     await expect(
       service.transitionStatus('period-001', 'calculating', 'user-001'),
-    ).rejects.toThrow('not found');
+    ).rejects.toThrow('no encontrado');
   });
 
   it('throws when period is locked', async () => {
     const { service } = makeService(makePeriod('locked'));
     await expect(service.transitionStatus('period-001', 'calculating', 'user-001')).rejects.toThrow(
-      'locked',
+      'está bloqueado',
     );
   });
 

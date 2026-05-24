@@ -1,4 +1,4 @@
--- Demo user for local testing
+-- Usuario demo para pruebas locales
 -- email: admin@earthlink.test  |  password: Earthlink2025!
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 

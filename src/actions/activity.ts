@@ -411,7 +411,7 @@ const bulkEntrySchema = z.array(
     data_quality: z.enum(DATA_QUALITY_VALUES).default('measured'),
     notes: z.string().max(1000, 'Las notas no pueden superar 1000 caracteres').optional(),
   }),
-).min(1, 'Se requiere al menos una fila');
+).min(1, 'Se requiere al menos una fila').max(500, 'No se pueden importar más de 500 filas por lote');
 
 export async function importActivityBulk(
   _prevState: CsvImportState | null,

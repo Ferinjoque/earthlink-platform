@@ -704,6 +704,22 @@ describe('importActivityBulk — límite de tamaño', () => {
     const result = await importActivityBulk(null, fd);
     expect(result.error).toBeDefined();
   });
+
+  it('returns error when array exceeds 500 rows', async () => {
+    mockAuthenticatedClient();
+    const row = {
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
+      source_type: 'purchased_electricity',
+      secondary: 'SEIN_PERU',
+      raw_quantity: 1000,
+      raw_unit: 'kWh',
+    };
+    const bigArray = Array.from({ length: 501 }, () => row);
+    const fd = makeFormData({ json_entries: JSON.stringify(bigArray) });
+    const result = await importActivityBulk(null, fd);
+    expect(result.error).toMatch(/500/);
+  });
 });
 
 // ── voidActivityEntry — validación UUID ───────────────────────────────────────

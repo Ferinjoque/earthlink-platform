@@ -1,9 +1,9 @@
 -- ─────────────────────────────────────────────────────────────────────────────
--- Security fixes (identified via audit)
+-- Correcciones de seguridad (identificadas via auditoría)
 -- ─────────────────────────────────────────────────────────────────────────────
 
--- ── C-1: anomaly_flags UPDATE policy (was missing) ───────────────────────────
--- Without this, any authenticated user could resolve anomalies in any org.
+-- ── C-1: Política UPDATE en anomaly_flags (faltaba) ──────────────────────────
+-- Sin esto, cualquier usuario autenticado podía resolver anomalías en cualquier org.
 
 DROP POLICY IF EXISTS "anomaly_update_staff" ON public.anomaly_flags;
 CREATE POLICY "anomaly_update_staff" ON public.anomaly_flags
@@ -29,8 +29,8 @@ CREATE POLICY "anomaly_update_staff" ON public.anomaly_flags
     )
   );
 
--- ── H-3a: audit_log read — restrict to admin/consultant (was USING (true)) ───
--- Suppliers must not be able to read all audit log entries.
+-- ── H-3a: Lectura en audit_log — restringir a admin/consultant (era USING (true)) ──
+-- Los suppliers no deben poder leer todas las entradas del audit log.
 
 DROP POLICY IF EXISTS "audit_log_read" ON public.audit_log;
 CREATE POLICY "audit_log_read" ON public.audit_log
@@ -43,8 +43,8 @@ CREATE POLICY "audit_log_read" ON public.audit_log
     )
   );
 
--- ── H-3b: report_exports read — scope to org members (was USING (true)) ─────
--- Users must only see exports belonging to their own organizations.
+-- ── H-3b: Lectura en report_exports — acotar a miembros de la org (era USING (true)) ──
+-- Los usuarios solo deben ver exportaciones de sus propias organizaciones.
 
 DROP POLICY IF EXISTS "report_exports_read" ON public.report_exports;
 CREATE POLICY "report_exports_read" ON public.report_exports

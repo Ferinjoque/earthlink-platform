@@ -1,9 +1,8 @@
 -- =============================================================================
--- Migration 010: INSERT policy for emission_results
--- The calculation action (calculatePeriod) runs as an authenticated admin or
--- consultant via the anon-key client. RLS was enabled on emission_results with
--- no INSERT policy, blocking inserts by the user-scoped client.
--- This policy grants INSERT to admin/consultant members of the supplier's org.
+-- Migración 010: Política INSERT para emission_results
+-- La acción calculatePeriod corre como admin/consultant autenticado via cliente anon-key.
+-- RLS estaba habilitado en emission_results sin política INSERT, bloqueando inserts del cliente.
+-- Esta política otorga INSERT a miembros admin/consultant de la org del proveedor.
 -- =============================================================================
 
 DROP POLICY IF EXISTS "emission_result_insert" ON public.emission_results;

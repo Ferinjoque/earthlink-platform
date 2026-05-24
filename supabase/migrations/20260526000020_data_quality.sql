@@ -1,7 +1,7 @@
--- Migration 020: data_quality field on activity_entries
--- GHG Protocol requires distinguishing measured vs estimated vs calculated values.
--- This field enables quality reporting (% measured vs estimated) and affects
--- anomaly detection confidence.
+-- Migración 020: campo data_quality en activity_entries
+-- El Protocolo GHG requiere distinguir valores medidos vs estimados vs calculados.
+-- Este campo habilita reportes de calidad (% medido vs estimado) y afecta
+-- la confianza de detección de anomalías.
 
 ALTER TABLE activity_entries
   ADD COLUMN IF NOT EXISTS data_quality text
@@ -9,11 +9,11 @@ ALTER TABLE activity_entries
     CHECK (data_quality IN ('measured', 'estimated', 'calculated'));
 
 COMMENT ON COLUMN activity_entries.data_quality IS
-  'How the raw_quantity was obtained: measured (direct meter/invoice), estimated (proxy/interpolation), calculated (derived from other data)';
+  'Cómo se obtuvo raw_quantity: measured (medidor directo/factura), estimated (proxy/interpolación), calculated (derivado de otros datos)';
 
--- Backfill: existing entries are assumed measured
+-- Backfill: las entradas existentes se asumen como medidas
 UPDATE activity_entries SET data_quality = 'measured' WHERE data_quality IS NULL;
 
--- Make it NOT NULL after backfill
+-- Hacer NOT NULL después del backfill
 ALTER TABLE activity_entries ALTER COLUMN data_quality SET NOT NULL;
 ALTER TABLE activity_entries ALTER COLUMN data_quality SET DEFAULT 'measured';

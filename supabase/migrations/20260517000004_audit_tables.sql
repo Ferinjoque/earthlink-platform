@@ -1,6 +1,6 @@
 -- =============================================================================
--- Migration 004: Audit Tables (2 tables)
--- Append-only immutable records — mutation guards applied in migration 005.
+-- Migración 004: Tablas de auditoría (2 tablas)
+-- Registros inmutables solo-append — guardias de mutación aplicados en migración 005.
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 -- =============================================================================
--- Migration 002: Auth / Access Tables (3 tables)
--- Organizations, Suppliers, Memberships
+-- Migración 002: Tablas de acceso / autenticación (3 tablas)
+-- Organizaciones, Proveedores, Membresías
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------

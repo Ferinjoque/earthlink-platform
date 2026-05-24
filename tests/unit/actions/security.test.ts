@@ -65,7 +65,7 @@ import {
 } from '../../../src/actions/audit';
 import { voidActivityEntry, importActivityXlsx } from '../../../src/actions/activity';
 import { createPeriod } from '../../../src/actions/periods';
-import { getEvidenceFilesBatch } from '../../../src/actions/evidence';
+import { getEvidenceFilesBatch, uploadEvidence, deleteEvidence } from '../../../src/actions/evidence';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -418,5 +418,189 @@ describe('Errores genéricos — sin leakage de mensajes de BD', () => {
       expect(result.error).not.toMatch(/pk_internal|constraint|duplicate key/i);
       expect(result.error).toMatch(/Intenta nuevamente/i);
     }
+  });
+});
+
+// ── uploadEvidence — magic bytes validation ───────────────────────────────────
+
+describe('uploadEvidence — validación de magic bytes', () => {
+  function makeFile(bytes: number[], mime: string, name: string): File {
+    const buf = new Uint8Array(bytes.concat(new Array(100).fill(0)));
+    return new File([buf], name, { type: mime });
+  }
+
+  function mockUploadClient() {
+    // Mock que pasa: auth → entry check (org join) → membership → duplicate check
+    let callCount = 0;
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: VALID_UUID } } }) },
+      from: vi.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          // activity_entries con join a reporting_periods → suppliers
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: {
+                id: VALID_UUID,
+                reporting_period_id: VALID_SUPPLIER,
+                reporting_periods: { supplier_id: VALID_SUPPLIER, suppliers: { organization_id: VALID_ORG } },
+              },
+            }),
+          };
+        }
+        if (callCount === 2) {
+          // memberships check
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({ data: { role: 'consultant' } }),
+          };
+        }
+        // duplicate sha256 check
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({ data: null }),
+        };
+      }),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(client as never);
+    vi.mocked(createAdminClient).mockReturnValue(client as never);
+    return client;
+  }
+
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it('rechaza JPEG con magic bytes incorrectos (PNG bytes con MIME jpeg)', async () => {
+    mockUploadClient();
+    const fakeJpeg = makeFile([0x89, 0x50, 0x4e, 0x47], 'image/jpeg', 'foto.jpg'); // PNG bytes
+    const formData = new FormData();
+    formData.append('evidence', fakeJpeg);
+    const result = await uploadEvidence(VALID_UUID, null, formData);
+    expect(result.error).toMatch(/contenido.*formato|formato.*declarado/i);
+  });
+
+  it('rechaza PDF con magic bytes incorrectos (JPEG bytes con MIME pdf)', async () => {
+    mockUploadClient();
+    const fakePdf = makeFile([0xff, 0xd8, 0xff], 'application/pdf', 'doc.pdf'); // JPEG bytes
+    const formData = new FormData();
+    formData.append('evidence', fakePdf);
+    const result = await uploadEvidence(VALID_UUID, null, formData);
+    expect(result.error).toMatch(/contenido.*formato|formato.*declarado/i);
+  });
+
+  it('rechaza archivo con formato MIME no permitido (antes de magic bytes)', async () => {
+    mockAuthClient(); // Simple mock — MIME check happens before auth
+    const badMime = makeFile([0x00, 0x00], 'text/html', 'evil.html');
+    const formData = new FormData();
+    formData.append('evidence', badMime);
+    const result = await uploadEvidence(VALID_UUID, null, formData);
+    expect(result.error).toMatch(/Formato no permitido/i);
+  });
+
+  it('rechaza si no autenticado', async () => {
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null } }) },
+      from: vi.fn(),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(client as never);
+    const validJpeg = makeFile([0xff, 0xd8, 0xff, 0xe0], 'image/jpeg', 'foto.jpg');
+    const formData = new FormData();
+    formData.append('evidence', validJpeg);
+    const result = await uploadEvidence(VALID_UUID, null, formData);
+    expect(result.error).toMatch(/autenticado/i);
+  });
+});
+
+// ── deleteEvidence — solo admin puede borrar archivos ajenos ──────────────────
+
+describe('deleteEvidence — solo admin puede eliminar archivos ajenos', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  function makeDeleteMock(uploaderRole: string, uploaderId: string, callerId: string) {
+    let callCount = 0;
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: callerId } } }) },
+      from: vi.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          // evidence_files SELECT
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { id: VALID_UUID, storage_path: 'evidence/org/entry/file.pdf', uploaded_by: uploaderId, activity_entry_id: VALID_SUPPLIER },
+            }),
+          };
+        }
+        if (callCount === 2) {
+          // activity_entries SELECT (org resolution)
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { reporting_periods: { suppliers: { organization_id: VALID_ORG } } },
+            }),
+          };
+        }
+        // memberships SELECT
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({ data: uploaderRole ? { role: uploaderRole } : null }),
+        };
+      }),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(client as never);
+    vi.mocked(createAdminClient).mockReturnValue(client as never);
+    return client;
+  }
+
+  it('rechaza cuando consultant intenta borrar archivo de otro usuario', async () => {
+    makeDeleteMock('consultant', 'other-user-id', VALID_UUID);
+    const result = await deleteEvidence(VALID_UUID, null, new FormData());
+    expect(result.error).toMatch(/permisos/i);
+    expect(result.success).toBeUndefined();
+  });
+
+  it('rechaza cuando supplier intenta borrar archivo de otro usuario', async () => {
+    makeDeleteMock('supplier', 'other-user-id', VALID_UUID);
+    const result = await deleteEvidence(VALID_UUID, null, new FormData());
+    expect(result.error).toMatch(/permisos/i);
+  });
+
+  it('permite al propio uploader borrar su archivo (sin verificar rol)', async () => {
+    // El caller y uploader son el mismo — no entra al bloque de verificación de rol
+    let callCount = 0;
+    const callerId = VALID_UUID;
+    const adminMock = {
+      storage: { from: vi.fn().mockReturnValue({ remove: vi.fn().mockResolvedValue({ error: null }) }) },
+    };
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: callerId } } }) },
+      from: vi.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { id: VALID_UUID, storage_path: 'evidence/org/entry/file.pdf', uploaded_by: callerId, activity_entry_id: VALID_SUPPLIER },
+            }),
+          };
+        }
+        // BD delete
+        return {
+          delete: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockResolvedValue({ error: null }),
+        };
+      }),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(client as never);
+    vi.mocked(createAdminClient).mockReturnValue(adminMock as never);
+    const result = await deleteEvidence(VALID_UUID, null, new FormData());
+    expect(result.success).toBe(true);
   });
 });

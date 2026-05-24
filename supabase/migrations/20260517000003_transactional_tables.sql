@@ -1,6 +1,6 @@
 -- =============================================================================
--- Migration 003: Transactional Tables (5 tables)
--- Core business data: periods, entries, results, evidence, anomalies
+-- Migración 003: Tablas transaccionales (5 tablas)
+-- Datos del negocio: periodos, entradas, resultados, evidencias, anomalías
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
@@ -20,8 +20,8 @@ CREATE TABLE public.reporting_periods (
   CONSTRAINT ck_period_dates CHECK (end_date > start_date)
 );
 
-COMMENT ON TABLE  public.reporting_periods IS 'Temporal audit window per supplier (quarterly or annual).';
-COMMENT ON COLUMN public.reporting_periods.status IS 'open → calculating → under_review → locked. Locked periods are immutable.';
+COMMENT ON TABLE  public.reporting_periods IS 'Ventana temporal de auditoría por proveedor (trimestral o anual).';
+COMMENT ON COLUMN public.reporting_periods.status IS 'open → calculating → under_review → locked. Los periodos bloqueados son inmutables.';
 
 CREATE INDEX idx_periods_supplier        ON public.reporting_periods (supplier_id);
 CREATE INDEX idx_periods_supplier_status ON public.reporting_periods (supplier_id, status);
@@ -58,9 +58,9 @@ CREATE TABLE public.activity_entries (
   updated_at          timestamptz DEFAULT now() NOT NULL
 );
 
-COMMENT ON TABLE  public.activity_entries IS 'Raw supplier consumption data before FP engine processing.';
-COMMENT ON COLUMN public.activity_entries.activity_kind IS 'Serialized ActivityKind discriminated union for type-safe calc engine input.';
-COMMENT ON COLUMN public.activity_entries.raw_unit IS 'As-submitted unit; FP engine normalizes before applying emission factor.';
+COMMENT ON TABLE  public.activity_entries IS 'Datos de consumo crudo del proveedor antes del procesamiento del motor FP.';
+COMMENT ON COLUMN public.activity_entries.activity_kind IS 'Unión discriminada ActivityKind serializada para entrada al motor de cálculo.';
+COMMENT ON COLUMN public.activity_entries.raw_unit IS 'Unidad tal como fue enviada; el motor FP normaliza antes de aplicar el factor de emisión.';
 
 CREATE INDEX idx_entries_period      ON public.activity_entries (reporting_period_id);
 CREATE INDEX idx_entries_source_type ON public.activity_entries (source_type);
@@ -71,8 +71,8 @@ CREATE TRIGGER trg_activity_entries_updated_at
   FOR EACH ROW EXECUTE FUNCTION public.fn_set_updated_at();
 
 -- ---------------------------------------------------------------------------
--- 11. emission_results  (APPEND-ONLY)
--- Mutation guard applied in migration 005.
+-- 11. emission_results  (SOLO-APPEND)
+-- Guardia de mutación aplicada en migración 005.
 -- ---------------------------------------------------------------------------
 CREATE TABLE public.emission_results (
   id                  uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -91,9 +91,9 @@ CREATE TABLE public.emission_results (
   calculated_by       uuid        REFERENCES auth.users(id) ON DELETE SET NULL
 );
 
-COMMENT ON TABLE  public.emission_results IS 'Deterministic FP engine output. Append-only — no UPDATE or DELETE permitted.';
-COMMENT ON COLUMN public.emission_results.calc_hash IS 'sha256(canonical(inputs)) — cryptographic provenance linking result to input parameters.';
-COMMENT ON COLUMN public.emission_results.calc_version IS 'Version of the calc engine (from src/calc/version.ts) that produced this result.';
+COMMENT ON TABLE  public.emission_results IS 'Salida determinista del motor FP. Solo-append — no se permiten UPDATE ni DELETE.';
+COMMENT ON COLUMN public.emission_results.calc_hash IS 'sha256(canonical(entradas)) — proveniencia criptográfica que vincula el resultado a los parámetros de entrada.';
+COMMENT ON COLUMN public.emission_results.calc_version IS 'Versión del motor de cálculo (de src/calc/version.ts) que produjo este resultado.';
 
 CREATE INDEX idx_results_entry  ON public.emission_results (activity_entry_id);
 CREATE INDEX idx_results_period ON public.emission_results (reporting_period_id);
@@ -114,8 +114,8 @@ CREATE TABLE public.evidence_files (
   uploaded_at       timestamptz DEFAULT now() NOT NULL
 );
 
-COMMENT ON TABLE  public.evidence_files IS 'Document attachments (invoices, meter readings) proving activity data. Stored in Supabase Storage.';
-COMMENT ON COLUMN public.evidence_files.sha256 IS 'Hex SHA-256 of file content for integrity verification.';
+COMMENT ON TABLE  public.evidence_files IS 'Archivos adjuntos (facturas, lecturas de medidor) que comprueban los datos de actividad. Almacenados en Supabase Storage.';
+COMMENT ON COLUMN public.evidence_files.sha256 IS 'SHA-256 hexadecimal del contenido del archivo para verificación de integridad.';
 
 CREATE INDEX idx_evidence_entry ON public.evidence_files (activity_entry_id);
 

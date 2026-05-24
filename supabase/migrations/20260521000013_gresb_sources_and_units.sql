@@ -1,11 +1,11 @@
 -- =============================================================================
--- Migration 013: GRESB source types expansion + new unit conversions
--- Adds fuel_oil_no2, propane fuels + kBtu/kgal_us/megaliter/m3/ton_us conversions
--- Also expands activity_entries.source_type CHECK to include water_use + waste
+-- Migración 013: Expansión de tipos de fuente GRESB + nuevas conversiones de unidades
+-- Agrega combustibles fuel_oil_no2, propane + conversiones kBtu/kgal_us/megaliter/m3/ton_us
+-- También expande el CHECK de activity_entries.source_type para incluir water_use + waste
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
--- 1. Expand activity_entries.source_type CHECK constraint
+-- 1. Expandir restricción CHECK de activity_entries.source_type
 -- ---------------------------------------------------------------------------
 ALTER TABLE public.activity_entries
   DROP CONSTRAINT IF EXISTS activity_entries_source_type_check;
@@ -23,7 +23,7 @@ ALTER TABLE public.activity_entries
   ));
 
 -- ---------------------------------------------------------------------------
--- 2. New fuel types: fuel_oil_no2, propane (stationary combustion)
+-- 2. Nuevos tipos de combustible: fuel_oil_no2, propane (combustión estacionaria)
 -- ---------------------------------------------------------------------------
 INSERT INTO public.fuel_types (id, code, label, scope, activity_kind) VALUES
   ('11111111-0001-0001-0001-000000000007', 'fuel_oil_no2', 'Fuel Oil No. 2 (Diésel Pesado)', 1, 'stationary_combustion'),
@@ -31,14 +31,14 @@ INSERT INTO public.fuel_types (id, code, label, scope, activity_kind) VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
--- 3. Emission factors for new fuels (DEFRA 2024 / US EPA values)
+-- 3. Factores de emisión para nuevos combustibles (DEFRA 2024 / US EPA)
 -- fuel_oil_no2: 2.68344 kg CO2e / L  (DEFRA 2024: Gas oil / Diesel)
--- propane:      1.49304 kg CO2e / L  (DEFRA 2024: LPG / Propane ~ 1.495)
+-- propane:      1.49304 kg CO2e / L  (DEFRA 2024: LPG / Propano ~ 1.495)
 -- ---------------------------------------------------------------------------
 INSERT INTO public.emission_factors
   (id, source_type, fuel_type_id, co2e_per_unit, unit, scope, source_db, valid_from, valid_to)
 VALUES
-  -- Fuel Oil No. 2: ~2.68 kg CO2e / L (similar to gas oil, DEFRA 2024)
+  -- Fuel Oil No. 2: ~2.68 kg CO2e / L (similar a gas oil, DEFRA 2024)
   ('44444444-0001-0001-0001-000000000007',
    'stationary_combustion', '11111111-0001-0001-0001-000000000007',
    2.68344000, 'L', 1, 'DEFRA_2024', '2024-01-01', NULL),
@@ -49,7 +49,7 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
--- 4. New unit conversions: kBtu, kgal_us, megaliter, m3, ton_us
+-- 4. Nuevas conversiones de unidades: kBtu, kgal_us, megaliter, m3, ton_us
 -- ---------------------------------------------------------------------------
 INSERT INTO public.unit_conversions (from_unit, to_unit, factor, notes) VALUES
   -- kBtu (mil BTU) ↔ kWh
@@ -63,7 +63,7 @@ INSERT INTO public.unit_conversions (from_unit, to_unit, factor, notes) VALUES
   -- kBtu ↔ MMBtu
   ('kBtu',      'MMBtu', 0.00100000, '1 kBtu = 0.001 MMBtu'),
   ('MMBtu',     'kBtu', 1000.0000000,'1 MMBtu = 1000 kBtu'),
-  -- kBtu ↔ MBtu (same as MMBtu by convention in GRESB)
+  -- kBtu ↔ MBtu (igual a MMBtu por convención en GRESB)
   ('kBtu',      'MBtu',  0.00100000, '1 kBtu = 0.001 MBtu'),
   ('MBtu',      'kBtu', 1000.0000000,'1 MBtu = 1000 kBtu'),
   -- kgal_us (mil galones US) ↔ L
@@ -85,8 +85,8 @@ INSERT INTO public.unit_conversions (from_unit, to_unit, factor, notes) VALUES
   ('m3',        'megaliter', 0.00100000, '1 m3 = 0.001 ML'),
   ('megaliter', 'm3',    1000.0000000, '1 ML = 1000 m3'),
   -- ton_us (tonelada corta US, short ton) ↔ tonne (métrica)
-  ('ton_us',    'tonne',    0.90718474, '1 US short ton = 0.907185 metric tonne'),
-  ('tonne',     'ton_us',   1.10231131, '1 metric tonne = 1.10231 US short ton'),
+  ('ton_us',    'tonne',    0.90718474, '1 tonelada corta US = 0.907185 tonelada métrica'),
+  ('tonne',     'ton_us',   1.10231131, '1 tonelada métrica = 1.10231 tonelada corta US'),
   -- ton_us ↔ kg
   ('ton_us',    'kg',     907.18474000, '1 US short ton = 907.185 kg'),
   ('kg',        'ton_us',   0.00110231, '1 kg = 0.00110231 US short ton'),

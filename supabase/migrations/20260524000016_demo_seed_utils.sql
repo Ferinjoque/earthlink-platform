@@ -1,7 +1,7 @@
 -- =============================================================================
--- Migration 016: Demo seed utilities
--- fn_demo_reset() — truncates all supplier-owned data for demo reseeding.
--- TRUNCATE bypasses row-level triggers (append-only guards).
+-- Migración 016: Utilidades de seed demo
+-- fn_demo_reset() — trunca todos los datos de proveedores para re-seed del demo.
+-- TRUNCATE bypasea los triggers a nivel de fila (guardias solo-append).
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION public.fn_demo_reset()
@@ -11,8 +11,8 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  -- TRUNCATE bypasses row-level BEFORE triggers (no-delete guards on
-  -- emission_results, audit_log, report_exports). CASCADE handles FK order.
+  -- TRUNCATE bypasea los triggers BEFORE a nivel de fila (guardias de no-delete en
+  -- emission_results, audit_log, report_exports). CASCADE maneja el orden de FK.
   TRUNCATE
     public.report_exports,
     public.audit_log,
@@ -26,5 +26,5 @@ BEGIN
 END;
 $$;
 
--- Allow service_role to call this function
+-- Permitir que service_role llame esta función
 GRANT EXECUTE ON FUNCTION public.fn_demo_reset() TO service_role;
