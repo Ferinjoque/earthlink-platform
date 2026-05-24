@@ -422,7 +422,7 @@ describe('exportCsv', () => {
     const fd = makeFormData({ period_ids: PERIOD_ID });
     const result = await exportCsv(null, fd);
     expect(result.success).toBe(true);
-    // CSV has only header, no data rows
+    // El CSV solo tiene encabezado, sin filas de datos
     const lines = result.csvContent?.split('\n') ?? [];
     expect(lines).toHaveLength(1);
     expect(lines[0]).toContain('periodo');

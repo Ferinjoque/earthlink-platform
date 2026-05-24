@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// ── Hoisted mocks ─────────────────────────────────────────────────────────────
+// ── Mocks hoisted ─────────────────────────────────────────────────────────────
 
 const mocks = vi.hoisted(() => ({
   createSignedUrls: vi.fn(),
@@ -34,7 +34,7 @@ import { getEvidenceFiles, getEvidenceFilesBatch, deleteEvidence } from '../../.
 
 type MockClient = Awaited<ReturnType<typeof createServerClient>>;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Funciones auxiliares ──────────────────────────────────────────────────────
 
 const ENTRY_ID = '00000000-0000-4000-8000-000000000001';
 const ENTRY_ID_2 = '00000000-0000-4000-8000-000000000002';

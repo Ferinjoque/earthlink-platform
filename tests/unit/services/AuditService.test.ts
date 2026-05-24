@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { AuditService } from '../../../src/services/AuditService';
 import { ReportingPeriod } from '../../../src/domain/ReportingPeriod';
 
-// ── Fixtures ──────────────────────────────────────────────────────────────────
+// ── Datos de prueba ───────────────────────────────────────────────────────────
 
 const NOW = new Date('2026-01-15T00:00:00Z');
 
@@ -58,7 +58,7 @@ function makeService(period: ReportingPeriod | null = makePeriod()) {
   return { service, ...repos };
 }
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
+// ── Pruebas ───────────────────────────────────────────────────────────────────
 
 describe('AuditService.lock()', () => {
   it('throws when period not found', async () => {

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AuditActionState } from '../../../src/actions/audit';
 import { ReportingPeriod } from '../../../src/domain/ReportingPeriod';
 
-// ── Hoisted mocks ─────────────────────────────────────────────────────────────
+// ── Mocks hoisted ─────────────────────────────────────────────────────────────
 
 const mocks = vi.hoisted(() => ({
   findById: vi.fn(),
@@ -23,7 +23,7 @@ const mocks = vi.hoisted(() => ({
   }),
 }));
 
-// ── Module mocks ──────────────────────────────────────────────────────────────
+// ── Mocks de módulo ───────────────────────────────────────────────────────────
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 vi.mock('next/headers', () => ({
@@ -99,7 +99,7 @@ import { createPeriod as createPeriodAudit } from '../../../src/actions/periods'
 
 type MockClient = Awaited<ReturnType<typeof createServerClient>>;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Funciones auxiliares ──────────────────────────────────────────────────────
 
 const VALID_UUID = '00000000-0000-4000-8000-000000000001';
 

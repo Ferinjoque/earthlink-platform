@@ -11,7 +11,7 @@ import type {
   ConversionTable,
 } from '../../../src/calc/types';
 
-// ── Test fixtures ─────────────────────────────────────────────────────────────
+// ── Datos de prueba ───────────────────────────────────────────────────────────
 
 function makeRecord(overrides: Partial<ActivityRecord> = {}): ActivityRecord {
   return {
@@ -419,7 +419,7 @@ describe('score', () => {
   });
 });
 
-// ── GRESB: water_use / waste zero-CO2e path ──────────────────────────────────
+// ── GRESB: ruta CO2e cero para water_use / waste ─────────────────────────────
 
 describe('calculate — water_use zero-CO2e path', () => {
   it('returns ok with co2eKg = 0 for potable_mixed water', () => {
@@ -521,7 +521,7 @@ describe('calculate — waste zero-CO2e path', () => {
   });
 });
 
-// ── GRESB: fuel_oil_no2 / propane factor keys ─────────────────────────────────
+// ── GRESB: claves de factor para fuel_oil_no2 / propane ──────────────────────
 
 describe('_internals.resolveFactorKey — new fuels', () => {
   it('fuel_oil_no2 produces correct key', () => {
@@ -570,7 +570,7 @@ describe('_internals.resolveScope — none for water/waste', () => {
   });
 });
 
-// ── GRESB: kBtu unit conversion ───────────────────────────────────────────────
+// ── GRESB: conversión de unidad kBtu ─────────────────────────────────────────
 
 describe('_internals.normalizeUnit — GRESB units', () => {
   it('converts kBtu → kWh', () => {
@@ -730,7 +730,7 @@ describe('calculate — new GRESB fuels', () => {
   });
 });
 
-// ── Property-based tests ──────────────────────────────────────────────────────
+// ── Pruebas basadas en propiedades ────────────────────────────────────────────
 
 describe('property tests (fast-check)', () => {
   it('co2eKg = normalizedValue × factorKgCo2ePerUnit for same-unit inputs', () => {

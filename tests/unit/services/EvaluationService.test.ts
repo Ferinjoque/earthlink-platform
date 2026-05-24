@@ -4,7 +4,7 @@ import { ActivityEntry } from '../../../src/domain/ActivityEntry';
 import { ReportingPeriod } from '../../../src/domain/ReportingPeriod';
 import type { EmissionFactor, FactorTable, ConversionTable } from '../../../src/calc/types';
 
-// ── Fixtures ──────────────────────────────────────────────────────────────────
+// ── Datos de prueba ───────────────────────────────────────────────────────────
 
 const NOW = new Date('2026-01-15T00:00:00Z');
 
@@ -58,7 +58,7 @@ function makeConversions(): ConversionTable {
   return new Map([['gallon->L', 3.78541]]);
 }
 
-// ── Mock factories ────────────────────────────────────────────────────────────
+// ── Fábricas de mocks ─────────────────────────────────────────────────────────
 
 function makeRepos(
   overrides: {
@@ -110,7 +110,7 @@ function makeService(overrides = {}) {
   return { service, ...repos };
 }
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
+// ── Pruebas ───────────────────────────────────────────────────────────────────
 
 describe('EvaluationService.evaluate()', () => {
   it('throws when period not found', async () => {
