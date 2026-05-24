@@ -120,6 +120,17 @@ describe('signIn', () => {
     expect(mockRedirect).toHaveBeenCalledWith('/dashboard');
   });
 
+  it('falls back to /dashboard when ?next has backslash open-redirect pattern', async () => {
+    mockClient();
+    const fd = makeFormData({
+      email: 'admin@earthlink.test',
+      password: 'correct',
+      next: '/\\evil.com',
+    });
+    await signIn(undefined, fd).catch(() => {});
+    expect(mockRedirect).toHaveBeenCalledWith('/dashboard');
+  });
+
   it('trims whitespace from email before auth', async () => {
     const client = mockClient();
     const fd = makeFormData({ email: '  admin@earthlink.test  ', password: 'correct' });

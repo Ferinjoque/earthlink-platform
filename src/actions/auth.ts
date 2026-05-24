@@ -27,7 +27,10 @@ export async function signIn(
 
   const next = formData.get('next');
   const destination =
-    typeof next === 'string' && next.startsWith('/') && !next.startsWith('//')
+    typeof next === 'string' &&
+    next.startsWith('/') &&
+    !next.startsWith('//') &&
+    !next.startsWith('/\\')
       ? next
       : '/dashboard';
   redirect(destination);
