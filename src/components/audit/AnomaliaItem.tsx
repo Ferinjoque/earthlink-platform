@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useActionState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   resolveAnomaly,
   type ResolveAnomalyState,
@@ -44,6 +45,7 @@ export const ETIQUETAS_SEVERIDAD: Record<AnomalySeverity, string> = {
 
 export function AnomaliaItem({ anomalia }: { anomalia: AnomaliaDetalle }) {
   const { toast } = useToast();
+  const router = useRouter();
   const [resolviendo, setResolviendo] = useState(false);
   const [state, formAction, isPending] = useActionState<ResolveAnomalyState | null, FormData>(
     resolveAnomaly,
@@ -53,8 +55,9 @@ export function AnomaliaItem({ anomalia }: { anomalia: AnomaliaDetalle }) {
   useEffect(() => {
     if (state?.success) {
       toast('Anomalía marcada como revisada', 'success');
+      router.refresh();
     }
-  }, [state?.success, toast]);
+  }, [state?.success, toast, router]);
 
   if (state?.success) return null;
 
