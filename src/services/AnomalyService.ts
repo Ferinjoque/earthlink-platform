@@ -74,6 +74,7 @@ export class AnomalyService {
 
       const sourceLabel = SOURCE_LABELS[entry.sourceType] ?? entry.sourceType;
       const secondaryLabel = secondary && secondary !== 'default' ? ` (${secondary})` : '';
+      const direction = entry.rawQuantity >= mean ? 'sobre' : 'bajo';
 
       anomalies.push({
         entryId: entry.id,
@@ -84,7 +85,7 @@ export class AnomalyService {
         historicalMean: mean,
         historicalStddev: stddev,
         severity,
-        message: `${sourceLabel}${secondaryLabel}: ${entry.rawQuantity.toLocaleString('es', { maximumFractionDigits: 2 })} ${entry.rawUnit} es ${z.toFixed(2)}σ sobre la media histórica (${mean.toFixed(2)} ${entry.rawUnit}). Verificar datos.`,
+        message: `${sourceLabel}${secondaryLabel}: ${entry.rawQuantity.toLocaleString('es', { maximumFractionDigits: 2 })} ${entry.rawUnit} es ${z.toFixed(2)}σ ${direction} la media histórica (${mean.toFixed(2)} ${entry.rawUnit}). Verificar datos.`,
       });
     }
 
