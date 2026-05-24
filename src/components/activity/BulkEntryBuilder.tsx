@@ -4,6 +4,7 @@ import { useActionState, useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { importActivityBulk } from '@/actions/activity';
 import type { CsvImportState } from '@/actions/activity';
+import { EvidenceUploader } from '@/components/activity/EvidenceUploader';
 import type { EmissionSourceType } from '@/types/database';
 import type { Unit } from '@/calc/types';
 import {
@@ -907,6 +908,7 @@ export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuil
     { ...defaultRow(suppliers, ym), supplier_id: initialSupplierId },
   ]);
   const [pendingDelete, setPendingDelete] = useState<number | null>(null);
+  const [evidenceStep, setEvidenceStep] = useState<{ entryIds: string[] } | null>(null);
   const [state, formAction, isPending] = useActionState<CsvImportState | null, FormData>(
     importActivityBulk,
     null,
@@ -923,11 +925,19 @@ export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuil
         `${n} registro${n !== 1 ? 's' : ''} importado${n !== 1 ? 's' : ''}${(state.skipped ?? 0) > 0 ? ` · ${state.skipped} omitidos` : ''}`,
         'success',
       );
+      const ids = state.entryIds ?? [];
+      if (ids.length > 0) {
+        setEvidenceStep({ entryIds: ids });
+      }
       setRows([{ ...defaultRow(suppliers), supplier_id: initialSupplierId }]);
     } else if (state.error) {
       toast(state.error, 'error');
     }
   }, [state?.submittedAt]);
+
+  function cerrarEvidenceStep() {
+    setEvidenceStep(null);
+  }
 
   function addRow() {
     setRows((prev) => {
@@ -990,6 +1000,110 @@ export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuil
         notes,
       })),
   );
+
+  // Panel de evidencia opcional que aparece después de crear registros
+  if (evidenceStep) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'var(--space-5)',
+          padding: 'var(--space-6)',
+          background: 'var(--color-surface-1)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-lg)',
+        }}
+      >
+        <div>
+          <p
+            style={{
+              fontSize: 'var(--text-xs)',
+              fontFamily: 'var(--font-mono)',
+              color: 'var(--color-accent)',
+              fontWeight: 600,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              margin: '0 0 var(--space-1)',
+            }}
+          >
+            Paso opcional
+          </p>
+          <h3
+            style={{
+              fontSize: 'var(--text-base)',
+              fontWeight: 600,
+              color: 'var(--color-ink-1)',
+              margin: 0,
+            }}
+          >
+            ¿Tienes un respaldo?
+          </h3>
+          <p
+            style={{
+              fontSize: 'var(--text-sm)',
+              color: 'var(--color-ink-3)',
+              margin: 'var(--space-1) 0 0',
+            }}
+          >
+            Adjunta capturas de medidores, facturas o PDFs como evidencia de los registros que acabas de crear.
+            Formatos permitidos: JPG, PNG, WebP, PDF · Máximo 10 MB por archivo.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+          {evidenceStep.entryIds.map((entryId, idx) => (
+            <div
+              key={entryId}
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 'var(--space-4)',
+                padding: 'var(--space-3) var(--space-4)',
+                background: 'var(--color-surface-0)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-md)',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--color-ink-3)',
+                  flexShrink: 0,
+                  paddingTop: '2px',
+                  minWidth: '60px',
+                }}
+              >
+                Registro {idx + 1}
+              </span>
+              <EvidenceUploader entryId={entryId} files={[]} />
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            onClick={cerrarEvidenceStep}
+            style={{
+              padding: 'var(--space-2) var(--space-6)',
+              background: 'var(--color-accent)',
+              color: 'white',
+              border: 'none',
+              borderRadius: 'var(--radius-md)',
+              fontSize: 'var(--text-sm)',
+              fontFamily: 'var(--font-sans)',
+              fontWeight: 500,
+              cursor: 'pointer',
+            }}
+          >
+            Listo
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Elemento form compartido para el modo de una sola tarjeta
   if (isCardMode) {

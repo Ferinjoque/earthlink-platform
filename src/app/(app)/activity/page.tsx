@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createServerClient } from '@/services/supabase/server';
-import { getEvidenceFilesBatch } from '@/actions/evidence';
 import { TopBar } from '@/components/shell/TopBar';
 import { ActivityList } from '@/components/activity/ActivityList';
 import { BulkImportPanel } from '@/components/activity/BulkImportPanel';
@@ -129,18 +128,29 @@ export default async function ActividadPage({ searchParams }: PageProps) {
     'activity_entry_id' | 'severity' | 'z_score' | 'message'
   >[] = [];
 
-  if (entryIds.length) {
-    const { data } = await supabase
-      .from('anomaly_flags')
-      .select('activity_entry_id, severity, z_score, message')
-      .in('activity_entry_id', entryIds)
-      .eq('is_resolved', false)
-      .order('flagged_at', { ascending: false });
-    if (data) flagsData.push(...data);
-  }
+  const evidenceCountMap = new Map<string, number>();
 
-  // Cargar archivos de evidencia para la página actual (con URLs firmadas)
-  const evidenceMap = entryIds.length ? await getEvidenceFilesBatch(entryIds) : new Map();
+  if (entryIds.length) {
+    const [flagsResult, evidenceResult] = await Promise.all([
+      supabase
+        .from('anomaly_flags')
+        .select('activity_entry_id, severity, z_score, message')
+        .in('activity_entry_id', entryIds)
+        .eq('is_resolved', false)
+        .order('flagged_at', { ascending: false }),
+      supabase
+        .from('evidence_files')
+        .select('activity_entry_id')
+        .in('activity_entry_id', entryIds),
+    ]);
+    if (flagsResult.data) flagsData.push(...flagsResult.data);
+    for (const ev of evidenceResult.data ?? []) {
+      evidenceCountMap.set(
+        ev.activity_entry_id,
+        (evidenceCountMap.get(ev.activity_entry_id) ?? 0) + 1,
+      );
+    }
+  }
 
   const flagMap = new Map<
     string,
@@ -169,8 +179,7 @@ export default async function ActividadPage({ searchParams }: PageProps) {
     notes: e.notes,
     voided_at: e.voided_at,
     void_reason: e.void_reason,
-    evidence_files: evidenceMap.get(e.id) ?? [],
-    evidence_count: evidenceMap.get(e.id)?.length ?? 0,
+    evidence_count: evidenceCountMap.get(e.id) ?? 0,
     anomaly: flagMap.get(e.id),
   }));
 

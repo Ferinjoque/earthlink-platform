@@ -730,7 +730,7 @@ export default async function DetallePeriodoPage({
                           </span>
                         }
                       >
-                        <EvidenceSection entryId={eid} />
+                        <EvidenceSection entryId={eid} readOnly />
                       </Suspense>
                     </div>
                   </div>

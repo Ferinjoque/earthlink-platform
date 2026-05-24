@@ -6,11 +6,9 @@ import Link from 'next/link';
 import { Paperclip } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { AnomalyBadge } from '@/components/activity/AnomalyBadge';
-import { EvidenceUploader } from '@/components/activity/EvidenceUploader';
 import { traducirMensajeAnomalia } from '@/lib/anomaly';
 import { voidActivityEntry, type VoidEntryState } from '@/actions/activity';
 import { useToast } from '@/components/ui/Toast';
-import type { EvidenceFileView } from '@/actions/evidence';
 import type { ActivityEntryStatus, AnomalySeverity, EmissionSourceType } from '@/types/database';
 
 export interface ActivityEntryView {
@@ -27,7 +25,6 @@ export interface ActivityEntryView {
   voided_at?: string | null;
   void_reason?: string | null;
   evidence_count?: number;
-  evidence_files?: EvidenceFileView[];
   anomaly?:
     | {
         severity: AnomalySeverity;
@@ -231,21 +228,14 @@ function EntradaFila({
   expandida,
   toggleExpandida,
   setExpandida,
-  evidenciaPanel,
-  setEvidenciaPanel,
   isVoided,
 }: {
   entry: ActivityEntryView;
   expandida: string | null;
   toggleExpandida: (id: string) => void;
   setExpandida: React.Dispatch<React.SetStateAction<string | null>>;
-  evidenciaPanel: string | null;
-  setEvidenciaPanel: React.Dispatch<React.SetStateAction<string | null>>;
   isVoided: boolean;
 }) {
-  const router = useRouter();
-  const evidenciaAbierta = evidenciaPanel === entry.id;
-
   return (
     <Fragment>
       <tr
@@ -359,35 +349,30 @@ function EntradaFila({
         <td
           style={{
             ...estiloCelda,
-            width: '100px',
+            width: '80px',
             textAlign: 'right',
             paddingLeft: 'var(--space-2)',
             paddingRight: 'var(--space-3)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', justifyContent: 'flex-end' }}>
-            <button
-              type="button"
-              onClick={() => setEvidenciaPanel(evidenciaAbierta ? null : entry.id)}
-              title={evidenciaAbierta ? 'Cerrar evidencias' : 'Adjuntar / ver evidencias'}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '2px',
-                fontSize: '10px',
-                fontFamily: 'var(--font-mono)',
-                color: evidenciaAbierta ? 'var(--color-accent)' : (entry.evidence_count ?? 0) > 0 ? 'var(--color-accent)' : 'var(--color-ink-3)',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '2px var(--space-1)',
-                opacity: evidenciaAbierta ? 1 : undefined,
-              }}
-              className="evidence-btn"
-            >
-              <Paperclip size={10} aria-hidden="true" />
-              {(entry.evidence_count ?? 0) > 0 ? entry.evidence_count : ''}
-            </button>
+            {(entry.evidence_count ?? 0) > 0 && (
+              <span
+                title={`${entry.evidence_count} archivo${(entry.evidence_count ?? 0) !== 1 ? 's' : ''} adjunto${(entry.evidence_count ?? 0) !== 1 ? 's' : ''}`}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '2px',
+                  fontSize: '10px',
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--color-accent)',
+                  opacity: 0.7,
+                }}
+              >
+                <Paperclip size={10} aria-hidden="true" />
+                {entry.evidence_count}
+              </span>
+            )}
             {!isVoided && <VoidEntryButton entryId={entry.id} />}
           </div>
         </td>
@@ -502,58 +487,6 @@ function EntradaFila({
         </tr>
       )}
 
-      {/* Panel de evidencias adjuntas */}
-      {evidenciaAbierta && (
-        <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-          <td
-            colSpan={7}
-            style={{
-              padding: 'var(--space-3) var(--space-4) var(--space-4)',
-              background: 'oklch(58% 0.16 155 / 3%)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-4)' }}>
-              <span
-                style={{
-                  fontSize: 'var(--text-xs)',
-                  fontFamily: 'var(--font-mono)',
-                  color: 'var(--color-ink-3)',
-                  flexShrink: 0,
-                  paddingTop: '2px',
-                }}
-              >
-                Evidencias
-              </span>
-              <div style={{ flex: 1 }}>
-                <EvidenceUploader
-                  entryId={entry.id}
-                  files={entry.evidence_files ?? []}
-                  onSuccess={() => {
-                    router.refresh();
-                  }}
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => setEvidenciaPanel(null)}
-                style={{
-                  fontSize: 'var(--text-xs)',
-                  fontFamily: 'var(--font-mono)',
-                  color: 'var(--color-ink-3)',
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  alignSelf: 'flex-start',
-                  padding: '2px var(--space-2)',
-                }}
-                aria-label="Cerrar panel de evidencias"
-              >
-                Cerrar ✕
-              </button>
-            </div>
-          </td>
-        </tr>
-      )}
     </Fragment>
   );
 }
@@ -564,7 +497,6 @@ export function ActivityList({ entries, periodos, pagination }: ActivityListProp
   const [filtroFuente, setFiltroFuente] = useState<EmissionSourceType | 'todos'>('todos');
   const [filtroPeriodo, setFiltroPeriodo] = useState<string>('todos');
   const [expandida, setExpandida] = useState<string | null>(null);
-  const [evidenciaPanel, setEvidenciaPanel] = useState<string | null>(null);
   const [mostrarAnulados, setMostrarAnulados] = useState(false);
 
   const activas = entries.filter((e) => !e.voided_at);
@@ -768,7 +700,7 @@ export function ActivityList({ entries, periodos, pagination }: ActivityListProp
         </p>
       ) : (
         <div style={{ overflowX: 'auto' }}>
-          <style>{'.activity-row:hover .activity-void-btn { opacity: 1 !important; } .activity-row:hover .evidence-btn { color: var(--color-accent) !important; }'}</style>
+          <style>{'.activity-row:hover .activity-void-btn { opacity: 1 !important; }'}</style>
           <table
             aria-label="Registros de actividad"
             style={{
@@ -806,8 +738,6 @@ export function ActivityList({ entries, periodos, pagination }: ActivityListProp
                   expandida={expandida}
                   toggleExpandida={toggleExpandida}
                   setExpandida={setExpandida}
-                  evidenciaPanel={evidenciaPanel}
-                  setEvidenciaPanel={setEvidenciaPanel}
                   isVoided={false}
                 />
               ))}
@@ -819,8 +749,6 @@ export function ActivityList({ entries, periodos, pagination }: ActivityListProp
                     expandida={expandida}
                     toggleExpandida={toggleExpandida}
                     setExpandida={setExpandida}
-                    evidenciaPanel={evidenciaPanel}
-                    setEvidenciaPanel={setEvidenciaPanel}
                     isVoided
                   />
                 ))}

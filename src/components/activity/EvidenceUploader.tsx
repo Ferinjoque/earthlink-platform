@@ -10,6 +10,7 @@ interface EvidenceUploaderProps {
   entryId: string;
   files: EvidenceFileView[];
   onSuccess?: () => void;
+  readOnly?: boolean;
 }
 
 function iconoPorMime(mime: string) {
@@ -57,7 +58,7 @@ function EvidenceDeleteButton({ fileId }: { fileId: string }) {
   );
 }
 
-export function EvidenceUploader({ entryId, files, onSuccess }: EvidenceUploaderProps) {
+export function EvidenceUploader({ entryId, files, onSuccess, readOnly = false }: EvidenceUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
@@ -147,14 +148,14 @@ export function EvidenceUploader({ entryId, files, onSuccess }: EvidenceUploader
               <span style={{ color: 'var(--color-ink-3)', flexShrink: 0 }}>
                 {formatBytes(f.file_size_bytes)}
               </span>
-              <EvidenceDeleteButton fileId={f.id} />
+              {!readOnly && <EvidenceDeleteButton fileId={f.id} />}
             </li>
           ))}
         </ul>
       )}
 
-      {/* Botón para adjuntar nuevo archivo */}
-      <form ref={formRef}>
+      {/* Botón para adjuntar nuevo archivo — oculto en modo solo lectura */}
+      {!readOnly && <form ref={formRef}>
         <input
           ref={inputRef}
           type="file"
@@ -184,7 +185,7 @@ export function EvidenceUploader({ entryId, files, onSuccess }: EvidenceUploader
           <Paperclip size={12} aria-hidden="true" />
           {isPending ? 'Subiendo…' : 'Adjuntar evidencia'}
         </button>
-      </form>
+      </form>}
     </div>
   );
 }
