@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { ActivityFormState, CsvImportState } from '../../../src/actions/activity';
 
-// ── Hoisted mock refs ─────────────────────────────────────────────────────────
+// ── Refs de mocks hoisted ─────────────────────────────────────────────────────
 
 const mocks = vi.hoisted(() => ({
   save: vi.fn().mockResolvedValue(undefined),
@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   detect: vi.fn().mockReturnValue([]),
 }));
 
-// ── Mock server-only modules ──────────────────────────────────────────────────
+// ── Mocks de módulos server-only ──────────────────────────────────────────────
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 vi.mock('next/headers', () => ({
@@ -56,7 +56,7 @@ import {
 
 type MockClient = Awaited<ReturnType<typeof createServerClient>>;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Funciones auxiliares ──────────────────────────────────────────────────────
 
 const VALID_UUID = '00000000-0000-4000-8000-000000000001';
 const VALID_YM = '2026-01';

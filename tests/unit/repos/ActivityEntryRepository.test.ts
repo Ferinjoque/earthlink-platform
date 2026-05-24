@@ -51,7 +51,7 @@ function makeEntry(notes?: string | null): ActivityEntry {
   });
 }
 
-// ── ActivityEntry domain ─────────────────────────────────────────────────────
+// ── Dominio ActivityEntry ─────────────────────────────────────────────────────
 
 describe('ActivityEntry — campo notes', () => {
   it('acepta notes como string y lo expone', () => {
@@ -81,7 +81,7 @@ describe('ActivityEntry — campo notes', () => {
   });
 });
 
-// ── ActivityEntryRepository.toEntity ────────────────────────────────────────
+// ── ActivityEntryRepository.toEntity (fila → entidad) ───────────────────────
 
 describe('ActivityEntryRepository.toEntity — notas', () => {
   it('mapea notes string desde la fila de BD', () => {
@@ -106,7 +106,7 @@ describe('ActivityEntryRepository.toEntity — notas', () => {
   });
 });
 
-// ── ActivityEntryRepository.toRow ────────────────────────────────────────────
+// ── ActivityEntryRepository.toRow (entidad → fila) ───────────────────────────
 
 describe('ActivityEntryRepository.toRow — notas', () => {
   it('incluye notes string en la fila resultante', () => {

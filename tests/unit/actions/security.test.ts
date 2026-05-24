@@ -72,7 +72,7 @@ import { voidActivityEntry, importActivityXlsx } from '../../../src/actions/acti
 import { createPeriod } from '../../../src/actions/periods';
 import { getEvidenceFilesBatch, uploadEvidence, deleteEvidence } from '../../../src/actions/evidence';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Funciones auxiliares ─────────────────────────────────────────────────────
 
 const VALID_UUID = '00000000-0000-4000-8000-000000000001';
 const VALID_SUPPLIER = '00000000-0000-4000-8000-000000000002';
@@ -502,7 +502,7 @@ describe('uploadEvidence — validación de magic bytes', () => {
 
   it('rechaza JPEG con magic bytes incorrectos (PNG bytes con MIME jpeg)', async () => {
     mockUploadClient();
-    const fakeJpeg = makeFile([0x89, 0x50, 0x4e, 0x47], 'image/jpeg', 'foto.jpg'); // PNG bytes
+    const fakeJpeg = makeFile([0x89, 0x50, 0x4e, 0x47], 'image/jpeg', 'foto.jpg'); // bytes de PNG
     const formData = new FormData();
     formData.append('evidence', fakeJpeg);
     const result = await uploadEvidence(VALID_UUID, null, formData);
@@ -511,7 +511,7 @@ describe('uploadEvidence — validación de magic bytes', () => {
 
   it('rechaza PDF con magic bytes incorrectos (JPEG bytes con MIME pdf)', async () => {
     mockUploadClient();
-    const fakePdf = makeFile([0xff, 0xd8, 0xff], 'application/pdf', 'doc.pdf'); // JPEG bytes
+    const fakePdf = makeFile([0xff, 0xd8, 0xff], 'application/pdf', 'doc.pdf'); // bytes de JPEG
     const formData = new FormData();
     formData.append('evidence', fakePdf);
     const result = await uploadEvidence(VALID_UUID, null, formData);
@@ -610,7 +610,7 @@ describe('deleteEvidence — solo admin puede eliminar archivos ajenos', () => {
       from: vi.fn().mockImplementation(() => {
         callCount++;
         if (callCount === 1) {
-          // SELECT evidence_files
+          // SELECT evidence_files (llamada 1)
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
@@ -620,7 +620,7 @@ describe('deleteEvidence — solo admin puede eliminar archivos ajenos', () => {
           };
         }
         if (callCount === 2) {
-          // SELECT activity_entries → org info
+          // SELECT activity_entries → info de org
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
@@ -637,7 +637,7 @@ describe('deleteEvidence — solo admin puede eliminar archivos ajenos', () => {
             maybeSingle: vi.fn().mockResolvedValue({ data: { role: 'consultant' } }),
           };
         }
-        // DELETE evidence_files
+        // DELETE evidence_files (llamada 4)
         return {
           delete: vi.fn().mockReturnThis(),
           eq: vi.fn().mockResolvedValue({ error: null }),

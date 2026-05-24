@@ -280,7 +280,7 @@ describe('getCsvTemplate', () => {
     expect(template).toContain('waste');
   });
 
-  // ── Template-as-input tests ──────────────────────────────────────────────
+  // ── Pruebas con plantilla como entrada ───────────────────────────────────
 
   it('header and comment lines are skipped — parseCsvText returns only data rows', () => {
     const template = getCsvTemplate();

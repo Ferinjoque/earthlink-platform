@@ -4,7 +4,7 @@ import { ActivityEntry } from '../../../src/domain/ActivityEntry';
 import type { ActivityKind, Unit } from '../../../src/calc/types';
 import type { EmissionSourceType } from '../../../src/types/database';
 
-// ── Fixtures ──────────────────────────────────────────────────────────────────
+// ── Datos de prueba ───────────────────────────────────────────────────────────
 
 const NOW = new Date('2026-01-15T00:00:00Z');
 
@@ -46,7 +46,7 @@ const historicalBaseline = [
   makeEntry(855),
 ];
 
-// ── Core detect() tests ───────────────────────────────────────────────────────
+// ── Pruebas principales de detect() ──────────────────────────────────────────
 
 describe('AnomalyService.detect()', () => {
   const svc = new AnomalyService();
@@ -117,7 +117,7 @@ describe('AnomalyService.detect()', () => {
   });
 });
 
-// ── Secondary + unit grouping (critical correctness) ─────────────────────────
+// ── Agrupación secundaria y por unidad (corrección crítica) ──────────────────
 
 describe('AnomalyService.detect() — secondary grouping', () => {
   const svc = new AnomalyService();
@@ -202,7 +202,7 @@ describe('AnomalyService.detect() — secondary grouping', () => {
   });
 });
 
-// ── Unit grouping ─────────────────────────────────────────────────────────────
+// ── Agrupación por unidad ─────────────────────────────────────────────────────
 
 describe('AnomalyService.detect() — unit grouping', () => {
   const svc = new AnomalyService();
@@ -225,7 +225,7 @@ describe('AnomalyService.detect() — unit grouping', () => {
   });
 });
 
-// ── Message quality ───────────────────────────────────────────────────────────
+// ── Calidad de mensajes ───────────────────────────────────────────────────────
 
 describe('AnomalyService.detect() — message content', () => {
   const svc = new AnomalyService();
@@ -400,7 +400,7 @@ describe('AnomalyService._internals.groupKey', () => {
   });
 });
 
-// ── Edge cases ────────────────────────────────────────────────────────────────
+// ── Casos límite ──────────────────────────────────────────────────────────────
 
 describe('AnomalyService.detect() — edge cases', () => {
   const svc = new AnomalyService();
