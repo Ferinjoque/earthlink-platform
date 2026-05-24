@@ -62,7 +62,7 @@ export default async function DetallePeriodoPage({
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  // Load period + supplier
+  // Cargar periodo y proveedor
   type PeriodoCompleto = Pick<
     ReportingPeriodRow,
     'id' | 'label' | 'supplier_id' | 'status' | 'start_date' | 'end_date'
@@ -85,7 +85,7 @@ export default async function DetallePeriodoPage({
   if (!rawSupplier) notFound();
   const supplier = rawSupplier as Pick<SupplierRow, 'id' | 'name' | 'organization_id'>;
 
-  // Auth: membership check
+  // Verificar membresía del usuario en la org
   const { data: memCheck } = await supabase
     .from('memberships')
     .select('role')
@@ -96,7 +96,7 @@ export default async function DetallePeriodoPage({
   if (!memCheck) notFound();
   const membership = memCheck as Pick<MembershipRow, 'role'>;
 
-  // Parallel fetch: emission results + audit log
+  // Fetch paralelo: resultados de emisión y registro de auditoría
   type FilaResultado = Pick<
     EmissionResultRow,
     | 'id'
@@ -136,7 +136,7 @@ export default async function DetallePeriodoPage({
   const results = (resultsRaw.data ?? []) as FilaResultado[];
   const auditLog = (auditLogRaw.data ?? []) as FilaAuditLog[];
 
-  // Parallel fetch: entry details + anomaly flags (both depend only on entryIds)
+  // Fetch paralelo: detalle de entradas y anomaly_flags (ambos dependen de los entryIds)
   const entryIds = [...new Set(results.map((r) => r.activity_entry_id))];
   type FilaEntrada = Pick<ActivityEntryRow, 'id' | 'source_type' | 'raw_quantity' | 'raw_unit'>;
   type FilaFlag = Pick<
@@ -165,7 +165,7 @@ export default async function DetallePeriodoPage({
   }
   const flagsData = (flagsRaw.data ?? []) as FilaFlag[];
 
-  // Aggregates
+  // Totales agregados
   let totalCo2e = 0;
   let scope1Co2e = 0;
   let scope2Co2e = 0;

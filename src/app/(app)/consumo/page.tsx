@@ -64,7 +64,7 @@ export default async function ConsumoPage() {
   }
   const supplierMap = new Map(suppliersData.map((s) => [s.id, s.name]));
 
-  // All periods (all statuses) — historical view
+  // Todos los periodos (todos los estados) — vista histórica
   const periodsData: Pick<ReportingPeriodRow, 'id' | 'start_date' | 'supplier_id'>[] = [];
   if (supplierIds.length) {
     const { data } = await supabase

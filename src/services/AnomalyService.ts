@@ -18,21 +18,20 @@ export class AnomalyService {
   static readonly Z_THRESHOLD_LOW = 2.0;
   static readonly Z_THRESHOLD_MEDIUM = 3.0;
   static readonly Z_THRESHOLD_HIGH = 4.5;
-  // Minimum data points needed for a statistically meaningful z-score
+  // Mínimo de puntos de datos para un z-score estadísticamente significativo
   static readonly MIN_BASELINE = 3;
 
   /**
-   * Pure detection — no I/O.
+   * Detección pura — sin I/O.
    *
-   * Compares each current entry against historical entries for the SAME
-   * (sourceType × secondary × rawUnit) group. Entries with different fuel
-   * types, refrigerants, grid regions, or measurement units are NEVER
-   * mixed into the same baseline — mixing units (e.g. kWh vs MWh) would
-   * produce meaningless z-scores, and mixing fuel types (diesel vs LPG)
-   * conflates unrelated consumption patterns.
+   * Compara cada entrada actual contra las históricas del MISMO grupo
+   * (sourceType × secondary × rawUnit). Nunca se mezclan tipos de combustible,
+   * refrigerantes, regiones eléctricas ni unidades distintas en la misma línea base
+   * — mezclar unidades (kWh vs MWh) produce z-scores sin sentido, y mezclar
+   * combustibles (diesel vs LPG) confunde patrones de consumo no relacionados.
    *
-   * Uses sample standard deviation (ddof = 1) for unbiased estimation.
-   * Requires at least MIN_BASELINE data points in the group.
+   * Usa desviación estándar muestral (ddof = 1) para estimación sin sesgo.
+   * Requiere al menos MIN_BASELINE puntos en el grupo.
    */
   detect(
     current: readonly ActivityEntry[],
@@ -92,7 +91,6 @@ export class AnomalyService {
     return anomalies;
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
 
   private static groupKey(
     sourceType: EmissionSourceType,
@@ -121,10 +119,7 @@ export class AnomalyService {
     }
   }
 
-  /**
-   * Z-score using sample standard deviation (ddof = 1).
-   * Returns null when the population is too small or has zero variance.
-   */
+  // Retorna null si la población es muy pequeña o tiene varianza cero
   private static zScore(value: number, population: readonly number[]): number | null {
     if (population.length < AnomalyService.MIN_BASELINE) return null;
     const m = AnomalyService.mean(population);
@@ -137,7 +132,7 @@ export class AnomalyService {
     return values.reduce((acc, v) => acc + v, 0) / values.length;
   }
 
-  /** Sample standard deviation (ddof = 1). */
+  // Desviación estándar muestral (ddof = 1) para estimación sin sesgo
   private static stddev(values: readonly number[], mean: number): number {
     if (values.length < 2) return 0;
     const variance =
@@ -151,7 +146,7 @@ export class AnomalyService {
     return 'low';
   }
 
-  // Expose internals for testing
+  // Expuesto para tests unitarios
   static readonly _internals = {
     zScore: AnomalyService.zScore.bind(AnomalyService),
     mean: AnomalyService.mean.bind(AnomalyService),

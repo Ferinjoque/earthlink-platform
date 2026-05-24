@@ -42,12 +42,12 @@ export default async function ActividadPage({ searchParams }: PageProps) {
     'organization_id' | 'supplier_id' | 'role'
   >[];
 
-  // supplier role → direct supplier access
+  // Rol 'supplier' → acceso directo a su proveedor
   const supplierRoleIds = memberships
     .map((m) => m.supplier_id)
     .filter((id): id is string => id !== null);
 
-  // admin/consultant → access to all suppliers in their orgs
+  // admin/consultant → acceso a todos los proveedores de sus orgs
   const adminOrgIds = memberships
     .filter((m) => m.role === 'admin' || m.role === 'consultant')
     .map((m) => m.organization_id);
@@ -119,7 +119,7 @@ export default async function ActividadPage({ searchParams }: PageProps) {
 
   const entryIds = entriesData.map((e) => e.id);
 
-  // Build a map: period_id → label (for entries list)
+  // Mapa period_id → label para mostrar etiqueta en la lista
   const periodLabelMap = new Map(periodsData.map((p) => [p.id, p.label]));
   const periodStatusMap = new Map(periodsData.map((p) => [p.id, p.status]));
 
@@ -169,7 +169,7 @@ export default async function ActividadPage({ searchParams }: PageProps) {
 
   const nEntradas = totalEntries;
 
-  // Empty state: no suppliers accessible
+  // Estado vacío: sin proveedores accesibles
   if (suppliersData.length === 0) {
     return (
       <>

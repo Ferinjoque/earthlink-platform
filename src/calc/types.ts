@@ -3,11 +3,9 @@
  * All types are readonly — mutation is never allowed inside calc/.
  */
 
-// ── Grid regions (must match grid_regions.code in DB) ────────────────────────
 
 export type GridRegion = 'SEIN_PERU' | 'LATAM_AVG' | 'US_AVERAGE' | 'EU_AVERAGE';
 
-// ── Water use subtypes ────────────────────────────────────────────────────────
 
 export type WaterSubtype =
   | 'all_sources'    // Total de todas las fuentes
@@ -17,14 +15,12 @@ export type WaterSubtype =
   | 'well_outdoor'   // Pozo — exterior
   | 'other_mixed';   // Otra fuente mixta
 
-// ── Waste subtypes ────────────────────────────────────────────────────────────
 
 export type WasteSubtype =
   | 'disposed_trash' // Basura dispuesta (vertedero)
   | 'recycled'       // Materiales reciclados
   | 'composted';     // Materiales compostados
 
-// ── Activity kinds (discriminated union, exhaustive) ─────────────────────────
 
 export type ActivityKind =
   | {
@@ -41,7 +37,6 @@ export type ActivityKind =
 // Scope 'none' = consumption tracked but no direct GHG (water, waste recycled/composted)
 export type GhgScope = 'scope1' | 'scope2' | 'none';
 
-// ── Units (accepted input + canonical normalized units) ───────────────────────
 
 export type Unit =
   // Energy — standard for gas & electricity
@@ -83,7 +78,6 @@ export const STANDARD_UNITS: Record<ActivityKind['kind'], Unit> = {
   waste: 'ton_us',
 };
 
-// ── Input / output types ──────────────────────────────────────────────────────
 
 export type ActivityRecord = Readonly<{
   id: string;
@@ -136,7 +130,6 @@ export type RiskScore = Readonly<{
   trend: 'up' | 'down' | 'stable';
 }>;
 
-// ── Error types ───────────────────────────────────────────────────────────────
 
 export type CalcError =
   | { readonly type: 'UNKNOWN_UNIT'; readonly unit: string }

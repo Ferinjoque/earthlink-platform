@@ -13,7 +13,6 @@ import { parseXlsxBuffer } from '@/lib/xlsx';
 import type { ActivityKind, Unit, WaterSubtype, WasteSubtype } from '@/calc/types';
 import type { EmissionSourceType } from '@/types/database';
 
-// ── Zod validation schemas ────────────────────────────────────────────────────
 
 const SOURCE_TYPES_ENUM = [
   'stationary_combustion',
@@ -38,7 +37,6 @@ const createEntrySchema = z.object({
   notes: z.string().optional(),
 });
 
-// ── State types ───────────────────────────────────────────────────────────────
 
 export interface ActivityFormState {
   error?: string | undefined;
@@ -55,7 +53,6 @@ export interface CsvImportState {
   submittedAt?: number | undefined;
 }
 
-// ── Build ActivityKind discriminated union from flat form values ───────────────
 
 const STATIONARY_FUELS = [
   'natural_gas', 'diesel', 'lpg', 'fuel_oil_no2', 'propane',
@@ -112,7 +109,6 @@ function buildActivityKind(sourceType: string, secondary: string): ActivityKind 
   }
 }
 
-// ── findOrCreatePeriod ────────────────────────────────────────────────────────
 
 const MESES_CORTO = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'] as const;
 
@@ -177,7 +173,6 @@ async function findOrCreatePeriod(
   return { periodId: (newPeriod as NewPeriodRow).id };
 }
 
-// ── verifySupplierAccess ──────────────────────────────────────────────────────
 
 type SupplierOrg = { organization_id: string };
 type MembershipCheck = { role: string; supplier_id: string | null };
@@ -204,7 +199,7 @@ async function verifySupplierAccess(
   const mem = memRaw as MembershipCheck | null;
   if (!mem) return { error: 'Sin permisos para registrar actividad en este proveedor' };
 
-  // Supplier-role users may only write to their assigned supplier
+  // Rol 'supplier' solo puede escribir en su proveedor asignado
   if (mem.role === 'supplier' && mem.supplier_id !== supplierId) {
     return { error: 'Sin permisos para registrar actividad en este proveedor' };
   }
@@ -212,7 +207,6 @@ async function verifySupplierAccess(
   return { ok: true };
 }
 
-// ── createActivityEntry ───────────────────────────────────────────────────────
 
 export async function createActivityEntry(
   _prevState: ActivityFormState | null,
@@ -276,7 +270,7 @@ export async function createActivityEntry(
     return { error: 'Error al guardar el registro. Intenta nuevamente.', submittedAt: Date.now() };
   }
 
-  // Anomaly detection — best-effort, non-fatal
+  // Detección de anomalías — no crítica, no bloquea si falla
   try {
     const historical = await entryRepo.findByPeriodId(reporting_period_id);
     const svc = new AnomalyService();
@@ -303,14 +297,13 @@ export async function createActivityEntry(
       await anomalyRepo.save(flag);
     }
   } catch {
-    // Entry saved — anomaly detection is non-critical
+    // Entrada guardada — la detección de anomalías es opcional
   }
 
   revalidatePath('/activity');
   return { success: true, submittedAt: Date.now() };
 }
 
-// ── importActivityCsv ─────────────────────────────────────────────────────────
 
 export async function importActivityCsv(
   _prevState: CsvImportState | null,
@@ -342,7 +335,7 @@ export async function importActivityCsv(
     };
   }
 
-  // Batch access check — verify user belongs to all suppliers referenced
+  // Verificar que el usuario tenga acceso a todos los proveedores del lote
   const uniqueSupplierIds = [...new Set(validRows.map((r) => r.data!.supplier_id))];
   for (const supplierId of uniqueSupplierIds) {
     const check = await verifySupplierAccess(supabase, supplierId, user.id);
@@ -394,7 +387,6 @@ export async function importActivityCsv(
   return { success: true, imported, skipped, submittedAt: Date.now() };
 }
 
-// ── importActivityBulk ────────────────────────────────────────────────────────
 
 const bulkEntrySchema = z.array(
   z.object({
@@ -436,7 +428,7 @@ export async function importActivityBulk(
 
   const bulkRows = validation.data;
 
-  // Batch access check
+  // Verificar acceso por lote
   const uniqueSupplierIds = [...new Set(bulkRows.map((r) => r.supplier_id))];
   for (const supplierId of uniqueSupplierIds) {
     const check = await verifySupplierAccess(supabase, supplierId, user.id);
@@ -481,7 +473,6 @@ export async function importActivityBulk(
   return { success: true, imported: importedCount, skipped: skippedCount, submittedAt: Date.now() };
 }
 
-// ── voidActivityEntry ─────────────────────────────────────────────────────────
 
 export interface VoidEntryState {
   error?: string | undefined;
@@ -551,7 +542,6 @@ export async function voidActivityEntry(
   return { success: true };
 }
 
-// ── deleteActivityEntry ───────────────────────────────────────────────────────
 
 export interface DeleteEntryState {
   error?: string | undefined;
@@ -571,7 +561,7 @@ export async function deleteActivityEntry(
   const entryId = formData.get('entry_id');
   if (typeof entryId !== 'string' || !entryId) return { error: 'Falta el ID del registro' };
 
-  // Fetch period status + org via join
+  // Obtener estado del periodo y org mediante join
   type EntryPeriod = {
     reporting_period_id: string;
     reporting_periods: { status: string; suppliers: { organization_id: string } };
@@ -589,7 +579,7 @@ export async function deleteActivityEntry(
 
   if (!orgId) return { error: 'Proveedor del registro no encontrado' };
 
-  // Membership check
+  // Verificar membresía en la organización
   const { data: memRaw } = await supabase
     .from('memberships')
     .select('role')
@@ -612,7 +602,6 @@ export async function deleteActivityEntry(
   return { success: true };
 }
 
-// ── importActivityXlsx ────────────────────────────────────────────────────────
 
 export async function importActivityXlsx(
   _prevState: CsvImportState | null,
@@ -643,7 +632,7 @@ export async function importActivityXlsx(
     };
   }
 
-  // Batch access check
+  // Verificar acceso por lote
   const uniqueSupplierIds = [...new Set(validRows.map((r) => r.data!.supplier_id))];
   for (const supplierId of uniqueSupplierIds) {
     const check = await verifySupplierAccess(supabase, supplierId, user.id);

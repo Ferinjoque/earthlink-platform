@@ -68,7 +68,6 @@ export default async function PanelPage({ searchParams }: PageProps) {
 
   const params = await searchParams;
 
-  // ── Phase 1: memberships ──
   const { data: rawMemberships } = await supabase
     .from('memberships')
     .select('organization_id, supplier_id, role')
@@ -89,7 +88,6 @@ export default async function PanelPage({ searchParams }: PageProps) {
     ),
   ];
 
-  // ── Phase 2: suppliers ──
   const allSupplierIds: string[] = [...memberSupplierIds];
   const supplierNameMap = new Map<string, string>();
 
@@ -106,7 +104,6 @@ export default async function PanelPage({ searchParams }: PageProps) {
     }
   }
 
-  // ── Phase 3: ALL periods (to derive available years) ──
   type PeriodRow = {
     id: string;
     status: string;
@@ -124,7 +121,7 @@ export default async function PanelPage({ searchParams }: PageProps) {
     if (data) allPeriodsData.push(...(data as PeriodRow[]));
   }
 
-  // Derive available years
+  // Derivar años disponibles de los periodos
   const yearSet = new Set<number>();
   for (const p of allPeriodsData) {
     yearSet.add(new Date(p.start_date).getFullYear());
@@ -138,7 +135,7 @@ export default async function PanelPage({ searchParams }: PageProps) {
       ? parseInt(params.year, 10)
       : (availableYears[0] ?? nowYear);
 
-  // Filter periods to selected year
+  // Filtrar periodos al año seleccionado
   const periodsData = allPeriodsData.filter(
     (p) => new Date(p.start_date).getFullYear() === selectedYear,
   );
@@ -153,7 +150,6 @@ export default async function PanelPage({ searchParams }: PageProps) {
     periodStartMap.set(p.id, p.start_date);
   }
 
-  // ── Phase 4: parallel — emissions + activity entries ──
   type EmissionRow = {
     co2e_kg: number;
     scope: number;
@@ -187,7 +183,6 @@ export default async function PanelPage({ searchParams }: PageProps) {
     entrySourceMap.set(e.id, e.source_type);
   }
 
-  // ── Compute KPIs + leaderboard + source mix ──
   let totalCo2eKg = 0;
   let scope1Co2eKg = 0;
   let scope2Co2eKg = 0;
@@ -230,7 +225,6 @@ export default async function PanelPage({ searchParams }: PageProps) {
   const periodosAbiertos = periodsData.filter((p) => p.status === 'open').length;
   const periodosEnRevision = periodsData.filter((p) => p.status === 'under_review').length;
 
-  // ── Trend: Jan-Dec selected year ──
   const currentMonthKey = `${nowYear}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
   const trendMap = new Map<string, number>();
   for (let m = 1; m <= 12; m++) {
@@ -254,7 +248,6 @@ export default async function PanelPage({ searchParams }: PageProps) {
   const maxTrendKg = Math.max(...trendData.map((m) => m.kg), 1);
   const hayTrend = trendData.some((m) => m.kg > 0);
 
-  // ── Leaderboard ──
   const leaderboard = [...supplierCo2eMap.entries()]
     .map(([id, { s1, s2 }]) => ({
       id,
@@ -267,7 +260,6 @@ export default async function PanelPage({ searchParams }: PageProps) {
     .slice(0, 8);
   const maxLeaderboardKg = Math.max(...leaderboard.map((l) => l.total), 1);
 
-  // ── Source mix ──
   const sourceMix = [...sourceTypeCo2eMap.entries()]
     .map(([sourceType, kg]) => ({
       sourceType,
@@ -278,7 +270,6 @@ export default async function PanelPage({ searchParams }: PageProps) {
     .slice(0, 6);
   const maxSourceKg = Math.max(...sourceMix.map((s) => s.kg), 1);
 
-  // ── Audit pipeline matrix ──
   const labelStartMap = new Map<string, string>();
   for (const p of periodsData) {
     const existing = labelStartMap.get(p.label);
@@ -304,7 +295,6 @@ export default async function PanelPage({ searchParams }: PageProps) {
   }
   const pipelineSupplierIds = [...pipelineMatrix.keys()];
 
-  // ── Phase 5: anomaly flags ──
   const allEntryIds = activityEntries.map((e) => e.id);
   type AnomalyFlagRow = {
     id: string;
@@ -344,7 +334,6 @@ export default async function PanelPage({ searchParams }: PageProps) {
   const totalAnomalias = anomalyAlerts.length;
   const top3Anomalias = anomalyAlerts.slice(0, 3);
 
-  // ── Derived display values ──
   const coberturaPercent =
     allSupplierIds.length > 0
       ? Math.round((suppliersWithEntries.size / allSupplierIds.length) * 100)

@@ -10,7 +10,6 @@ import type { Unit, GhgScope, ActivityKind, GridRegion, WaterSubtype, WasteSubty
 
 export type ValidationResult = { valid: true } | { valid: false; reason: string };
 
-// ── Abstract base ─────────────────────────────────────────────────────────────
 
 export abstract class EmissionSource {
   abstract readonly activityKind: ActivityKind;
@@ -31,7 +30,6 @@ export abstract class EmissionSource {
   }
 }
 
-// ── Scope 1 ───────────────────────────────────────────────────────────────────
 
 abstract class Scope1Source extends EmissionSource {
   scope(): GhgScope {
@@ -107,7 +105,6 @@ export class FugitiveEmissionSource extends Scope1Source {
   }
 }
 
-// ── Scope 2 ───────────────────────────────────────────────────────────────────
 
 abstract class Scope2Source extends EmissionSource {
   scope(): GhgScope {
@@ -152,7 +149,6 @@ export class PurchasedSteamSource extends Scope2Source {
   }
 }
 
-// ── No-scope (water, waste) ───────────────────────────────────────────────────
 // Consumo rastreado para GRESB pero sin GHG directo en Alcances 1 y 2.
 
 abstract class NoScopeSource extends EmissionSource {

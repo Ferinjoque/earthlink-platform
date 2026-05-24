@@ -35,7 +35,6 @@ interface ReportsPanelProps {
   orgName: string;
 }
 
-// ─── helpers ────────────────────────────────────────────────────────────────
 
 function groupByYear(periodos: PeriodoExportable[]): Map<number, PeriodoExportable[]> {
   const map = new Map<number, PeriodoExportable[]>();
@@ -44,7 +43,7 @@ function groupByYear(periodos: PeriodoExportable[]): Map<number, PeriodoExportab
     arr.push(p);
     map.set(p.year, arr);
   }
-  // Sort years descending
+  // Ordenar años de más reciente a más antiguo
   return new Map([...map.entries()].sort((a, b) => b[0] - a[0]));
 }
 
@@ -67,7 +66,6 @@ function sumarPeriodos(periodos: PeriodoExportable[]): {
   return { totalCo2eKg, scope1Kg, scope2Kg, nProveedores: proveedores.size };
 }
 
-// ─── component ───────────────────────────────────────────────────────────────
 
 export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps) {
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set());
@@ -99,7 +97,7 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
     year: 'numeric',
   });
 
-  // Trigger download when CSV content is returned + refresh history
+  // Disparar descarga cuando el CSV vuelve del servidor y refrescar historial
   useEffect(() => {
     if (state?.success && state.csvContent && state.filename) {
       const blob = new Blob([state.csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -152,18 +150,18 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
 
   const gruposPorAnio = groupByYear(periodos);
 
-  // Annual stats for selected periods
+  // Estadísticas anuales de los periodos seleccionados
   const seleccionadosList = periodos.filter((p) => seleccionados.has(p.id));
   const statsSeleccion = sumarPeriodos(seleccionadosList);
 
-  // Detect if all selected are same year (for filename)
+  // Detectar si todos los periodos son del mismo año (para el nombre del archivo)
   const aniosSeleccionados = [...new Set(seleccionadosList.map((p) => p.year))];
   const anioUnico: number | null =
     aniosSeleccionados.length === 1 && aniosSeleccionados[0] !== undefined
       ? aniosSeleccionados[0]
       : null;
 
-  // Last export sha256 for print footer
+  // sha256 del último export para pie de página en impresión
   const ultimoSha = state?.success && state.sha256 ? state.sha256 : (historial[0]?.file_sha256 ?? null);
 
   return (
@@ -891,7 +889,6 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
   );
 }
 
-// ─── sub-components ──────────────────────────────────────────────────────────
 
 function SummaryKpi({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
@@ -906,7 +903,6 @@ function SummaryKpi({ label, value, color }: { label: string; value: string; col
   );
 }
 
-// ─── style constants ──────────────────────────────────────────────────────────
 
 const estiloTh: React.CSSProperties = {
   textAlign: 'left',

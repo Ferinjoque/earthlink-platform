@@ -31,7 +31,7 @@ export interface ParsedCsvRow {
   errors: string[];
 }
 
-// Canonical field → accepted header aliases (lowercased, spaces normalised)
+// Campo canónico → aliases aceptados de columna (en minúsculas, espacios normalizados)
 const COL_ALIASES: Record<string, string[]> = {
   supplier_id: [
     'supplier_id',
@@ -166,7 +166,7 @@ function buildColMap(headerLine: string, sep: string): Map<string, number> | nul
 
 function looksLikeHeader(line: string): boolean {
   const firstCol = line.split(/[,;\t]/)[0]?.trim() ?? '';
-  // UUID in first column → data row (supplier_id), not a header
+  // UUID en primera columna → fila de datos (supplier_id), no es encabezado
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(firstCol)) {
     return false;
   }

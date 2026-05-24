@@ -2,7 +2,6 @@
 
 import { useState, useId } from 'react';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface ConsumoMensual {
   yearMonth: string; // "YYYY-MM"
@@ -24,7 +23,6 @@ interface ConsumptionChartProps {
   proveedores: ProveedorResumen[];
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 const MESES_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
@@ -70,7 +68,6 @@ interface ChartSeries {
   points: SeriesPoint[];
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
 
 function SvgLineChart({
   series,
@@ -85,7 +82,7 @@ function SvgLineChart({
   const plotW = width - SVG_PADDING.left - SVG_PADDING.right;
   const plotH = CHART_HEIGHT - SVG_PADDING.top - SVG_PADDING.bottom;
 
-  // Compute global max across all series
+  // Calcular el máximo global entre todas las series para eje Y compartido
   const allValues = series.flatMap((s) => s.points.map((p) => p.value));
   const maxVal = allValues.length > 0 ? Math.max(...allValues) : 0;
   const ticks = niceYTicks(maxVal * 1.1, 4);
@@ -256,22 +253,21 @@ function SvgLineChart({
   );
 }
 
-// ── Main component ─────────────────────────────────────────────────────────────
 
 export function ConsumptionChart({ consumo, proveedores }: ConsumptionChartProps) {
   const [proveedorActivo, setProveedorActivo] = useState<string>('todos');
   const clipId = useId().replace(/:/g, '-') + '-clip';
 
-  // Filter data by active supplier
+  // Filtrar datos según proveedor activo
   const datosFiltrados =
     proveedorActivo === 'todos'
       ? consumo
       : consumo.filter((d) => d.supplierId === proveedorActivo);
 
-  // Collect sorted unique months across filtered data
+  // Obtener meses únicos ordenados de los datos filtrados
   const months = [...new Set(datosFiltrados.map((d) => d.yearMonth))].sort();
 
-  // Build series: aggregate across suppliers per month
+  // Construir series: agregar por mes y proveedor
   const monthMap = new Map<string, { energia: number; agua: number; residuos: number }>();
   for (const d of datosFiltrados) {
     const prev = monthMap.get(d.yearMonth) ?? { energia: 0, agua: 0, residuos: 0 };
@@ -318,12 +314,12 @@ export function ConsumptionChart({ consumo, proveedores }: ConsumptionChartProps
     })),
   };
 
-  // Summary stats
+  // Estadísticas de resumen
   const totalCo2eKg = datosFiltrados.reduce((acc, d) => acc + d.energiaCo2eKg, 0);
   const totalAguaM3 = datosFiltrados.reduce((acc, d) => acc + d.aguaRawQty, 0);
   const totalResiduosTon = datosFiltrados.reduce((acc, d) => acc + d.residuosRawQty, 0);
 
-  // Last entry: the latest yearMonth in filtered data
+  // Última entrada: el mes más reciente en los datos filtrados
   const ultimoMes = months.length > 0 ? months[months.length - 1] : null;
   const ultimoLabel = ultimoMes
     ? (datosFiltrados.find((d) => d.yearMonth === ultimoMes)?.label ?? ultimoMes)
@@ -461,7 +457,6 @@ export function ConsumptionChart({ consumo, proveedores }: ConsumptionChartProps
   );
 }
 
-// ── Micro-components ──────────────────────────────────────────────────────────
 
 function PillButton({
   active,

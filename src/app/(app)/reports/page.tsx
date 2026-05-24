@@ -31,7 +31,7 @@ export default async function ReportesPage() {
     ...new Set(memberships.map((m) => m.organization_id).filter((id): id is string => id !== null)),
   ];
 
-  // Fetch org name for report header
+  // Cargar nombre de org para encabezado del reporte
   let orgName = 'EarthLink';
   if (orgIds.length) {
     const { data: orgsData } = await supabase
@@ -54,7 +54,7 @@ export default async function ReportesPage() {
   const supplierMap = new Map(suppliersData.map((s) => [s.id, s.name]));
   const allSupplierIds = suppliersData.map((s) => s.id);
 
-  // Fetch exportable periods (under_review or locked) — include start_date for year grouping
+  // Cargar periodos exportables (en revisión o bloqueados) con start_date para agrupar por año
   type FilaPeriodo = Pick<ReportingPeriodRow, 'id' | 'label' | 'supplier_id' | 'status' | 'start_date'>;
   const periodsData: FilaPeriodo[] = [];
   if (allSupplierIds.length) {
@@ -67,7 +67,7 @@ export default async function ReportesPage() {
     if (data) periodsData.push(...(data as FilaPeriodo[]));
   }
 
-  // Fetch emission result summaries for these periods (with scope breakdown)
+  // Cargar resúmenes de resultados de emisión con desglose por alcance
   const periodIds = periodsData.map((p) => p.id);
   const mapaResumen = new Map<
     string,
@@ -112,7 +112,7 @@ export default async function ReportesPage() {
     };
   });
 
-  // Fetch export history for user's orgs
+  // Cargar historial de exportaciones de las orgs del usuario
   type FilaExport = Pick<
     ReportExportRow,
     'id' | 'format' | 'generated_at' | 'file_sha256' | 'reporting_period_ids'

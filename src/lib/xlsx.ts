@@ -17,7 +17,6 @@ export interface XlsxSupplier {
 const HEADER_BG = 'FF1A2E1A';
 const ACCENT_BG = 'FFE8F5E9';
 
-// ── Template generation ───────────────────────────────────────────────────────
 
 export async function generateXlsxTemplate(suppliers: XlsxSupplier[]): Promise<Uint8Array> {
   const ExcelJS = (await import('exceljs')).default;
@@ -25,7 +24,6 @@ export async function generateXlsxTemplate(suppliers: XlsxSupplier[]): Promise<U
   wb.creator = 'EarthLink';
   wb.created = new Date();
 
-  // ── Sheet: Registros ─────────────────────────────────────────────────────
   const ws = wb.addWorksheet('Registros', { views: [{ state: 'frozen', ySplit: 1 }] });
 
   ws.columns = [
@@ -39,7 +37,7 @@ export async function generateXlsxTemplate(suppliers: XlsxSupplier[]): Promise<U
     { header: 'Notas', key: 'notes', width: 32 },
   ];
 
-  // Style header row
+  // Estilar la fila de encabezado
   const headerRow = ws.getRow(1);
   headerRow.eachCell((cell) => {
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: HEADER_BG } };
@@ -81,10 +79,9 @@ export async function generateXlsxTemplate(suppliers: XlsxSupplier[]): Promise<U
   const sepRow = ws.addRow(['← Borrar filas de ejemplo antes de importar →']);
   sepRow.getCell(1).font = { italic: true, color: { argb: 'FF888888' }, size: 9 };
 
-  // Add 50 blank data rows
+  // Agregar 50 filas en blanco para datos
   for (let i = 0; i < 50; i++) ws.addRow([]);
 
-  // ── Data validation ───────────────────────────────────────────────────────
   const sourceTypes = Object.keys(ETIQUETAS_FUENTE) as EmissionSourceType[];
   const nSources = sourceTypes.length;
   const nSecondaries = ALL_SECONDARIES.length;
@@ -124,7 +121,6 @@ export async function generateXlsxTemplate(suppliers: XlsxSupplier[]): Promise<U
     };
   }
 
-  // ── Sheet: Listas (hidden) ────────────────────────────────────────────────
   const wsList = wb.addWorksheet('Listas');
   wsList.state = 'hidden';
 
@@ -152,7 +148,6 @@ export async function generateXlsxTemplate(suppliers: XlsxSupplier[]): Promise<U
     wsList.getCell(`D${i + 2}`).value = q;
   });
 
-  // ── Sheet: Proveedores ────────────────────────────────────────────────────
   const wsProv = wb.addWorksheet('Proveedores');
   wsProv.columns = [
     { header: 'UUID del Proveedor (copiar en col. A de Registros)', key: 'id', width: 44 },
@@ -166,7 +161,6 @@ export async function generateXlsxTemplate(suppliers: XlsxSupplier[]): Promise<U
     wsProv.addRow([s.id, s.name]);
   }
 
-  // ── Sheet: Ayuda ──────────────────────────────────────────────────────────
   const wsHelp = wb.addWorksheet('Ayuda');
   wsHelp.getColumn(1).width = 35;
   wsHelp.getColumn(2).width = 50;
@@ -250,7 +244,6 @@ export async function generateXlsxTemplate(suppliers: XlsxSupplier[]): Promise<U
   return new Uint8Array(buf as ArrayBuffer);
 }
 
-// ── XLSX parser ───────────────────────────────────────────────────────────────
 
 export async function parseXlsxBuffer(buffer: ArrayBuffer): Promise<ParsedCsvRow[]> {
   const ExcelJS = (await import('exceljs')).default;
@@ -292,7 +285,7 @@ export async function parseXlsxBuffer(buffer: ArrayBuffer): Promise<ParsedCsvRow
     const dataQuality = getCellStr(7) || 'measured';
     const notes = getCellStr(8);
 
-    // Skip empty rows and separator rows
+    // Saltear filas vacías y filas separadoras
     if (!supplierId && !yearMonth && !sourceType && !quantityRaw) return;
     if (supplierId.startsWith('←') || supplierId.startsWith('Borrar')) return;
 

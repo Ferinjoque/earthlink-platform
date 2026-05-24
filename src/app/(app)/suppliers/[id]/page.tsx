@@ -64,7 +64,7 @@ export default async function DetalleProveedorPage({
     'id' | 'name' | 'category' | 'contact_email' | 'ruc' | 'organization_id' | 'created_at'
   >;
 
-  // Defense-in-depth: verify caller belongs to this supplier's org
+  // Defensa en profundidad: verificar que el usuario pertenece a la org del proveedor
   const { data: memCheck } = await supabase
     .from('memberships')
     .select('role')
@@ -86,7 +86,7 @@ export default async function DetalleProveedorPage({
 
   const periodIds = periods.map((p) => p.id);
 
-  // Parallel: emission_results + recent activity_entries (both depend only on periodIds)
+  // Fetch paralelo: emission_results y entradas recientes (ambos dependen de periodIds)
   type FilaResultado = { reporting_period_id: string; co2e_kg: number };
   type FilaEntrada = Pick<
     ActivityEntryRow,
