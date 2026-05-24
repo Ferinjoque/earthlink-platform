@@ -20,7 +20,7 @@ const csvRowSchema = z.object({
   raw_quantity: z.coerce.number().positive('Debe ser un número positivo'),
   raw_unit: z.string().min(1, 'Unidad obligatoria'),
   data_quality: z.enum(DATA_QUALITY_VALUES).default('measured'),
-  notes: z.string().optional(),
+  notes: z.string().max(1000).optional(),
 });
 
 export type CsvRowInput = z.infer<typeof csvRowSchema>;

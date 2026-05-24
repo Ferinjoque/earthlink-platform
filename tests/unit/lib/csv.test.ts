@@ -142,6 +142,23 @@ describe('parseCsvText', () => {
     expect(rows[0]!.errors.length).toBeGreaterThan(0);
   });
 
+  it('rejects notes exceeding 1000 characters', () => {
+    const longNote = 'a'.repeat(1001);
+    const csv = `${VALID_UUID},${VALID_YM},stationary_combustion,natural_gas,1000,m3_ng,measured,${longNote}`;
+    const rows = parseCsvText(csv);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.data).toBeNull();
+    expect(rows[0]!.errors.length).toBeGreaterThan(0);
+  });
+
+  it('accepts notes at exactly 1000 characters', () => {
+    const note = 'b'.repeat(1000);
+    const csv = `${VALID_UUID},${VALID_YM},stationary_combustion,natural_gas,1000,m3_ng,measured,${note}`;
+    const rows = parseCsvText(csv);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.data?.notes).toHaveLength(1000);
+  });
+
   it('colMap path returns empty string when data row is shorter than header', () => {
     // Header defines 7 columns; data row has only 3 → required fields missing
     const csv = [

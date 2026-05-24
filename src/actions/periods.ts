@@ -11,7 +11,15 @@ const createPeriodSchema = z
     fecha_inicio: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha de inicio inválida (YYYY-MM-DD)'),
     fecha_fin: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha de fin inválida (YYYY-MM-DD)'),
   })
-  .refine((d) => !Number.isNaN(Date.parse(d.fecha_inicio)) && !Number.isNaN(Date.parse(d.fecha_fin)), {
+  .refine((d) => {
+    const calendarValid = (s: string) => {
+      const parts = s.split('-').map(Number);
+      const y = parts[0] ?? NaN, m = parts[1] ?? NaN, day = parts[2] ?? NaN;
+      const dt = new Date(y, m - 1, day);
+      return dt.getFullYear() === y && dt.getMonth() + 1 === m && dt.getDate() === day;
+    };
+    return calendarValid(d.fecha_inicio) && calendarValid(d.fecha_fin);
+  }, {
     message: 'Las fechas deben ser fechas del calendario válidas',
     path: ['fecha_inicio'],
   })

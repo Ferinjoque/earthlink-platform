@@ -105,6 +105,24 @@ describe('createPeriod', () => {
     expect(result.error).toMatch(/posterior/i);
   });
 
+  it('returns error for calendar-invalid date (Feb 30)', async () => {
+    mockClient();
+    const result = await createPeriod(
+      null,
+      makeFormData({ ...validFields, fecha_inicio: '2026-02-30', fecha_fin: '2026-03-31' }),
+    );
+    expect(result.error).toMatch(/calendario/i);
+  });
+
+  it('returns error for calendar-invalid date (month 13)', async () => {
+    mockClient();
+    const result = await createPeriod(
+      null,
+      makeFormData({ ...validFields, fecha_inicio: '2026-13-01', fecha_fin: '2026-13-30' }),
+    );
+    expect(result.error).toBeTruthy();
+  });
+
   it('returns error when supplier not found', async () => {
     mockClient({ supplierOrg: null });
     const result = await createPeriod(null, makeFormData(validFields));
