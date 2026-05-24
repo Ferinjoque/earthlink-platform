@@ -76,6 +76,7 @@ function FormProveedor({
   );
 
   const { toast } = useToast();
+  const router = useRouter();
 
   // Cerrar formulario automáticamente al guardar
   useEffect(() => {
@@ -84,9 +85,10 @@ function FormProveedor({
       mode === 'create' ? 'Proveedor creado correctamente' : 'Proveedor actualizado',
       'success',
     );
+    router.refresh();
     const t = setTimeout(() => onCancel(), 300);
     return () => clearTimeout(t);
-  }, [state?.success, mode, onCancel, toast]);
+  }, [state?.success, mode, onCancel, toast, router]);
 
   const fe = state?.fieldErrors ?? {};
 
@@ -328,13 +330,15 @@ function ConfirmacionArchivo({
     null,
   );
   const { toast } = useToast();
+  const router = useRouter();
 
   useEffect(() => {
     if (state?.success) {
       toast(`${supplier.name} archivado`, 'info');
+      router.refresh();
       onCancel();
     }
-  }, [state?.success, supplier.name, onCancel, toast]);
+  }, [state?.success, supplier.name, onCancel, toast, router]);
 
   return (
     <form
