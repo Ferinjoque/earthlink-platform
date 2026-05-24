@@ -465,6 +465,7 @@ export async function calculateYear(
   const priorPeriodIdsYear = (priorPeriodsYearRaw ?? []).map((p: { id: string }) => p.id);
   const historicalEntriesYear = await activityEntryRepoYear.findByPeriodIds(priorPeriodIdsYear);
 
+  const adminClientYear = createAdminClient();
   let calculated = 0;
   let skipped = 0;
   const errores: string[] = [];
@@ -510,6 +511,8 @@ export async function calculateYear(
       await auditSvc.transitionStatus(p.id, 'under_review', user.id);
       calculated = calculated + 1;
     } catch (err) {
+      // Restablecer a 'open' para que el periodo pueda reintentarse
+      await adminClientYear.from('reporting_periods').update({ status: 'open' }).eq('id', p.id);
       errores.push(
         `Periodo ${p.id}: ${err instanceof Error ? err.message : 'error desconocido'}`,
       );
