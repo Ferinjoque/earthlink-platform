@@ -93,7 +93,7 @@ export async function createSupplier(
     ruc: ruc || null,
   });
 
-  if (error) return { error: error.message };
+  if (error) return { error: 'Error al guardar el proveedor. Intenta nuevamente.' };
 
   revalidatePath('/suppliers');
   return { success: true };
@@ -160,7 +160,7 @@ export async function updateSupplier(
     })
     .eq('id', id);
 
-  if (error) return { error: error.message };
+  if (error) return { error: 'Error al guardar el proveedor. Intenta nuevamente.' };
 
   revalidatePath('/suppliers');
   return { success: true };
@@ -204,7 +204,7 @@ export async function archiveSupplier(
     .update({ archived_at: new Date().toISOString() })
     .eq('id', id);
 
-  if (error) return { error: error.message };
+  if (error) return { error: 'Error al guardar el proveedor. Intenta nuevamente.' };
 
   revalidatePath('/suppliers');
   return { success: true };

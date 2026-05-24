@@ -156,7 +156,7 @@ describe('calculatePeriod', () => {
   it('returns error when period_id is missing', async () => {
     mockAuth();
     const result = await calculatePeriod(null, makeFormData({}));
-    expect(result.error).toMatch(/falta el id/i);
+    expect(result.error).toMatch(/ID de periodo inválido/i);
   });
 
   it('returns error when period is not found', async () => {
@@ -231,7 +231,7 @@ describe('lockPeriod', () => {
   it('returns error when period_id is missing', async () => {
     mockAuth();
     const result = await lockPeriod(null, makeFormData({}));
-    expect(result.error).toMatch(/falta el id/i);
+    expect(result.error).toMatch(/ID de periodo inválido/i);
   });
 
   it('returns error when period is not found', async () => {
@@ -427,7 +427,7 @@ describe('resolveAnomaly', () => {
   it('returns error when flag_id is missing', async () => {
     mockResolveClient();
     const result = await resolveAnomaly(null, makeFormData({}));
-    expect(result.error).toMatch(/falta el id/i);
+    expect(result.error).toMatch(/ID de anomalía inválido/i);
   });
 
   it('returns error when flag not found', async () => {
@@ -582,7 +582,7 @@ describe('recalculatePeriod', () => {
   it('returns error when period_id is missing', async () => {
     mockAuth();
     const result = await recalculatePeriod(null, makeFormData({}));
-    expect(result.error).toMatch(/falta el id/i);
+    expect(result.error).toMatch(/ID de periodo inválido/i);
   });
 
   it('returns error when period not found', async () => {

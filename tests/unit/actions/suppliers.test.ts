@@ -172,7 +172,7 @@ describe('createSupplier', () => {
       organization_id: VALID_ORG_ID,
     });
     const result = await createSupplier(null, fd);
-    expect(result.error).toMatch(/duplicate key/i);
+    expect(result.error).toMatch(/Error al guardar/i);
   });
 
   it('returns success on valid create', async () => {
@@ -226,7 +226,7 @@ describe('archiveSupplier', () => {
     mockClient({ updateError: { message: 'row-level security' } });
     const fd = makeFormData({ id: VALID_SUPPLIER_ID });
     const result = await archiveSupplier(null, fd);
-    expect(result.error).toMatch(/row-level security/i);
+    expect(result.error).toMatch(/Error al guardar/i);
   });
 
   it('returns success when admin archives supplier', async () => {
@@ -290,7 +290,7 @@ describe('updateSupplier', () => {
     mockClient({ updateError: { message: 'unique constraint' } });
     const fd = makeFormData({ id: VALID_SUPPLIER_ID, nombre: 'Updated', categoria: 'Manufactura' });
     const result = await updateSupplier(null, fd);
-    expect(result.error).toMatch(/unique constraint/i);
+    expect(result.error).toMatch(/Error al guardar/i);
   });
 
   it('returns success with valid input as admin', async () => {

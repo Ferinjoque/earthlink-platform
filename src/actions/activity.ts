@@ -34,7 +34,7 @@ const createEntrySchema = z.object({
   raw_quantity: z.coerce.number().positive('La cantidad debe ser positiva'),
   raw_unit: z.string().min(1, 'La unidad es obligatoria'),
   data_quality: z.enum(DATA_QUALITY_VALUES).default('measured'),
-  notes: z.string().optional(),
+  notes: z.string().max(1000, 'Las notas no pueden superar 1000 caracteres').optional(),
 });
 
 
@@ -398,7 +398,7 @@ const bulkEntrySchema = z.array(
     raw_quantity: z.coerce.number().positive('La cantidad debe ser positiva'),
     raw_unit: z.string().min(1, 'Unidad obligatoria'),
     data_quality: z.enum(DATA_QUALITY_VALUES).default('measured'),
-    notes: z.string().optional(),
+    notes: z.string().max(1000, 'Las notas no pueden superar 1000 caracteres').optional(),
   }),
 ).min(1, 'Se requiere al menos una fila');
 
@@ -503,6 +503,9 @@ export async function voidActivityEntry(
   if (typeof reason !== 'string' || !reason.trim()) {
     return { error: 'La razón de anulación es obligatoria' };
   }
+  if (reason.trim().length > 1000) {
+    return { error: 'La razón de anulación no puede superar 1000 caracteres' };
+  }
 
   type EntryPeriod = {
     voided_at: string | null;
@@ -543,7 +546,7 @@ export async function voidActivityEntry(
       voided_by: user.id,
     })
     .eq('id', entryId);
-  if (updateError) return { error: `Error al anular: ${updateError.message}` };
+  if (updateError) return { error: 'Error al anular el registro. Intenta nuevamente.' };
 
   revalidatePath('/activity');
   revalidatePath('/audit');
@@ -605,7 +608,7 @@ export async function deleteActivityEntry(
     .from('activity_entries')
     .delete()
     .eq('id', entryId);
-  if (deleteError) return { error: `Error al eliminar: ${deleteError.message}` };
+  if (deleteError) return { error: 'Error al eliminar el registro. Intenta nuevamente.' };
 
   revalidatePath('/activity');
   return { success: true };
@@ -628,6 +631,13 @@ export async function importActivityXlsx(
   }
 
   const buffer = await file.arrayBuffer();
+
+  // Verificar magic bytes de ZIP/XLSX (PK\x03\x04) para rechazar binarios arbitrarios
+  const magic = new Uint8Array(buffer.slice(0, 4));
+  if (magic[0] !== 0x50 || magic[1] !== 0x4b || magic[2] !== 0x03 || magic[3] !== 0x04) {
+    return { error: 'El archivo no es un Excel válido (.xlsx)', submittedAt: Date.now() };
+  }
+
   const rows = await parseXlsxBuffer(buffer);
 
   const validRows = rows.filter((r) => r.errors.length === 0 && r.data !== null);
