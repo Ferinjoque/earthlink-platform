@@ -1002,7 +1002,7 @@ export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuil
   }
 
   function requestDelete(idx: number) {
-    if (rows.length === 1) return; // card mode doesn't delete last row
+    if (rows.length === 1) return; // el modo tarjeta no elimina la última fila
     setPendingDelete(idx);
   }
 

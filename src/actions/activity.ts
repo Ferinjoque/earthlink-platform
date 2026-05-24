@@ -635,6 +635,9 @@ export async function deleteActivityEntry(
     .maybeSingle();
   if (!memRaw) return { error: 'Sin permisos para eliminar este registro' };
 
+  if (periodStatus === 'calculating') {
+    return { error: 'No se puede eliminar registros mientras el periodo está siendo calculado' };
+  }
   if (periodStatus === 'locked') {
     return { error: 'Periodo bloqueado. Contacta al administrador.' };
   }

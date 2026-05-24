@@ -348,7 +348,7 @@ describe('importActivityCsv', () => {
   });
 
   it('returns success with imported count for valid CSV', async () => {
-    // Two rows, same supplier → access check runs once, period check runs twice
+    // Dos filas, mismo proveedor → verificación de acceso una vez, de periodo dos veces
     const mockSupabase = {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
       from: vi.fn()
@@ -401,8 +401,8 @@ describe('importActivityCsv', () => {
   });
 
   it('skips rows with valid source_type but invalid secondary', async () => {
-    // Row 2: mobile_combustion with invalid fuel → buildActivityKind returns null → skipped
-    // Row 1 needs full access+period chain; Row 2 also needs access+period (period skipped after activityKind fails)
+    // Fila 2: mobile_combustion con combustible inválido → buildActivityKind devuelve null → omitida
+    // Fila 1 requiere cadena completa acceso+periodo; Fila 2 también (periodo omitido tras fallo de activityKind)
     const mockSupabase = {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
       from: vi.fn()
@@ -611,7 +611,7 @@ describe('importActivityCsv — ownership check', () => {
     const mockSupabase = {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
       from: vi.fn()
-        .mockReturnValueOnce(makeMaybySingleChain(null)), // supplier not found
+        .mockReturnValueOnce(makeMaybySingleChain(null)), // proveedor no encontrado
     };
     vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
     const csv = `${VALID_UUID},${VALID_YM},stationary_combustion,diesel,100,L,`;
@@ -918,6 +918,12 @@ describe('deleteActivityEntry — control de roles', () => {
     const result = await deleteActivityEntry(null, makeFormData({ entry_id: ENTRY_ID }));
     expect(result.error).toMatch(/bloqueado/i);
   });
+
+  it('returns error when period is calculating', async () => {
+    mockDeleteClient({ periodStatus: 'calculating' });
+    const result = await deleteActivityEntry(null, makeFormData({ entry_id: ENTRY_ID }));
+    expect(result.error).toMatch(/calculad/i);
+  });
 });
 
 // ── voidActivityEntry — success path ─────────────────────────────────────────
@@ -1061,7 +1067,7 @@ describe('createActivityEntry — findOrCreatePeriod 23505 retry', () => {
         .mockReturnValueOnce(makeMaybeSingleChain({ role: 'admin' }))             // memberships
         .mockReturnValueOnce(makeMaybeSingleChain(null))                          // period find → null
         .mockReturnValueOnce(insertChain23505)                                    // period insert → 23505
-        .mockReturnValueOnce(retrySelectChain)                                    // period retry select
+        .mockReturnValueOnce(retrySelectChain)                                    // reintento de select de periodo
         .mockReturnValueOnce(anomalyChain),                                       // anomaly baseline
     };
     vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);

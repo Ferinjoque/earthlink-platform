@@ -119,7 +119,7 @@ describe('parseCsvText', () => {
   });
 
   it('positional parse handles row with fewer than 7 columns (undefined fields default to empty)', () => {
-    // Row has only 4 cols — raw_unit and notes are undefined → ?? '' fallback fires
+    // Fila con solo 4 columnas — raw_unit y notes undefined → activa el fallback ?? ''
     const csv = `${VALID_UUID},${VALID_YM},stationary_combustion,1000`;
     const rows = parseCsvText(csv);
     expect(rows).toHaveLength(1);
@@ -160,7 +160,7 @@ describe('parseCsvText', () => {
   });
 
   it('colMap path returns empty string when data row is shorter than header', () => {
-    // Header defines 7 columns; data row has only 3 → required fields missing
+    // Encabezado define 7 columnas; fila de datos tiene solo 3 → campos requeridos faltantes
     const csv = [
       'supplier_id,year_month,source_type,secondary,raw_quantity,raw_unit,notes',
       `${VALID_UUID},${VALID_YM},stationary_combustion`,
@@ -214,8 +214,8 @@ describe('parseCsvText', () => {
 
   it('falls back to positional parsing when header lacks required columns', () => {
     // 'source_type' in header → looksLikeHeader = true
-    // but missing supplier_id, year_month, raw_quantity, raw_unit → buildColMap returns null
-    // data row is parsed positionally
+    // pero faltan supplier_id, year_month, raw_quantity, raw_unit → buildColMap devuelve null
+    // la fila de datos se parsea posicionalmente
     const csv = [
       'source_type,secondary_only',
       `${VALID_UUID},${VALID_YM},stationary_combustion,natural_gas,1000,m3_ng,`,
@@ -234,7 +234,7 @@ describe('parseCsvText', () => {
     const csv = `my_label,col2,col3,col4,col5,col6,col7`;
     const rows = parseCsvText(csv);
     expect(rows).toHaveLength(1);
-    // fails validation since 'my_label' is not a UUID
+    // falla la validación ya que 'my_label' no es un UUID
     expect(rows[0]!.data).toBeNull();
     expect(rows[0]!.errors.length).toBeGreaterThan(0);
   });
@@ -294,7 +294,7 @@ describe('getCsvTemplate', () => {
   it('example rows fail UUID validation because <UUID-del-proveedor> is not a UUID', () => {
     const template = getCsvTemplate();
     const rows = parseCsvText(template);
-    // Every data row uses the placeholder, so every row must fail
+    // Cada fila usa el placeholder, por lo que todas deben fallar
     expect(rows.length).toBeGreaterThan(0);
     for (const row of rows) {
       expect(row.data).toBeNull();
@@ -319,13 +319,13 @@ describe('getCsvTemplate', () => {
     const filledCsv = getCsvTemplate().replace(/<UUID-del-proveedor>/g, REAL_UUID);
     const rows = parseCsvText(filledCsv);
     const sourceTypes = new Set(rows.map((r) => r.data?.source_type).filter(Boolean));
-    // Template covers all 7 source types
+    // La plantilla cubre los 7 tipos de fuente
     expect(sourceTypes.size).toBe(7);
   });
 });
 
 describe('parseCsvText — Spanish alias header', () => {
-  // Uses the exact alias pattern documented in getCsvTemplate
+  // Usa el patrón de alias exacto documentado en getCsvTemplate
   it('recognizes proveedor_id,mes,fuente,combustible,cantidad,unidad,notas aliases', () => {
     const REAL_UUID = '00000000-0000-4000-8000-000000000001';
     const csv = [

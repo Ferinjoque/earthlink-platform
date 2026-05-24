@@ -389,7 +389,7 @@ describe('score', () => {
   });
 
   it('level is critical for very large emissions with upward trend', () => {
-    // Base 65 + 10 (up trend) = 75 → critical
+    // Base 65 + 10 (tendencia ascendente) = 75 → critical
     const prior = makeTotals(100_000);
     const current = makeTotals(2_000_000);
     const s = score(current, [prior]);
@@ -719,8 +719,8 @@ describe('calculate — new GRESB fuels', () => {
       factorKgCo2ePerUnit: 2.68344,
       standardUnit: 'L',
     });
-    // 1 kBtu ≈ 0.1054 L for fuel oil (energy density conversion, approximate)
-    // For this test we just verify the conversion path works
+    // 1 kBtu ≈ 0.1054 L para fuel oil (conversión de densidad energética, aprox.)
+    // En este test solo verificamos que la ruta de conversión funciona
     const conversions = makeConversions([['kBtu->L', 0.1054]]);
     const result = calculate(record, makeFactorTable(factor), conversions);
 
@@ -848,7 +848,7 @@ describe('property tests (fast-check)', () => {
         fc.double({ min: 0.001, max: 1e4, noNaN: true, noDefaultInfinity: true }),
         (rawValue) => {
           // gallon → L → kWh doesn't exist as a real path, but we test that
-          // the identity conversion (kWh → kWh) always equals the value itself
+          // la conversión identidad (kWh → kWh) siempre es igual al valor
           const result = _internals.normalizeUnit(rawValue, 'kWh', 'kWh', new Map());
           return result.ok && Math.abs(result.value - rawValue) < 1e-10;
         },

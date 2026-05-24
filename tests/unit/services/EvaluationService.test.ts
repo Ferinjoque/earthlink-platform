@@ -237,7 +237,7 @@ describe('EvaluationService.evaluate()', () => {
     // GHG: 100 × 2.5139 = 251.39; water: 0
     expect(totals.totalCo2eKg).toBeCloseTo(251.39, 2);
     expect(totals.recordCount).toBe(2);
-    // Only GHG entry should be persisted
+    // Solo la entrada GHG debe persistirse
     expect(emissionResultRepo.insertMany).toHaveBeenCalledOnce();
     const [rows] = emissionResultRepo.insertMany.mock.calls[0]!;
     expect(rows).toHaveLength(1);
@@ -342,7 +342,7 @@ describe('EvaluationService.evaluate()', () => {
     expect(totals.byScope['scope2']).toBeCloseTo(451.7, 1);
     expect(totals.totalCo2eKg).toBeCloseTo(703.09, 0);
     expect(totals.recordCount).toBe(2);
-    // both results persisted
+    // ambos resultados deben persistirse
     const [rows] = emissionResultRepo.insertMany.mock.calls[0]!;
     expect(rows).toHaveLength(2);
     const scopes = rows.map((r: { result: { scope: string } }) => r.result.scope).sort();
@@ -382,7 +382,7 @@ describe('EvaluationService.evaluate()', () => {
     const e2 = makeEntry({ id: 'e2', rawQuantity: 200 }); // scope1: 502.78
     const { service } = makeService({ entries: [e1, e2] });
     const { totals } = await service.evaluate('period-001');
-    // both diesel → scope1 only; scope2 must be exactly 0
+    // ambos diesel → solo scope1; scope2 debe ser exactamente 0
     expect(totals.byScope['scope1']).toBeCloseTo(totals.totalCo2eKg, 4);
     expect(totals.byScope['scope2']).toBe(0);
     expect(totals.byScope['scope1'] + totals.byScope['scope2']).toBeCloseTo(totals.totalCo2eKg, 4);

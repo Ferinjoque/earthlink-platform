@@ -519,7 +519,7 @@ describe('uploadEvidence — validación de magic bytes', () => {
   });
 
   it('rechaza archivo con formato MIME no permitido (antes de magic bytes)', async () => {
-    mockAuthClient(); // Simple mock — MIME check happens before auth
+    mockAuthClient(); // Mock simple — la validación MIME ocurre antes que la autenticación
     const badMime = makeFile([0x00, 0x00], 'text/html', 'evil.html');
     const formData = new FormData();
     formData.append('evidence', badMime);

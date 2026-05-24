@@ -390,6 +390,7 @@ export async function deleteEvidence(
 
   revalidatePath('/activity');
   revalidatePath('/audit');
+  revalidatePath('/suppliers');
 
   return { success: true };
 }

@@ -17,10 +17,10 @@ test.describe('Proveedores — lista y detalle', () => {
   });
 
   test('muestra al menos un proveedor en la lista', async ({ page }) => {
-    // Any table row or supplier card should exist
+    // Debe existir al menos una fila de tabla o tarjeta de proveedor
     const rows = page.locator('table tbody tr, [data-supplier-row]');
     const count = await rows.count();
-    // Either has rows or shows an empty state
+    // Tiene filas o muestra un estado vacío
     if (count === 0) {
       await expect(page.getByText(/proveedor/i)).toBeVisible();
     } else {
@@ -40,7 +40,7 @@ test.describe('Proveedor detalle', () => {
     await page.waitForLoadState('networkidle');
     const supplierLink = page.locator('a[href^="/suppliers/"]').first();
     const count = await supplierLink.count();
-    if (count === 0) return; // skip if no suppliers
+    if (count === 0) return; // omitir si no hay proveedores
     await supplierLink.click();
     await page.waitForLoadState('networkidle');
     await expect(page).toHaveURL(/\/suppliers\/.+/);

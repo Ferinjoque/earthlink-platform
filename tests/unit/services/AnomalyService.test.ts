@@ -36,8 +36,8 @@ function makeEntry(
   });
 }
 
-// Historical baseline: ~850 L diesel (small variance)
-// Using MIN_BASELINE (3) or more entries
+// Línea base histórica: ~850 L diesel (varianza pequeña)
+// Con MIN_BASELINE (3) o más entradas
 const historicalBaseline = [
   makeEntry(840),
   makeEntry(850),
@@ -57,7 +57,7 @@ describe('AnomalyService.detect()', () => {
   });
 
   it('returns empty array when historical baseline has fewer than MIN_BASELINE entries', () => {
-    // With only 2 entries the z-score is statistically meaningless
+    // Con solo 2 entradas el z-score carece de significado estadístico
     const twoEntries = [makeEntry(850), makeEntry(860)];
     const result = svc.detect([makeEntry(5000)], twoEntries);
     expect(result).toHaveLength(0);
@@ -134,7 +134,7 @@ describe('AnomalyService.detect() — secondary grouping', () => {
       sourceType: 'mobile_combustion',
     });
     const result = svc.detect([dieselEntry], gasolineHistory);
-    // Baseline is gasoline, current is diesel — different group key → no anomaly
+    // Línea base gasolina, actual diesel — diferente clave de grupo → sin anomalía
     expect(result).toHaveLength(0);
   });
 
@@ -166,7 +166,7 @@ describe('AnomalyService.detect() — secondary grouping', () => {
       sourceType: 'fugitive',
     });
     const result = svc.detect([r410aEntry], r134aHistory);
-    // Different refrigerant → no baseline match → no anomaly
+    // Refrigerante diferente → sin coincidencia de línea base → sin anomalía
     expect(result).toHaveLength(0);
   });
 
@@ -197,7 +197,7 @@ describe('AnomalyService.detect() — secondary grouping', () => {
       sourceType: 'purchased_electricity',
     });
     const result = svc.detect([peruEntry], usHistory);
-    // Different grid region → no baseline match → no anomaly
+    // Región de red distinta → sin línea base coincidente → sin anomalía
     expect(result).toHaveLength(0);
   });
 });
@@ -208,7 +208,7 @@ describe('AnomalyService.detect() — unit grouping', () => {
   const svc = new AnomalyService();
 
   it('does NOT compare kWh entries against MWh baseline', () => {
-    // Historical: 850 MWh/quarter; current: 850 kWh — looks like anomaly if mixed
+    // Histórico: 850 MWh/trimestre; actual: 850 kWh — parecería anomalía si se mezclan
     const mwhHistory = [
       makeEntry(850, { sourceType: 'purchased_electricity', activityKind: { kind: 'purchased_electricity', gridRegion: 'SEIN_PERU' }, rawUnit: 'MWh' }),
       makeEntry(840, { sourceType: 'purchased_electricity', activityKind: { kind: 'purchased_electricity', gridRegion: 'SEIN_PERU' }, rawUnit: 'MWh' }),
@@ -220,7 +220,7 @@ describe('AnomalyService.detect() — unit grouping', () => {
       rawUnit: 'kWh',
     });
     const result = svc.detect([kwhEntry], mwhHistory);
-    // Different units → different group key → no baseline → no anomaly (not a false positive)
+    // Unidades distintas → clave de grupo diferente → sin línea base → sin anomalía (no falso positivo)
     expect(result).toHaveLength(0);
   });
 });
@@ -328,11 +328,11 @@ describe('AnomalyService._internals', () => {
   });
 
   it('severityFor thresholds are exact boundaries', () => {
-    // At exactly Z_THRESHOLD_LOW → low
+    // Exactamente en Z_THRESHOLD_LOW → low
     expect(AnomalyService._internals.severityFor(AnomalyService.Z_THRESHOLD_LOW)).toBe('low');
-    // At exactly Z_THRESHOLD_MEDIUM → medium
+    // Exactamente en Z_THRESHOLD_MEDIUM → medium
     expect(AnomalyService._internals.severityFor(AnomalyService.Z_THRESHOLD_MEDIUM)).toBe('medium');
-    // At exactly Z_THRESHOLD_HIGH → high
+    // Exactamente en Z_THRESHOLD_HIGH → high
     expect(AnomalyService._internals.severityFor(AnomalyService.Z_THRESHOLD_HIGH)).toBe('high');
   });
 
@@ -425,7 +425,7 @@ describe('AnomalyService.detect() — edge cases', () => {
   });
 
   it('handles zero-value entries in baseline (skips when all zeros)', () => {
-    // If all historical values are 0, stddev = 0 → z = null → no anomaly
+    // Si todos los históricos son 0, stddev = 0 → z = null → sin anomalía
     const zeroHistory = [makeEntry(0), makeEntry(0), makeEntry(0)];
     const current = [makeEntry(500)];
     const result = svc.detect(current, zeroHistory);

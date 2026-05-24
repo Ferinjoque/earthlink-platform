@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { ActivityEntryView } from '@/components/activity/ActivityList';
 
-// Pure filter logic extracted for testing
+// Lógica de filtros pura, extraída para testing
 function filtrarEntradas(
   entries: ActivityEntryView[],
   filtroEstado: string,

@@ -59,7 +59,7 @@ describe('etiquetaEstadoPeriodo', () => {
   });
 });
 
-// Tests for fallback branches in variantEstadoPeriodo
+// Tests para ramas de fallback en variantEstadoPeriodo
 describe('variantEstadoPeriodo — fallback', () => {
   it('returns neutral for unknown status values', () => {
     const unknown = 'archived' as unknown as PeriodStatus;
