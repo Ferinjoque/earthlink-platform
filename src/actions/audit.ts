@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { createServerClient } from '@/services/supabase/server';
+import { createServerClient, createAdminClient } from '@/services/supabase/server';
 import { AuditService } from '@/services/AuditService';
 import { EvaluationService } from '@/services/EvaluationService';
 import { ActivityEntryRepository } from '@/repos/ActivityEntryRepository';
@@ -270,11 +270,15 @@ export async function recalculatePeriod(
     .maybeSingle();
   if (!memRaw) return { error: 'Solo administradores pueden recalcular periodos bloqueados' };
 
-  // Borrar resultados previos del periodo para recalcular desde cero
-  const { error: deleteError } = await supabase
-    .from('emission_results')
-    .delete()
-    .eq('reporting_period_id', periodId);
+  // Borrar resultados previos del periodo para recalcular desde cero.
+  // emission_results es append-only (trigger bloquea DELETE directo).
+  // fn_admin_delete_period_results usa set_config local para autorizar el borrado.
+  const adminClient = createAdminClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: deleteError } = await (adminClient as any).rpc(
+    'fn_admin_delete_period_results',
+    { p_period_id: periodId },
+  );
   if (deleteError) return { error: 'Error al limpiar resultados previos. Intenta nuevamente.' };
 
   const evalSvc = new EvaluationService(

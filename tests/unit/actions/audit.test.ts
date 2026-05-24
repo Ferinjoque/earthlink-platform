@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   findByPeriodId: vi.fn().mockResolvedValue([]),
   buildFactorTable: vi.fn().mockResolvedValue(new Map()),
   buildConversionTable: vi.fn().mockResolvedValue(new Map()),
+  adminRpc: vi.fn(),
 }));
 
 // ── Module mocks ──────────────────────────────────────────────────────────────
@@ -30,6 +31,7 @@ vi.mock('next/headers', () => ({
 }));
 vi.mock('../../../src/services/supabase/server', () => ({
   createServerClient: vi.fn(),
+  createAdminClient: vi.fn(() => ({ rpc: mocks.adminRpc })),
 }));
 
 vi.mock('../../../src/repos/ReportingPeriodRepository', () => ({
@@ -550,23 +552,21 @@ describe('createPeriod (audit.ts)', () => {
 
 // ── recalculatePeriod ─────────────────────────────────────────────────────────
 
-function makeDeleteChain(error: { message: string } | null) {
-  return { delete: () => ({ eq: () => Promise.resolve({ error }) }) };
-}
-
 function mockRecalculateClient({
   hasSupplier = true,
   isAdmin = true,
-  deleteError = null as { message: string } | null,
+  rpcError = null as { message: string } | null,
 } = {}) {
   const client = {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: VALID_UUID } } }) },
     from: vi.fn()
       .mockReturnValueOnce(makeSelectChain(hasSupplier ? { organization_id: VALID_ORG_ID } : null))
-      .mockReturnValueOnce(makeSelectChain(isAdmin ? { role: 'admin' } : null))
-      .mockReturnValueOnce(makeDeleteChain(deleteError)),
+      .mockReturnValueOnce(makeSelectChain(isAdmin ? { role: 'admin' } : null)),
   };
   vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
+  // Reset antes de encolar para no acumular valores de tests anteriores que retornan antes del RPC
+  mocks.adminRpc.mockReset();
+  mocks.adminRpc.mockResolvedValueOnce({ data: 1, error: rpcError });
   return client;
 }
 
@@ -608,7 +608,7 @@ describe('recalculatePeriod', () => {
 
   it('returns error when delete of existing results fails', async () => {
     mocks.findById.mockResolvedValueOnce(makePeriod('locked'));
-    mockRecalculateClient({ deleteError: { message: 'constraint violation' } });
+    mockRecalculateClient({ rpcError: { message: 'constraint violation' } });
     const result = await recalculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
     expect(result.error).toMatch(/limpiar/i);
   });
