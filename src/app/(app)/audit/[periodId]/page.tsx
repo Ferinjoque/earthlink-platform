@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
@@ -6,6 +7,7 @@ import { createServerClient } from '@/services/supabase/server';
 import { TopBar } from '@/components/shell/TopBar';
 import { Badge } from '@/components/ui/Badge';
 import { PrintButton } from '@/components/ui/PrintButton';
+import { EvidenceSection } from '@/components/activity/EvidenceSection';
 import type {
   ReportingPeriodRow,
   SupplierRow,
@@ -648,8 +650,89 @@ export default async function DetallePeriodoPage({
           )}
         </section>
 
+        {/* ── Evidencias adjuntas por entrada ── */}
+        {entryIds.length > 0 && (
+          <section className="animate-fade-up stagger-5" data-no-print>
+            <div style={{ marginBottom: 'var(--space-4)' }}>
+              <h3
+                style={{
+                  fontSize: 'var(--text-base)',
+                  fontWeight: 600,
+                  color: 'var(--color-ink-1)',
+                  margin: 0,
+                }}
+              >
+                Evidencias adjuntas
+              </h3>
+              <p
+                style={{
+                  fontSize: 'var(--text-sm)',
+                  color: 'var(--color-ink-3)',
+                  margin: 'var(--space-1) 0 0',
+                }}
+              >
+                Archivos de respaldo opcionales por cada entrada de actividad.
+              </p>
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--space-3)',
+              }}
+            >
+              {entryIds.map((eid) => {
+                const entrada = entryMap.get(eid);
+                return (
+                  <div
+                    key={eid}
+                    style={{
+                      background: 'var(--color-surface-1)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius-md)',
+                      padding: 'var(--space-3) var(--space-4)',
+                      display: 'flex',
+                      gap: 'var(--space-4)',
+                      alignItems: 'flex-start',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 'var(--text-xs)',
+                        fontFamily: 'var(--font-mono)',
+                        color: 'var(--color-ink-3)',
+                        flexShrink: 0,
+                        minWidth: '160px',
+                      }}
+                    >
+                      {FUENTE_LABELS[entrada?.source_type ?? ''] ?? entrada?.source_type ?? eid.slice(0, 8)}
+                      {entrada && (
+                        <span style={{ display: 'block', color: 'var(--color-ink-3)' }}>
+                          {entrada.raw_quantity.toLocaleString('es')} {entrada.raw_unit}
+                        </span>
+                      )}
+                    </span>
+                    <div style={{ flex: 1 }}>
+                      <Suspense
+                        fallback={
+                          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)' }}>
+                            Cargando…
+                          </span>
+                        }
+                      >
+                        <EvidenceSection entryId={eid} />
+                      </Suspense>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
         {/* ── Audit log timeline ── */}
-        <section className="animate-fade-up stagger-5">
+        <section className="animate-fade-up stagger-6" data-no-print>
           <div style={{ marginBottom: 'var(--space-5)' }}>
             <h3
               style={{
