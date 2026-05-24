@@ -213,24 +213,19 @@ export async function getEvidenceFiles(entryId: string): Promise<EvidenceFileVie
   if (!rows?.length) return [];
 
   const admin = createAdminClient();
-  const results: EvidenceFileView[] = await Promise.all(
-    rows.map(async (row) => {
-      const { data: signed } = await admin.storage
-        .from('evidence')
-        .createSignedUrl(row.storage_path, 3600);
-      return {
-        id: row.id,
-        original_name: row.original_name,
-        mime_type: row.mime_type,
-        file_size_bytes: row.file_size_bytes,
-        sha256: row.sha256,
-        uploaded_at: row.uploaded_at,
-        signedUrl: signed?.signedUrl ?? null,
-      };
-    }),
-  );
+  const paths = rows.map((r) => r.storage_path);
+  const { data: signedList } = await admin.storage.from('evidence').createSignedUrls(paths, 3600);
+  const signedMap = new Map((signedList ?? []).map((s) => [s.path, s.signedUrl]));
 
-  return results;
+  return rows.map((row) => ({
+    id: row.id,
+    original_name: row.original_name,
+    mime_type: row.mime_type,
+    file_size_bytes: row.file_size_bytes,
+    sha256: row.sha256,
+    uploaded_at: row.uploaded_at,
+    signedUrl: signedMap.get(row.storage_path) ?? null,
+  }));
 }
 
 /**
@@ -296,27 +291,25 @@ export async function getEvidenceFilesBatch(
   if (!rows?.length) return new Map();
 
   const admin = createAdminClient();
-  const result = new Map<string, EvidenceFileView[]>();
+  const paths = rows.map((r) => r.storage_path);
+  const { data: signedList } = await admin.storage.from('evidence').createSignedUrls(paths, 3600);
+  const signedMap = new Map((signedList ?? []).map((s) => [s.path, s.signedUrl]));
 
-  await Promise.all(
-    rows.map(async (row) => {
-      const { data: signed } = await admin.storage
-        .from('evidence')
-        .createSignedUrl(row.storage_path, 3600);
-      const view: EvidenceFileView = {
-        id: row.id,
-        original_name: row.original_name,
-        mime_type: row.mime_type,
-        file_size_bytes: row.file_size_bytes,
-        sha256: row.sha256,
-        uploaded_at: row.uploaded_at,
-        signedUrl: signed?.signedUrl ?? null,
-      };
-      const list = result.get(row.activity_entry_id) ?? [];
-      list.push(view);
-      result.set(row.activity_entry_id, list);
-    }),
-  );
+  const result = new Map<string, EvidenceFileView[]>();
+  for (const row of rows) {
+    const view: EvidenceFileView = {
+      id: row.id,
+      original_name: row.original_name,
+      mime_type: row.mime_type,
+      file_size_bytes: row.file_size_bytes,
+      sha256: row.sha256,
+      uploaded_at: row.uploaded_at,
+      signedUrl: signedMap.get(row.storage_path) ?? null,
+    };
+    const list = result.get(row.activity_entry_id) ?? [];
+    list.push(view);
+    result.set(row.activity_entry_id, list);
+  }
 
   return result;
 }

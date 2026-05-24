@@ -1,0 +1,377 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// ── Hoisted mocks ─────────────────────────────────────────────────────────────
+
+const mocks = vi.hoisted(() => ({
+  createSignedUrls: vi.fn(),
+  storageRemove: vi.fn(),
+  storageUpload: vi.fn(),
+}));
+
+vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
+vi.mock('next/headers', () => ({
+  cookies: vi.fn(() =>
+    Promise.resolve({ getAll: vi.fn(() => []), set: vi.fn() }),
+  ),
+}));
+
+vi.mock('../../../src/services/supabase/server', () => {
+  const makeStorage = () => ({
+    from: vi.fn(() => ({
+      createSignedUrls: mocks.createSignedUrls,
+      upload: mocks.storageUpload,
+      remove: mocks.storageRemove,
+    })),
+  });
+  return {
+    createServerClient: vi.fn(),
+    createAdminClient: vi.fn(() => ({ storage: makeStorage() })),
+  };
+});
+
+import { createServerClient } from '../../../src/services/supabase/server';
+import { getEvidenceFiles, getEvidenceFilesBatch } from '../../../src/actions/evidence';
+
+type MockClient = Awaited<ReturnType<typeof createServerClient>>;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const ENTRY_ID = '00000000-0000-4000-8000-000000000001';
+const ENTRY_ID_2 = '00000000-0000-4000-8000-000000000002';
+const ORG_ID = 'org-001';
+
+function makeSelectChain(data: unknown) {
+  const chain = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    in: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    maybeSingle: vi.fn().mockResolvedValue({ data, error: null }),
+    then: undefined as unknown,
+  };
+  (chain as unknown as Promise<unknown>)[Symbol.iterator] = undefined as unknown;
+  return {
+    ...chain,
+    [Symbol.asyncIterator]: undefined,
+  };
+}
+
+function mockAuthWithOrg() {
+  const entryCheck = {
+    id: ENTRY_ID,
+    reporting_periods: {
+      supplier_id: 'supplier-1',
+      suppliers: { organization_id: ORG_ID },
+    },
+  };
+  const memCheck = { role: 'admin' };
+
+  const fromMock = vi.fn().mockImplementation((table: string) => {
+    if (table === 'activity_entries') {
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: entryCheck, error: null }),
+      };
+    }
+    if (table === 'memberships') {
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: memCheck, error: null }),
+      };
+    }
+    if (table === 'evidence_files') {
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      };
+    }
+    return makeSelectChain(null);
+  });
+
+  const client = {
+    auth: {
+      getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }),
+    },
+    from: fromMock,
+  };
+  vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
+  return { client, fromMock };
+}
+
+function mockNoAuth() {
+  const client = {
+    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null } }) },
+    from: vi.fn(),
+  };
+  vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
+}
+
+function makeEvidenceRow(overrides: Partial<{
+  id: string; storage_path: string; activity_entry_id: string;
+}> = {}) {
+  return {
+    id: overrides.id ?? 'file-001',
+    original_name: 'recibo.pdf',
+    mime_type: 'application/pdf',
+    file_size_bytes: 1024,
+    sha256: 'abc123',
+    uploaded_at: '2025-01-01T00:00:00Z',
+    storage_path: overrides.storage_path ?? `evidence/${ORG_ID}/${ENTRY_ID}/file-001.pdf`,
+    activity_entry_id: overrides.activity_entry_id ?? ENTRY_ID,
+  };
+}
+
+// ── getEvidenceFiles ──────────────────────────────────────────────────────────
+
+describe('getEvidenceFiles', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns empty array for invalid UUID', async () => {
+    const result = await getEvidenceFiles('not-a-uuid');
+    expect(result).toEqual([]);
+  });
+
+  it('returns empty array when not authenticated', async () => {
+    mockNoAuth();
+    const result = await getEvidenceFiles(ENTRY_ID);
+    expect(result).toEqual([]);
+  });
+
+  it('returns empty array when entry not found', async () => {
+    const fromMock = vi.fn().mockImplementation(() => ({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    }));
+    vi.mocked(createServerClient).mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'u1' } } }) },
+      from: fromMock,
+    } as unknown as MockClient);
+
+    const result = await getEvidenceFiles(ENTRY_ID);
+    expect(result).toEqual([]);
+  });
+
+  it('returns empty array when user has no membership', async () => {
+    const fromMock = vi.fn().mockImplementation((table: string) => {
+      if (table === 'activity_entries') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: {
+              id: ENTRY_ID,
+              reporting_periods: { supplier_id: 's1', suppliers: { organization_id: ORG_ID } },
+            },
+            error: null,
+          }),
+        };
+      }
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+      };
+    });
+    vi.mocked(createServerClient).mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'u1' } } }) },
+      from: fromMock,
+    } as unknown as MockClient);
+
+    const result = await getEvidenceFiles(ENTRY_ID);
+    expect(result).toEqual([]);
+  });
+
+  it('returns empty array when no files exist for the entry', async () => {
+    mockAuthWithOrg();
+    const result = await getEvidenceFiles(ENTRY_ID);
+    expect(result).toEqual([]);
+  });
+
+  it('usa createSignedUrls en lote y retorna archivos con signedUrl', async () => {
+    const { fromMock } = mockAuthWithOrg();
+    const row = makeEvidenceRow();
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'activity_entries') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: {
+              id: ENTRY_ID,
+              reporting_periods: { supplier_id: 's1', suppliers: { organization_id: ORG_ID } },
+            },
+            error: null,
+          }),
+        };
+      }
+      if (table === 'memberships') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({ data: { role: 'admin' }, error: null }),
+        };
+      }
+      if (table === 'evidence_files') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          order: vi.fn().mockResolvedValue({ data: [row], error: null }),
+        };
+      }
+      return makeSelectChain(null);
+    });
+
+    mocks.createSignedUrls.mockResolvedValue({
+      data: [{ path: row.storage_path, signedUrl: 'https://example.com/signed' }],
+      error: null,
+    });
+
+    const result = await getEvidenceFiles(ENTRY_ID);
+
+    expect(mocks.createSignedUrls).toHaveBeenCalledWith([row.storage_path], 3600);
+    expect(result).toHaveLength(1);
+    expect(result[0].signedUrl).toBe('https://example.com/signed');
+    expect(result[0].id).toBe('file-001');
+  });
+
+  it('usa null como signedUrl cuando createSignedUrls falla para un archivo', async () => {
+    const { fromMock } = mockAuthWithOrg();
+    const row = makeEvidenceRow();
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'activity_entries') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: {
+              id: ENTRY_ID,
+              reporting_periods: { supplier_id: 's1', suppliers: { organization_id: ORG_ID } },
+            },
+            error: null,
+          }),
+        };
+      }
+      if (table === 'memberships') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({ data: { role: 'admin' }, error: null }),
+        };
+      }
+      if (table === 'evidence_files') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          order: vi.fn().mockResolvedValue({ data: [row], error: null }),
+        };
+      }
+      return makeSelectChain(null);
+    });
+
+    mocks.createSignedUrls.mockResolvedValue({ data: null, error: { message: 'Storage error' } });
+
+    const result = await getEvidenceFiles(ENTRY_ID);
+    expect(result[0].signedUrl).toBeNull();
+  });
+});
+
+// ── getEvidenceFilesBatch ─────────────────────────────────────────────────────
+
+describe('getEvidenceFilesBatch', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns empty map for empty array', async () => {
+    const result = await getEvidenceFilesBatch([]);
+    expect(result.size).toBe(0);
+  });
+
+  it('returns empty map when all IDs are invalid UUIDs', async () => {
+    const result = await getEvidenceFilesBatch(['invalid', 'also-bad']);
+    expect(result.size).toBe(0);
+  });
+
+  it('returns empty map when batch exceeds 200 entries', async () => {
+    const ids = Array.from({ length: 201 }, (_, i) =>
+      `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
+    );
+    const result = await getEvidenceFilesBatch(ids);
+    expect(result.size).toBe(0);
+  });
+
+  it('returns empty map when not authenticated', async () => {
+    mockNoAuth();
+    const result = await getEvidenceFilesBatch([ENTRY_ID]);
+    expect(result.size).toBe(0);
+  });
+
+  it('agrupa archivos por entry_id usando createSignedUrls en lote', async () => {
+    const row1 = makeEvidenceRow({ id: 'file-001', activity_entry_id: ENTRY_ID, storage_path: `evidence/${ORG_ID}/${ENTRY_ID}/file-001.pdf` });
+    const row2 = makeEvidenceRow({ id: 'file-002', activity_entry_id: ENTRY_ID_2, storage_path: `evidence/${ORG_ID}/${ENTRY_ID_2}/file-002.pdf` });
+
+    const fromMock = vi.fn().mockImplementation((table: string) => {
+      if (table === 'memberships') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockResolvedValue({
+            data: [{ organization_id: ORG_ID }],
+            error: null,
+          }),
+        };
+      }
+      if (table === 'activity_entries') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          in: vi.fn().mockResolvedValue({
+            data: [
+              { id: ENTRY_ID, reporting_periods: { suppliers: { organization_id: ORG_ID } } },
+              { id: ENTRY_ID_2, reporting_periods: { suppliers: { organization_id: ORG_ID } } },
+            ],
+            error: null,
+          }),
+        };
+      }
+      if (table === 'evidence_files') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          in: vi.fn().mockReturnThis(),
+          order: vi.fn().mockResolvedValue({ data: [row1, row2], error: null }),
+        };
+      }
+      return makeSelectChain(null);
+    });
+
+    vi.mocked(createServerClient).mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'u1' } } }) },
+      from: fromMock,
+    } as unknown as MockClient);
+
+    mocks.createSignedUrls.mockResolvedValue({
+      data: [
+        { path: row1.storage_path, signedUrl: 'https://example.com/signed1' },
+        { path: row2.storage_path, signedUrl: 'https://example.com/signed2' },
+      ],
+      error: null,
+    });
+
+    const result = await getEvidenceFilesBatch([ENTRY_ID, ENTRY_ID_2]);
+
+    expect(mocks.createSignedUrls).toHaveBeenCalledWith(
+      [row1.storage_path, row2.storage_path],
+      3600,
+    );
+    expect(result.get(ENTRY_ID)).toHaveLength(1);
+    expect(result.get(ENTRY_ID_2)).toHaveLength(1);
+    expect(result.get(ENTRY_ID)?.[0].signedUrl).toBe('https://example.com/signed1');
+    expect(result.get(ENTRY_ID_2)?.[0].signedUrl).toBe('https://example.com/signed2');
+  });
+});
