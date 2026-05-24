@@ -241,6 +241,22 @@ describe('AnomalyService.detect() — message content', () => {
     expect(result[0]!.message).not.toContain('undefined');
   });
 
+  it('mensaje contiene "sobre" cuando valor supera la media', () => {
+    // baseline mean ≈ 850; valor 4750 >> mean → "sobre"
+    const result = svc.detect([makeEntry(4750)], historicalBaseline);
+    expect(result[0]!.message).toContain('sobre');
+    expect(result[0]!.message).not.toContain('bajo');
+  });
+
+  it('mensaje contiene "bajo" cuando valor está por debajo de la media', () => {
+    // baseline mean ≈ 850; valor 10 << mean → "bajo"
+    const lowEntry = makeEntry(10);
+    const result = svc.detect([lowEntry], historicalBaseline);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.message).toContain('bajo');
+    expect(result[0]!.message).not.toContain('sobre');
+  });
+
   it('uses raw sourceType when no Spanish label available', () => {
     const unknownType = 'biogenic_combustion' as EmissionSourceType;
     function makeUnknownEntry(qty: number): ActivityEntry {
