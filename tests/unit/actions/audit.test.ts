@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   evaluate: vi.fn(),
   insertMany: vi.fn(),
   findByPeriodId: vi.fn().mockResolvedValue([]),
+  findByPeriodIds: vi.fn().mockResolvedValue([]),
   buildFactorTable: vi.fn().mockResolvedValue(new Map()),
   buildConversionTable: vi.fn().mockResolvedValue(new Map()),
   adminRpc: vi.fn(),
@@ -63,6 +64,7 @@ vi.mock('../../../src/services/EvaluationService', () => ({
 vi.mock('../../../src/repos/ActivityEntryRepository', () => ({
   ActivityEntryRepository: class {
     findByPeriodId = mocks.findByPeriodId;
+    findByPeriodIds = mocks.findByPeriodIds;
   },
 }));
 
@@ -85,7 +87,7 @@ vi.mock('../../../src/repos/EmissionResultRepository', () => ({
 }));
 
 import { createServerClient } from '../../../src/services/supabase/server';
-import { calculatePeriod, lockPeriod, resolveAnomaly, recalculatePeriod, closeYear } from '../../../src/actions/audit';
+import { calculatePeriod, lockPeriod, resolveAnomaly, recalculatePeriod, closeYear, calculateYear } from '../../../src/actions/audit';
 import { createPeriod as createPeriodAudit } from '../../../src/actions/periods';
 
 type MockClient = Awaited<ReturnType<typeof createServerClient>>;
@@ -718,6 +720,266 @@ describe('recalculatePeriod — validación de estado', () => {
   });
 });
 
+// ── calculateYear ─────────────────────────────────────────────────────────────
+
+const CALC_YEAR_SUPPLIER_ID = '60000000-0000-4000-8000-000000000060';
+
+function makeQueryChain(resolvedData: unknown) {
+  const c: Record<string, unknown> = {};
+  const resolve = () => Promise.resolve({ data: resolvedData });
+  c['select'] = () => c;
+  c['eq'] = () => c;
+  c['gte'] = () => c;
+  c['lte'] = () => c;
+  // .in() terminates the chain y resuelve la promesa
+  c['in'] = resolve;
+  c['maybeSingle'] = () => Promise.resolve({ data: resolvedData });
+  c['delete'] = () => c;
+  c['insert'] = () => Promise.resolve({ error: null });
+  return c;
+}
+
+function makeCalculateYearClient({
+  hasSupplier = true,
+  hasMembership = true,
+  candidatos = [] as Array<{ id: string; status: string }>,
+} = {}) {
+  const anomalyChain = {
+    delete: () => ({
+      in: () => ({
+        eq: () => Promise.resolve({ error: null }),
+      }),
+    }),
+    insert: () => Promise.resolve({ error: null }),
+  };
+
+  const client = {
+    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: VALID_UUID } } }) },
+    from: vi.fn().mockImplementation((table: string) => {
+      if (table === 'suppliers') return makeSelectChain(hasSupplier ? { organization_id: VALID_ORG_ID } : null);
+      if (table === 'memberships') return makeSelectChain(hasMembership ? { role: 'admin' } : null);
+      if (table === 'reporting_periods') return makeQueryChain(candidatos);
+      if (table === 'anomaly_flags') return anomalyChain;
+      return makeQueryChain([]);
+    }),
+  };
+  vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
+  return client;
+}
+
+describe('calculateYear', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns error when not authenticated', async () => {
+    mockNoAuth();
+    const result = await calculateYear(
+      null,
+      makeFormData({ supplier_id: CALC_YEAR_SUPPLIER_ID, year: '2026' }),
+    );
+    expect(result.error).toMatch(/autenticado/i);
+  });
+
+  it('returns error on invalid schema (year out of range)', async () => {
+    makeCalculateYearClient();
+    const result = await calculateYear(
+      null,
+      makeFormData({ supplier_id: CALC_YEAR_SUPPLIER_ID, year: '1999' }),
+    );
+    expect(result.error).toBeTruthy();
+  });
+
+  it('returns error when supplier not found', async () => {
+    makeCalculateYearClient({ hasSupplier: false });
+    const result = await calculateYear(
+      null,
+      makeFormData({ supplier_id: CALC_YEAR_SUPPLIER_ID, year: '2026' }),
+    );
+    expect(result.error).toMatch(/proveedor/i);
+  });
+
+  it('returns error when user lacks membership', async () => {
+    makeCalculateYearClient({ hasMembership: false });
+    const result = await calculateYear(
+      null,
+      makeFormData({ supplier_id: CALC_YEAR_SUPPLIER_ID, year: '2026' }),
+    );
+    expect(result.error).toMatch(/permisos/i);
+  });
+
+  it('returns success with 0 calculated when no periods found', async () => {
+    makeCalculateYearClient({ candidatos: [] });
+    const result = await calculateYear(
+      null,
+      makeFormData({ supplier_id: CALC_YEAR_SUPPLIER_ID, year: '2026' }),
+    );
+    expect(result.success).toBe(true);
+    expect(result.calculated).toBe(0);
+  });
+
+  it('skips under_review periods (already calculated)', async () => {
+    makeCalculateYearClient({
+      candidatos: [{ id: VALID_UUID, status: 'under_review' }],
+    });
+    mocks.findByPeriodIds.mockResolvedValueOnce([]);
+    const result = await calculateYear(
+      null,
+      makeFormData({ supplier_id: CALC_YEAR_SUPPLIER_ID, year: '2026' }),
+    );
+    expect(result.success).toBe(true);
+    expect(result.calculated).toBe(0);
+    expect(result.skipped).toBe(1);
+  });
+
+  it('calculates open period successfully', async () => {
+    makeCalculateYearClient({
+      candidatos: [{ id: VALID_UUID, status: 'open' }],
+    });
+    mocks.findByPeriodIds.mockResolvedValueOnce([]);
+    mocks.transitionStatus.mockResolvedValue(makePeriod('calculating'));
+    mocks.evaluate.mockResolvedValueOnce(GOOD_EVAL_OUTCOME);
+
+    const result = await calculateYear(
+      null,
+      makeFormData({ supplier_id: CALC_YEAR_SUPPLIER_ID, year: '2026' }),
+    );
+    expect(result.success).toBe(true);
+    expect(result.calculated).toBe(1);
+    expect(result.skipped).toBe(0);
+  });
+
+  it('skips period when transitionStatus throws', async () => {
+    makeCalculateYearClient({
+      candidatos: [{ id: VALID_UUID, status: 'open' }],
+    });
+    mocks.findByPeriodIds.mockResolvedValueOnce([]);
+    mocks.transitionStatus.mockRejectedValueOnce(new Error('already calculating'));
+
+    const result = await calculateYear(
+      null,
+      makeFormData({ supplier_id: CALC_YEAR_SUPPLIER_ID, year: '2026' }),
+    );
+    expect(result.success).toBe(true);
+    expect(result.calculated).toBe(0);
+    expect(result.skipped).toBe(1);
+  });
+
+  it('adds error message when evaluate throws', async () => {
+    makeCalculateYearClient({
+      candidatos: [{ id: VALID_UUID, status: 'open' }],
+    });
+    mocks.findByPeriodIds.mockResolvedValueOnce([]);
+    mocks.transitionStatus.mockResolvedValue(makePeriod('calculating'));
+    mocks.evaluate.mockRejectedValueOnce(new Error('factor missing'));
+
+    const result = await calculateYear(
+      null,
+      makeFormData({ supplier_id: CALC_YEAR_SUPPLIER_ID, year: '2026' }),
+    );
+    expect(result.success).toBe(true);
+    expect(result.skipped).toBe(1);
+    expect(result.errors).toHaveLength(1);
+  });
+});
+
+// ── unlockPeriod ─────────────────────────────────────────────────────────────
+
+function makeUnlockClient({
+  hasSupplier = true,
+  isAdmin = true,
+  updateError = null as { message: string } | null,
+} = {}) {
+  const updateChain = { update: () => ({ eq: () => Promise.resolve({ error: updateError }) }) };
+  const client = {
+    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: VALID_UUID } } }) },
+    from: vi.fn()
+      .mockReturnValueOnce(makeSelectChain(hasSupplier ? { organization_id: VALID_ORG_ID } : null))
+      .mockReturnValueOnce(makeSelectChain(isAdmin ? { role: 'admin' } : null))
+      .mockReturnValueOnce(updateChain),
+  };
+  vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
+  return client;
+}
+
+describe('unlockPeriod', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns error when not authenticated', async () => {
+    mockNoAuth();
+    const result = await (await import('../../../src/actions/audit')).unlockPeriod(
+      null,
+      makeFormData({ period_id: VALID_UUID, unlock_reason: 'corrección' }),
+    );
+    expect(result.error).toMatch(/autenticado/i);
+  });
+
+  it('returns error when period not found', async () => {
+    makeUnlockClient();
+    mocks.findById.mockResolvedValueOnce(null);
+    const { unlockPeriod } = await import('../../../src/actions/audit');
+    const result = await unlockPeriod(
+      null,
+      makeFormData({ period_id: VALID_UUID, unlock_reason: 'corrección' }),
+    );
+    expect(result.error).toMatch(/no encontrado/i);
+  });
+
+  it('returns error when supplier not found', async () => {
+    mocks.findById.mockResolvedValueOnce(makePeriod('locked'));
+    makeUnlockClient({ hasSupplier: false });
+    const { unlockPeriod } = await import('../../../src/actions/audit');
+    const result = await unlockPeriod(
+      null,
+      makeFormData({ period_id: VALID_UUID, unlock_reason: 'corrección' }),
+    );
+    expect(result.error).toMatch(/proveedor/i);
+  });
+
+  it('returns error when caller is not admin', async () => {
+    mocks.findById.mockResolvedValueOnce(makePeriod('locked'));
+    makeUnlockClient({ isAdmin: false });
+    const { unlockPeriod } = await import('../../../src/actions/audit');
+    const result = await unlockPeriod(
+      null,
+      makeFormData({ period_id: VALID_UUID, unlock_reason: 'corrección' }),
+    );
+    expect(result.error).toMatch(/administrador/i);
+  });
+
+  it('returns error when period is not locked', async () => {
+    mocks.findById.mockResolvedValueOnce(makePeriod('open'));
+    makeUnlockClient();
+    const { unlockPeriod } = await import('../../../src/actions/audit');
+    const result = await unlockPeriod(
+      null,
+      makeFormData({ period_id: VALID_UUID, unlock_reason: 'corrección' }),
+    );
+    expect(result.error).toMatch(/bloqueado/i);
+  });
+
+  it('returns error when DB update fails', async () => {
+    mocks.findById.mockResolvedValueOnce(makePeriod('locked'));
+    makeUnlockClient({ updateError: { message: 'constraint error' } });
+    const { unlockPeriod } = await import('../../../src/actions/audit');
+    const result = await unlockPeriod(
+      null,
+      makeFormData({ period_id: VALID_UUID, unlock_reason: 'corrección' }),
+    );
+    expect(result.error).toMatch(/desbloquear/i);
+  });
+
+  it('returns success when locked period is unlocked by admin', async () => {
+    mocks.findById.mockResolvedValueOnce(makePeriod('locked'));
+    makeUnlockClient();
+    const { unlockPeriod } = await import('../../../src/actions/audit');
+    const result = await unlockPeriod(
+      null,
+      makeFormData({ period_id: VALID_UUID, unlock_reason: 'Corrección de datos de enero' }),
+    );
+    expect(result.success).toBe(true);
+    expect(result.error).toBeUndefined();
+  });
+});
+
 // ── closeYear — guard contra periodos en cálculo ──────────────────────────────
 
 const CLOSE_YEAR_SUPPLIER_ID = '40000000-0000-4000-8000-000000000040';
@@ -775,5 +1037,36 @@ describe('closeYear — validación de estado', () => {
     );
     expect(result.success).toBe(true);
     expect(result.calculated).toBe(0);
+  });
+
+  it('locks under_review periods and returns success with count', async () => {
+    const periodId2 = '50000000-0000-4000-8000-000000000050';
+    mockCloseYearClient([
+      { id: VALID_UUID, status: 'under_review' },
+      { id: periodId2, status: 'under_review' },
+    ]);
+    mocks.lock.mockResolvedValue(makePeriod('locked'));
+    const result = await closeYear(
+      null,
+      makeFormData({ supplier_id: CLOSE_YEAR_SUPPLIER_ID, year: '2026' }),
+    );
+    expect(result.success).toBe(true);
+    expect(result.calculated).toBe(2);
+    expect(result.skipped).toBe(0);
+  });
+
+  it('increments skipped when lock throws for a period', async () => {
+    mockCloseYearClient([
+      { id: VALID_UUID, status: 'under_review' },
+    ]);
+    mocks.lock.mockRejectedValueOnce(new Error('already locked'));
+    const result = await closeYear(
+      null,
+      makeFormData({ supplier_id: CLOSE_YEAR_SUPPLIER_ID, year: '2026' }),
+    );
+    expect(result.success).toBe(true);
+    expect(result.calculated).toBe(0);
+    expect(result.skipped).toBe(1);
+    expect(result.errors).toHaveLength(1);
   });
 });
