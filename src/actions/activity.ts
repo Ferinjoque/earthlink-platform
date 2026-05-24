@@ -594,12 +594,13 @@ export async function deleteActivityEntry(
 
   if (!orgId) return { error: 'Proveedor del registro no encontrado' };
 
-  // Verificar membresía en la organización
+  // Solo admin/consultant pueden eliminar entradas
   const { data: memRaw } = await supabase
     .from('memberships')
     .select('role')
     .eq('user_id', user.id)
     .eq('organization_id', orgId)
+    .in('role', ['admin', 'consultant'])
     .maybeSingle();
   if (!memRaw) return { error: 'Sin permisos para eliminar este registro' };
 

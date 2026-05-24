@@ -743,6 +743,84 @@ describe('deleteActivityEntry — validación de ID', () => {
   });
 });
 
+// ── deleteActivityEntry — control de roles ────────────────────────────────────
+
+const ENTRY_ID = '00000000-0000-4000-8000-000000000099';
+
+function makeChainWithIn(data: unknown) {
+  const c: Record<string, unknown> = {};
+  c['select'] = () => c;
+  c['eq'] = () => c;
+  c['in'] = () => c;
+  c['maybeSingle'] = () => Promise.resolve({ data });
+  return c;
+}
+
+function makeDeleteChain(error: { message: string } | null = null) {
+  const c: Record<string, unknown> = {};
+  c['delete'] = () => c;
+  c['eq'] = () => Promise.resolve({ error });
+  return c;
+}
+
+function mockDeleteClient({
+  memberRole = 'admin' as string | null,
+  deleteError = null as { message: string } | null,
+} = {}) {
+  const entryData = {
+    reporting_period_id: PERIOD_ID,
+    reporting_periods: { status: 'open', suppliers: { organization_id: 'org-001' } },
+  };
+  // Simula el filtro .in('role', ['admin', 'consultant']) de la DB:
+  // solo devuelve fila si el rol es uno de los permitidos
+  const allowedRoles = ['admin', 'consultant'];
+  const membershipData =
+    memberRole && allowedRoles.includes(memberRole) ? { role: memberRole } : null;
+  const client = {
+    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+    from: vi.fn()
+      .mockReturnValueOnce(makeChainWithIn(entryData))
+      .mockReturnValueOnce(makeChainWithIn(membershipData))
+      .mockReturnValueOnce(makeDeleteChain(deleteError)),
+  };
+  vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
+  return client;
+}
+
+describe('deleteActivityEntry — control de roles', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns error when user has supplier role (not admin/consultant)', async () => {
+    mockDeleteClient({ memberRole: 'supplier' });
+    const result = await deleteActivityEntry(null, makeFormData({ entry_id: ENTRY_ID }));
+    expect(result.error).toMatch(/permiso/i);
+  });
+
+  it('returns error when user has no membership', async () => {
+    mockDeleteClient({ memberRole: null });
+    const result = await deleteActivityEntry(null, makeFormData({ entry_id: ENTRY_ID }));
+    expect(result.error).toMatch(/permiso/i);
+  });
+
+  it('returns success for admin role', async () => {
+    mockDeleteClient({ memberRole: 'admin' });
+    const result = await deleteActivityEntry(null, makeFormData({ entry_id: ENTRY_ID }));
+    expect(result.success).toBe(true);
+  });
+
+  it('returns success for consultant role', async () => {
+    mockDeleteClient({ memberRole: 'consultant' });
+    const result = await deleteActivityEntry(null, makeFormData({ entry_id: ENTRY_ID }));
+    expect(result.success).toBe(true);
+  });
+
+  it('returns error when DB delete fails', async () => {
+    mockDeleteClient({ deleteError: { message: 'foreign key violation' } });
+    const result = await deleteActivityEntry(null, makeFormData({ entry_id: ENTRY_ID }));
+    expect(result.error).toMatch(/eliminar/i);
+  });
+});
+
 // ── helper used in tests above that references an unqualified name ────────────
 
 function makeMaybySingleChain(data: unknown) {
