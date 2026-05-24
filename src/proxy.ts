@@ -37,7 +37,7 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  // Refresh session — MUST call getUser() (not getSession()) per @supabase/ssr docs
+  // Refrescar sesión — se debe llamar getUser() y no getSession() según docs de @supabase/ssr
   const {
     data: { user },
   } = await supabase.auth.getUser();
