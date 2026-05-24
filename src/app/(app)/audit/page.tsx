@@ -93,7 +93,7 @@ export default async function AuditoriaPage({ searchParams }: PageProps) {
   const allPeriodIds = periodsData.map((p) => p.id);
   const nonOpenPeriodIds = periodsData.filter((p) => p.status !== 'open').map((p) => p.id);
 
-  // Parallel fetch: emission_results + all activity_entries (both depend only on period IDs)
+  // Fetch paralelo: emission_results y activity_entries (ambos dependen solo de los period IDs)
   type FilaResultado = Pick<
     EmissionResultRow,
     | 'id'
@@ -127,7 +127,7 @@ export default async function AuditoriaPage({ searchParams }: PageProps) {
   const resultsData = (resultsRaw.data ?? []) as FilaResultado[];
   const allEntriesData = (allEntriesRaw.data ?? []) as FilaEntradaMin[];
 
-  // Entries that have been voided — exclude their emission_results from summaries
+  // Excluir emission_results de entradas anuladas en los resúmenes
   const voidedEntryIds = new Set(
     allEntriesData.filter((e) => e.voided_at !== null).map((e) => e.id),
   );
@@ -136,7 +136,7 @@ export default async function AuditoriaPage({ searchParams }: PageProps) {
   const entryPeriodMap = new Map(activeEntriesData.map((e) => [e.id, e]));
   const allEntryIds = activeEntriesData.map((e) => e.id);
 
-  // Build unique source types per period (active entries only)
+  // Tipos de fuente únicos por periodo (solo entradas activas, sin anuladas)
   const mapaSourceTypes = new Map<string, Set<string>>();
   for (const e of activeEntriesData) {
     const set = mapaSourceTypes.get(e.reporting_period_id) ?? new Set<string>();
@@ -144,7 +144,7 @@ export default async function AuditoriaPage({ searchParams }: PageProps) {
     mapaSourceTypes.set(e.reporting_period_id, set);
   }
 
-  // Parallel fetch: entries for result detail + anomaly flags (both ready to run now)
+  // Fetch paralelo: entradas para detalle y anomaly_flags
   type FilaEntrada = Pick<ActivityEntryRow, 'id' | 'source_type' | 'raw_quantity' | 'raw_unit'>;
   type FilaFlag = Pick<
     AnomalyFlagRow,
@@ -174,7 +174,7 @@ export default async function AuditoriaPage({ searchParams }: PageProps) {
   const flagsData = (flagsRaw.data ?? []) as FilaFlag[];
   const entryMap = new Map(entriesForResults.map((e) => [e.id, e]));
 
-  // Build per-period maps
+  // Construir mapas por periodo para renderizado
   const mapaResumen = new Map<string, ResumenEmisiones>();
   const mapaResultados = new Map<string, ResultadoDetalle[]>();
   for (const r of resultsData) {

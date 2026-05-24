@@ -1,7 +1,7 @@
 import { calculate, aggregate, _internals } from '../calc/pipeline';
 import type { EmissionFactor, EmissionResult, EvaluationTotals } from '../calc/types';
 
-// Kinds with no GHG factor — zero CO2e, not persisted to emission_results
+// Categorías sin factor GHG — CO2e = 0, no se persisten en emission_results
 const NO_GHG_KINDS: ReadonlySet<string> = new Set(['water_use', 'waste']);
 import type { ActivityEntryRepository } from '../repos/ActivityEntryRepository';
 import type { EmissionFactorRepository } from '../repos/EmissionFactorRepository';
@@ -47,7 +47,7 @@ export class EvaluationService {
     for (const entry of entries) {
       const record = entry.toActivityRecord(period.supplierId);
 
-      // Water / waste: zero CO2e, no factor required, not persisted to emission_results
+      // Agua y residuos: CO2e = 0, sin factor, no se persiste el resultado
       if (NO_GHG_KINDS.has(record.activity.kind)) {
         const calcResult = calculate(record, factors, conversions);
         if (calcResult.ok) noGhgResults.push(calcResult.value);

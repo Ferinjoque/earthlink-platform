@@ -99,7 +99,6 @@ const estiloCelda: React.CSSProperties = {
   color: 'var(--color-ink-1)',
 };
 
-// ── VoidEntryButton ───────────────────────────────────────────────────────────
 
 function VoidEntryButton({ entryId }: { entryId: string }) {
   const { toast } = useToast();
@@ -221,7 +220,6 @@ function VoidEntryButton({ entryId }: { entryId: string }) {
   );
 }
 
-// ── EntradaFila ───────────────────────────────────────────────────────────────
 
 function EntradaFila({
   entry,
@@ -471,7 +469,6 @@ function EntradaFila({
   );
 }
 
-// ── ActivityList ──────────────────────────────────────────────────────────────
 
 export function ActivityList({ entries, periodos, pagination }: ActivityListProps) {
   const [filtroEstado, setFiltroEstado] = useState<ActivityEntryStatus | 'todos'>('todos');

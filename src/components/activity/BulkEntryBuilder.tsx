@@ -76,7 +76,6 @@ function updateSourceType(row: EntryRow, st: EmissionSourceType): EntryRow {
   };
 }
 
-// ── Shared styles ─────────────────────────────────────────────────────────────
 
 function estiloInput(hasError = false): React.CSSProperties {
   return {
@@ -134,7 +133,6 @@ function FieldLabel({
   );
 }
 
-// ── GRESB hint banner ─────────────────────────────────────────────────────────
 
 function GresbHint({ sourceType }: { sourceType: EmissionSourceType }) {
   if (sourceType !== 'water_use' && sourceType !== 'waste') return null;
@@ -156,7 +154,6 @@ function GresbHint({ sourceType }: { sourceType: EmissionSourceType }) {
   );
 }
 
-// ── Card mode (1 row) ─────────────────────────────────────────────────────────
 
 function CardMode({
   row,
@@ -341,7 +338,7 @@ function CardMode({
           action={undefined}
           onSubmit={(e) => {
             e.preventDefault();
-            // Use hidden form submit via the outer form action
+            // Enviar vía el form externo para evitar doble anidamiento de formularios
           }}
           style={{ display: 'contents' }}
         >
@@ -413,7 +410,6 @@ function CardMode({
   );
 }
 
-// ── Delete confirmation modal ─────────────────────────────────────────────────
 
 function DeleteModal({
   row,
@@ -545,7 +541,6 @@ function DeleteModal({
   );
 }
 
-// ── Table mode (2+ rows) ──────────────────────────────────────────────────────
 
 const SOURCE_TYPES = Object.keys(ETIQUETAS_FUENTE) as EmissionSourceType[];
 
@@ -899,7 +894,6 @@ function TableMode({
   );
 }
 
-// ── Main BulkEntryBuilder ─────────────────────────────────────────────────────
 
 interface BulkEntryBuilderProps {
   suppliers: Supplier[];
@@ -997,7 +991,7 @@ export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuil
       })),
   );
 
-  // Shared form element for card mode
+  // Elemento form compartido para el modo de una sola tarjeta
   if (isCardMode) {
     const row = rows[0]!;
     return (

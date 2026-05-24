@@ -76,7 +76,7 @@ function FormProveedor({
 
   const { toast } = useToast();
 
-  // Auto-close on success
+  // Cerrar formulario automáticamente al guardar
   useEffect(() => {
     if (!state?.success) return;
     toast(

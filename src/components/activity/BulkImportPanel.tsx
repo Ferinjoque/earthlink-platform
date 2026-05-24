@@ -21,7 +21,6 @@ interface BulkImportPanelProps {
 
 type Tab = 'manual' | 'archivo';
 
-// ── Template downloads ────────────────────────────────────────────────────────
 
 function downloadCsvTemplate() {
   const blob = new Blob([getCsvTemplate()], { type: 'text/csv;charset=utf-8;' });
@@ -33,7 +32,6 @@ function downloadCsvTemplate() {
   URL.revokeObjectURL(url);
 }
 
-// ── CSV preview table ─────────────────────────────────────────────────────────
 
 const CABECERAS_PREVIEW = ['Fila', 'Proveedor', 'Mes', 'Fuente', 'Cant.', 'Unidad', 'Estado'];
 
@@ -131,7 +129,6 @@ const tdPrev: React.CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
-// ── Archivo tab ───────────────────────────────────────────────────────────────
 
 function ArchivoTab({ suppliers }: { suppliers: Supplier[] }) {
   const supplierMap = new Map(suppliers.map((s) => [s.id, s.name]));
@@ -490,7 +487,6 @@ function ArchivoTab({ suppliers }: { suppliers: Supplier[] }) {
   );
 }
 
-// ── Main BulkImportPanel ──────────────────────────────────────────────────────
 
 const TABS: { val: Tab; Icon: React.ElementType; label: string }[] = [
   { val: 'manual', Icon: Table2, label: 'Manual' },
@@ -561,7 +557,6 @@ export function BulkImportPanel({ suppliers, defaultSupplierId }: BulkImportPane
   );
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 const btnTmpl: React.CSSProperties = {
   background: 'none',

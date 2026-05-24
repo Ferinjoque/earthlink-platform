@@ -24,7 +24,6 @@ import { useToast } from '@/components/ui/Toast';
 import type { PeriodStatus } from '@/domain/ReportingPeriod';
 import type { AnomalySeverity } from '@/types/database';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface ResultadoDetalle {
   id: string;
@@ -77,7 +76,6 @@ interface AuditTableProps {
   isAdmin: boolean;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 const MESES_CORTO = [
   'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
@@ -187,7 +185,6 @@ function puedeCerrarAnio(periodos: PeriodoFila[], year: number): boolean {
     periodos.some((p) => p.status === 'under_review');
 }
 
-// ── VoidResultButton ──────────────────────────────────────────────────────────
 
 function VoidResultButton({ activityEntryId }: { activityEntryId: string }) {
   const { toast } = useToast();
@@ -308,7 +305,6 @@ function VoidResultButton({ activityEntryId }: { activityEntryId: string }) {
   );
 }
 
-// ── UnlockButton ──────────────────────────────────────────────────────────────
 
 function UnlockButton({ periodId }: { periodId: string }) {
   const { toast } = useToast();
@@ -416,7 +412,6 @@ function UnlockButton({ periodId }: { periodId: string }) {
   );
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
 
 function ScopeTable({
   rows,
@@ -758,7 +753,6 @@ function AnomaliaItem({ anomalia }: { anomalia: AnomaliaDetalle }) {
   );
 }
 
-// ── RecalculateButton ─────────────────────────────────────────────────────────
 
 function RecalculateButton({ periodId }: { periodId: string }) {
   const { toast } = useToast();
@@ -843,7 +837,6 @@ function RecalculateButton({ periodId }: { periodId: string }) {
   );
 }
 
-// ── BatchYearControls ─────────────────────────────────────────────────────────
 
 function BatchYearControls({
   supplierId,
@@ -1009,7 +1002,6 @@ function BatchYearControls({
   );
 }
 
-// ── YearGroupRow ──────────────────────────────────────────────────────────────
 
 function YearGroupRow({
   grupo,
@@ -1201,7 +1193,6 @@ function YearGroupRow({
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
 
 const ESTADOS_FILTRO: { valor: PeriodStatus | 'todos'; etiqueta: string }[] = [
   { valor: 'todos', etiqueta: 'Todos' },
@@ -1477,7 +1468,6 @@ export function AuditTable({ periodos, isAdmin }: AuditTableProps) {
   );
 }
 
-// ── PeriodoRow ────────────────────────────────────────────────────────────────
 
 function PeriodoRow({
   p,

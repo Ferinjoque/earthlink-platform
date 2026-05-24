@@ -21,7 +21,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect('/login');
   }
 
-  // Fetch suppliers for global search
+  // Cargar proveedores para búsqueda global
   const { data: rawMemberships } = await supabase
     .from('memberships')
     .select('organization_id')

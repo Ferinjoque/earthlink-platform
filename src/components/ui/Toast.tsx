@@ -3,7 +3,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
 
 type ToastVariant = 'success' | 'error' | 'info';
 
@@ -17,7 +16,6 @@ interface ToastContextValue {
   toast: (message: string, variant?: ToastVariant) => void;
 }
 
-// ── Context ───────────────────────────────────────────────────────────────────
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
@@ -27,7 +25,6 @@ export function useToast(): ToastContextValue {
   return ctx;
 }
 
-// ── Single toast ──────────────────────────────────────────────────────────────
 
 const VARIANT_STYLES: Record<ToastVariant, { background: string; color: string; border: string }> =
   {
@@ -102,7 +99,6 @@ function ToastBubble({ item, onDismiss }: { item: ToastItem; onDismiss: (id: num
   );
 }
 
-// ── Provider ──────────────────────────────────────────────────────────────────
 
 let nextId = 1;
 

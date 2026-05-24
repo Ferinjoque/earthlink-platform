@@ -50,7 +50,7 @@ export async function exportCsv(
     return { error: 'ID de periodo inválido' };
   }
 
-  // Verify membership
+  // Verificar membresía del usuario
   const { data: rawMemberships } = await supabase
     .from('memberships')
     .select('organization_id')
@@ -61,7 +61,7 @@ export async function exportCsv(
     .filter((id): id is string => id !== null);
   if (orgIds.length === 0) return { error: 'Sin organizaciones asociadas' };
 
-  // Fetch period + supplier info
+  // Cargar periodos y proveedores
   type FilaPeriodo = Pick<ReportingPeriodRow, 'id' | 'label' | 'supplier_id'>;
   const { data: periodsRaw } = await supabase
     .from('reporting_periods')
@@ -77,7 +77,7 @@ export async function exportCsv(
     .in('id', supplierIds);
   const suppliers = (suppliersRaw ?? []) as FilaSupplier[];
 
-  // Authorization: periods must belong to user's orgs
+  // Autorización: solo periodos de orgs del usuario
   const allowedSupplierIds = new Set(
     suppliers.filter((s) => orgIds.includes(s.organization_id)).map((s) => s.id),
   );
@@ -91,7 +91,7 @@ export async function exportCsv(
   const supplierMap = new Map(suppliers.map((s) => [s.id, s.name]));
   const periodMap = new Map(periods.map((p) => [p.id, p]));
 
-  // Fetch emission results
+  // Cargar resultados de emisión
   type FilaResultado = Pick<
     EmissionResultRow,
     | 'id'
@@ -118,7 +118,7 @@ export async function exportCsv(
     return { error: 'Los periodos seleccionados no tienen resultados calculados' };
   }
 
-  // Fetch activity entries for source info
+  // Cargar entradas de actividad para incluir fuente en el CSV
   const entryIds = [...new Set(results.map((r) => r.activity_entry_id))];
   type FilaEntrada = Pick<ActivityEntryRow, 'id' | 'source_type' | 'raw_quantity' | 'raw_unit'>;
   const { data: entriesRaw } = await supabase
@@ -128,7 +128,7 @@ export async function exportCsv(
   const entries = (entriesRaw ?? []) as FilaEntrada[];
   const entryMap = new Map(entries.map((e) => [e.id, e]));
 
-  // Build CSV
+  // Construir CSV
   const CSV_HEADER = [
     'periodo',
     'proveedor',
@@ -176,7 +176,7 @@ export async function exportCsv(
     ? `earthlink-${annualYear}-reporte.csv`
     : `earthlink-export-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.csv`;
 
-  // Save one export record per org covered by the authorized periods
+  // Guardar un registro de exportación por org cubierta
   const authorizedPeriods = periods.filter((p) => authorizedPeriodIds.includes(p.id));
   const periodIdsByOrg = new Map<string, string[]>();
   for (const p of authorizedPeriods) {
