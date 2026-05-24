@@ -170,6 +170,8 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
       <style>{`
         @media print {
           @page { margin: 18mm 20mm; }
+          @page :first { margin-top: 0; }
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           .reports-print-header { display: block !important; }
           .reports-print-footer { display: block !important; }
           [data-no-print] { display: none !important; }
@@ -184,35 +186,43 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
             width: 100% !important;
             border-collapse: collapse !important;
             font-size: 8pt !important;
+            widows: 2;
+            orphans: 2;
           }
           .reports-table thead { display: table-header-group !important; }
           .reports-table th,
           .reports-table td {
-            border: 1px solid #ccc !important;
+            border: 0.5pt solid #ccc !important;
             color: #000 !important;
             background: transparent !important;
-            padding: 4pt 6pt !important;
+            padding: 3.5pt 5pt !important;
             font-size: 8pt !important;
+            word-break: break-word;
           }
           .reports-table thead th {
-            background: #f0f0f0 !important;
+            background: #f4f4f4 !important;
             font-weight: 700 !important;
+            border-bottom: 1pt solid #999 !important;
           }
-          .reports-table tr { page-break-inside: avoid; }
+          .reports-table tr { break-inside: avoid; page-break-inside: avoid; }
+          .reports-table tbody tr:nth-child(even) td { background: #fafafa !important; }
           .reports-summary-cards { display: none !important; }
-          .reports-year-group { page-break-inside: avoid; margin-top: 16pt; }
+          .reports-year-group { break-inside: avoid; page-break-inside: avoid; margin-top: 16pt; }
           .reports-year-group + .reports-year-group { margin-top: 24pt; }
           .reports-year-heading {
             font-size: 11pt !important;
             font-weight: 700 !important;
             color: #000 !important;
-            border-bottom: 1.5px solid #000 !important;
+            border-bottom: 1.5pt solid #000 !important;
             padding-bottom: 4pt !important;
             margin-bottom: 8pt !important;
+            break-after: avoid;
+            page-break-after: avoid;
           }
           .reports-checkbox-col { display: none !important; }
           .reports-actions-row { display: none !important; }
           .rp-year-content { grid-template-rows: 1fr !important; }
+          a { text-decoration: none !important; color: inherit !important; }
         }
 
         .reports-print-header { display: none; }
