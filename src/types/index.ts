@@ -1,4 +1,4 @@
-/** Shared TypeScript types used across the app layer */
+/** Tipos TypeScript compartidos en toda la capa de aplicación */
 
 export type UserRole = 'supplier' | 'consultant' | 'admin';
 
