@@ -248,9 +248,17 @@ export async function recalculatePeriod(
   if (typeof periodId !== 'string' || !UUID_RE.test(periodId)) return { error: 'ID de periodo inválido' };
 
   const periodRepo = new ReportingPeriodRepository(supabase);
+  const auditLogRepo = new AuditLogRepository(supabase);
 
   const period = await periodRepo.findById(periodId);
   if (!period) return { error: 'Periodo de reporte no encontrado' };
+
+  // Solo periodos bloqueados o en revisión pueden recalcularse
+  if (period.status !== 'locked' && period.status !== 'under_review') {
+    return {
+      error: `El periodo está en estado "${period.status}" — solo los periodos bloqueados o en revisión pueden recalcularse`,
+    };
+  }
 
   // Verificar que el usuario pertenece a la org propietaria del periodo
   type SupplierOrg = { organization_id: string };
@@ -297,6 +305,11 @@ export async function recalculatePeriod(
       error: `Error en la evaluación: ${err instanceof Error ? err.message : 'error desconocido'}`,
     };
   }
+
+  await auditLogRepo.log('RECALCULATE', 'reporting_periods', periodId, user.id, {
+    oldValues: { status: period.status },
+    newValues: { status: period.status, recalculated_at: new Date().toISOString() },
+  });
 
   revalidatePath('/audit');
   revalidatePath('/dashboard');
@@ -515,6 +528,13 @@ export async function closeYear(
     return {
       error:
         'Hay periodos abiertos sin calcular. Calcula todos los periodos antes de cerrar el año.',
+    };
+  }
+  const hayCalculando = todosLosPeriodos.some((p) => p.status === 'calculating');
+  if (hayCalculando) {
+    return {
+      error:
+        'Hay periodos en proceso de cálculo. Espera a que finalicen antes de cerrar el año.',
     };
   }
 

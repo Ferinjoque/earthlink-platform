@@ -4,6 +4,8 @@ import { createHash, randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { createServerClient, createAdminClient } from '@/services/supabase/server';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const MIME_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'] as const;
 type MimePermitido = (typeof MIME_PERMITIDOS)[number];
 
@@ -41,7 +43,7 @@ export async function uploadEvidence(
   _prev: EvidenceActionState | null,
   formData: FormData,
 ): Promise<EvidenceActionState> {
-  if (!entryId || !/^[0-9a-f-]{36}$/i.test(entryId)) {
+  if (!entryId || !UUID_RE.test(entryId)) {
     return { error: 'ID de entrada inválido' };
   }
 
@@ -155,7 +157,7 @@ export async function uploadEvidence(
  * Lista los archivos de evidencia de una entry con URLs firmadas (1 hora de validez).
  */
 export async function getEvidenceFiles(entryId: string): Promise<EvidenceFileView[]> {
-  if (!entryId || !/^[0-9a-f-]{36}$/i.test(entryId)) return [];
+  if (!entryId || !UUID_RE.test(entryId)) return [];
 
   const supabase = await createServerClient();
   const {
@@ -260,7 +262,7 @@ export async function deleteEvidence(
   _prev: DeleteEvidenceState | null,
   _formData: FormData,
 ): Promise<DeleteEvidenceState> {
-  if (!fileId || !/^[0-9a-f-]{36}$/i.test(fileId)) {
+  if (!fileId || !UUID_RE.test(fileId)) {
     return { error: 'ID inválido' };
   }
 
@@ -306,12 +308,14 @@ export async function deleteEvidence(
     }
   }
 
-  // Borrar de Storage
+  // Borrar de Storage — si falla, no eliminar el registro para mantener consistencia
   const admin = createAdminClient();
-  await admin.storage.from('evidence').remove([file.storage_path]);
+  const { error: storageError } = await admin.storage.from('evidence').remove([file.storage_path]);
+  if (storageError) return { error: 'Error al eliminar el archivo del almacenamiento. Intenta nuevamente.' };
 
   // Borrar registro BD
-  await supabase.from('evidence_files').delete().eq('id', fileId);
+  const { error: dbError } = await supabase.from('evidence_files').delete().eq('id', fileId);
+  if (dbError) return { error: 'Error al eliminar el registro. Intenta nuevamente.' };
 
   revalidatePath('/activity');
   revalidatePath('/audit');

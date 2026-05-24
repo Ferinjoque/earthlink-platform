@@ -42,7 +42,7 @@ function formatQty(qty: number, unit: string): string {
   return `${qty.toLocaleString('es', { maximumFractionDigits: 1 })} ${unit}`;
 }
 
-/** Evenly-spaced nice tick values for a Y axis given a max value. */
+/** Genera valores de graduación uniformes para el eje Y dado un valor máximo. */
 function niceYTicks(maxVal: number, count: number): number[] {
   if (maxVal === 0) return [0];
   const rawStep = maxVal / count;
@@ -129,7 +129,7 @@ function SvgLineChart({
         </clipPath>
       </defs>
 
-      {/* Grid lines */}
+      {/* Líneas de cuadrícula */}
       {ticks.map((tick) => {
         const y = yPos(tick);
         return (
@@ -156,7 +156,7 @@ function SvgLineChart({
         );
       })}
 
-      {/* X axis baseline */}
+      {/* Línea base eje X */}
       <line
         x1={SVG_PADDING.left}
         y1={SVG_PADDING.top + plotH}
@@ -166,7 +166,7 @@ function SvgLineChart({
         strokeWidth={1}
       />
 
-      {/* X axis labels */}
+      {/* Etiquetas eje X */}
       {months.map((ym, idx) => {
         const [year, mon] = ym.split('-');
         const label =
@@ -203,7 +203,7 @@ function SvgLineChart({
         );
       })}
 
-      {/* Empty state message */}
+      {/* Mensaje estado vacío */}
       {!hasData && (
         <text
           x={SVG_PADDING.left + plotW / 2}
@@ -217,7 +217,7 @@ function SvgLineChart({
         </text>
       )}
 
-      {/* Series lines */}
+      {/* Líneas de series */}
       {series.map((s) => {
         const pts = buildPolylinePoints(s.points);
         if (!pts) return null;

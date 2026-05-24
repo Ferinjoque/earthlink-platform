@@ -166,7 +166,7 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-8)' }}>
-      {/* Print styles */}
+      {/* Estilos de impresión */}
       <style>{`
         @media print {
           @page { margin: 18mm 20mm; }
@@ -237,16 +237,16 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
           overflow: hidden;
         }
 
-        /* (summary card uses inline transition — no CSS animation needed) */
+        /* (tarjeta resumen usa transición inline — no se necesita animación CSS) */
       `}</style>
 
-      {/* Hidden download anchor */}
+      {/* Enlace de descarga oculto */}
       <a ref={downloadRef} style={{ display: 'none' }} aria-hidden="true" />
 
       {/* ── Print-only cover page ── */}
       <div className="reports-print-header" aria-hidden="true">
         <div style={{ pageBreakAfter: 'always', display: 'flex', flexDirection: 'column', minHeight: '240mm', justifyContent: 'space-between', padding: '0 0 16pt' }}>
-          {/* Wordmark */}
+          {/* Logotipo */}
           <div>
             <p style={{ fontFamily: 'var(--font-mono)', fontSize: '9pt', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#333', margin: '0 0 6pt', fontWeight: 700 }}>
               EarthLink
@@ -254,7 +254,7 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
             <div style={{ width: '32pt', height: '1.5pt', background: '#000', margin: '0 0 0' }} />
           </div>
 
-          {/* Main title block */}
+          {/* Bloque de título principal */}
           <div style={{ padding: '0' }}>
             <p style={{ fontFamily: 'var(--font-mono)', fontSize: '7pt', color: '#999', margin: '0 0 14pt', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
               Protocolo GHG · Alcances 1 y 2
@@ -274,7 +274,7 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
             </p>
           </div>
 
-          {/* Stats strip */}
+          {/* Franja de estadísticas */}
           {(() => {
             const statsPortada = seleccionados.size > 0 ? statsSeleccion : sumarPeriodos(periodos);
             const nPeriodos = seleccionados.size > 0 ? seleccionados.size : periodos.length;
@@ -301,7 +301,7 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
             );
           })()}
 
-          {/* Footer: integrity */}
+          {/* Pie de página: integridad */}
           <div style={{ borderTop: '0.5pt solid #e8e8e8', paddingTop: '6pt' }}>
             <p style={{ fontFamily: 'var(--font-mono)', fontSize: '6pt', color: '#bbb', margin: 0 }}>
               Generado por EarthLink · {fechaHoy}

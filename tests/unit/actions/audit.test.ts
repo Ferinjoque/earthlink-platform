@@ -85,7 +85,7 @@ vi.mock('../../../src/repos/EmissionResultRepository', () => ({
 }));
 
 import { createServerClient } from '../../../src/services/supabase/server';
-import { calculatePeriod, lockPeriod, resolveAnomaly, recalculatePeriod } from '../../../src/actions/audit';
+import { calculatePeriod, lockPeriod, resolveAnomaly, recalculatePeriod, closeYear } from '../../../src/actions/audit';
 import { createPeriod as createPeriodAudit } from '../../../src/actions/periods';
 
 type MockClient = Awaited<ReturnType<typeof createServerClient>>;
@@ -687,5 +687,93 @@ describe('resolveAnomaly — resolution_note', () => {
     expect(updateSpy).toHaveBeenCalledWith(
       expect.objectContaining({ resolution_note: null }),
     );
+  });
+});
+
+// ── recalculatePeriod — validación de estado ──────────────────────────────────
+
+describe('recalculatePeriod — validación de estado', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns error when period status is open', async () => {
+    mockAuth();
+    mocks.findById.mockResolvedValueOnce(makePeriod('open'));
+    const result = await recalculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
+    expect(result.error).toMatch(/"open"/);
+  });
+
+  it('returns error when period status is calculating', async () => {
+    mockAuth();
+    mocks.findById.mockResolvedValueOnce(makePeriod('calculating'));
+    const result = await recalculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
+    expect(result.error).toMatch(/"calculating"/);
+  });
+
+  it('allows recalculation of under_review period', async () => {
+    mocks.findById.mockResolvedValueOnce(makePeriod('under_review'));
+    mockRecalculateClient();
+    mocks.evaluate.mockResolvedValueOnce(GOOD_EVAL_OUTCOME);
+    const result = await recalculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
+    expect(result.success).toBe(true);
+  });
+});
+
+// ── closeYear — guard contra periodos en cálculo ──────────────────────────────
+
+const CLOSE_YEAR_SUPPLIER_ID = '40000000-0000-4000-8000-000000000040';
+
+function mockCloseYearClient(periodsData: Array<{ id: string; status: string }>) {
+  const periodsChain = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    gte: vi.fn().mockReturnThis(),
+    lte: vi.fn().mockResolvedValue({ data: periodsData, error: null }),
+  };
+  const client = {
+    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: VALID_UUID } } }) },
+    from: vi.fn()
+      .mockReturnValueOnce(makeSelectChain({ organization_id: VALID_ORG_ID }))
+      .mockReturnValueOnce(makeSelectChain({ role: 'admin' }))
+      .mockReturnValueOnce(periodsChain),
+  };
+  vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
+  return client;
+}
+
+describe('closeYear — validación de estado', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns error when any period is open', async () => {
+    mockCloseYearClient([
+      { id: VALID_UUID, status: 'open' },
+      { id: VALID_ORG_ID, status: 'under_review' },
+    ]);
+    const result = await closeYear(
+      null,
+      makeFormData({ supplier_id: CLOSE_YEAR_SUPPLIER_ID, year: '2026' }),
+    );
+    expect(result.error).toMatch(/abiertos/i);
+  });
+
+  it('returns error when any period is calculating', async () => {
+    mockCloseYearClient([
+      { id: VALID_UUID, status: 'calculating' },
+      { id: VALID_ORG_ID, status: 'under_review' },
+    ]);
+    const result = await closeYear(
+      null,
+      makeFormData({ supplier_id: CLOSE_YEAR_SUPPLIER_ID, year: '2026' }),
+    );
+    expect(result.error).toMatch(/proceso de cálculo/i);
+  });
+
+  it('returns success (0 locked) when no under_review periods', async () => {
+    mockCloseYearClient([{ id: VALID_UUID, status: 'locked' }]);
+    const result = await closeYear(
+      null,
+      makeFormData({ supplier_id: CLOSE_YEAR_SUPPLIER_ID, year: '2026' }),
+    );
+    expect(result.success).toBe(true);
+    expect(result.calculated).toBe(0);
   });
 });

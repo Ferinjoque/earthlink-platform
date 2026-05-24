@@ -65,7 +65,7 @@ export function Sidebar({ anomaliaCount = 0 }: SidebarProps) {
         zIndex: 'var(--z-sticky)',
       }}
     >
-      {/* Wordmark */}
+      {/* Logotipo */}
       <div
         style={{
           padding: 'var(--space-5) var(--space-5)',
@@ -117,7 +117,7 @@ export function Sidebar({ anomaliaCount = 0 }: SidebarProps) {
         </div>
       </div>
 
-      {/* Nav */}
+      {/* Navegación */}
       <nav
         aria-label="Navegación principal"
         style={{
@@ -197,7 +197,7 @@ export function Sidebar({ anomaliaCount = 0 }: SidebarProps) {
         })}
       </nav>
 
-      {/* Sign out */}
+      {/* Cerrar sesión */}
       <div style={{ padding: 'var(--space-3)', borderTop: '1px solid var(--color-border)' }}>
         <form action={signOut}>
           <button
