@@ -94,6 +94,15 @@ export async function calculatePeriod(
   try {
     outcome = await evalSvc.evaluate(periodId);
   } catch {
+    // Restablecer a 'open' para que el periodo pueda reintentarse — no dejarlo en 'calculating'
+    const adminClient = createAdminClient();
+    const { error: recoveryError } = await adminClient
+      .from('reporting_periods')
+      .update({ status: 'open' })
+      .eq('id', periodId);
+    if (recoveryError) {
+      return { error: 'Error crítico al calcular: no se pudo restablecer el estado del periodo. Contacta al administrador.' };
+    }
     return { error: 'Error al calcular las emisiones del periodo. Intenta nuevamente.' };
   }
 
