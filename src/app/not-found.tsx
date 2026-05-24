@@ -16,7 +16,7 @@ export default function NotFound() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: var(--space-10) var(--space-8);
+          padding: var(--space-10) var(--space-8) var(--space-32);
           background: var(--color-surface-0);
           text-align: center;
           gap: var(--space-6);
