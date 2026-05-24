@@ -886,6 +886,35 @@ describe('deleteActivityEntry — control de roles', () => {
   });
 });
 
+// ── voidActivityEntry — success path ─────────────────────────────────────────
+
+describe('voidActivityEntry — success', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns success for open period with valid reason', async () => {
+    const entryData = {
+      voided_at: null,
+      reporting_period_id: PERIOD_ID,
+      reporting_periods: { status: 'open', suppliers: { organization_id: 'org-001' } },
+    };
+    const updateChain = {
+      update: () => ({ eq: () => Promise.resolve({ error: null }) }),
+    };
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+      from: vi.fn()
+        .mockReturnValueOnce(makeMaybeSingleChain(entryData))
+        .mockReturnValueOnce(makeMaybeSingleChain({ role: 'consultant' }))
+        .mockReturnValueOnce(updateChain),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
+
+    const result = await voidActivityEntry(null, makeFormData({ entry_id: ENTRY_ID, void_reason: 'Dato incorrecto' }));
+    expect(result.success).toBe(true);
+    expect(result.error).toBeUndefined();
+  });
+});
+
 // ── helper used in tests above that references an unqualified name ────────────
 
 function makeMaybySingleChain(data: unknown) {

@@ -617,6 +617,7 @@ export async function resolveAnomaly(
   if (error) return { error: 'Error al resolver la anomalía. Intenta nuevamente.' };
 
   revalidatePath('/audit');
+  revalidatePath('/dashboard');
   return { success: true };
 }
 
