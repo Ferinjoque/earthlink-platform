@@ -286,8 +286,9 @@ export async function recalculatePeriod(
   );
   if (deleteError) return { error: 'Error al limpiar resultados previos. Intenta nuevamente.' };
 
+  const activityEntryRepo = new ActivityEntryRepository(supabase);
   const evalSvc = new EvaluationService(
-    new ActivityEntryRepository(supabase),
+    activityEntryRepo,
     new EmissionFactorRepository(supabase),
     new UnitConversionRepository(supabase),
     new EmissionResultRepository(supabase),
@@ -299,6 +300,46 @@ export async function recalculatePeriod(
     outcome = await evalSvc.evaluate(periodId);
   } catch {
     return { error: 'Error al recalcular las emisiones del periodo. Intenta nuevamente.' };
+  }
+
+  // Re-ejecutar detección de anomalías con los resultados actualizados
+  try {
+    const priorYear = period.startDate.getFullYear() - 1;
+    const { data: priorPeriodsRaw } = await supabase
+      .from('reporting_periods')
+      .select('id')
+      .eq('supplier_id', period.supplierId)
+      .gte('start_date', `${priorYear}-01-01`)
+      .lte('start_date', `${priorYear}-12-31`);
+    const priorPeriodIds = (priorPeriodsRaw ?? []).map((p: { id: string }) => p.id);
+
+    const [currentEntries, historicalEntries] = await Promise.all([
+      activityEntryRepo.findByPeriodId(periodId),
+      activityEntryRepo.findByPeriodIds(priorPeriodIds),
+    ]);
+    const anomalies = new AnomalyService().detect(currentEntries, historicalEntries);
+
+    if (currentEntries.length > 0) {
+      await supabase
+        .from('anomaly_flags')
+        .delete()
+        .in('activity_entry_id', currentEntries.map((e) => e.id))
+        .eq('is_resolved', false);
+    }
+    if (anomalies.length > 0) {
+      await supabase.from('anomaly_flags').insert(
+        anomalies.map((a) => ({
+          activity_entry_id: a.entryId,
+          detector: 'zscore_monthly',
+          severity: a.severity,
+          z_score: a.zScore,
+          message: a.message,
+          threshold_used: AnomalyService.Z_THRESHOLD_LOW,
+        })),
+      );
+    }
+  } catch {
+    // Detección de anomalías no crítica — no bloquear el recálculo
   }
 
   await auditLogRepo.log('RECALCULATE', 'reporting_periods', periodId, user.id, {
