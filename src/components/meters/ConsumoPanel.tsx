@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { BarChart2, Download } from 'lucide-react';
 import type { EntryWithPeriod, MeterYearSummary } from '@/lib/meters';
 import { getAvailableYears, aggregateByMonth, formatQuantity, MONTH_LABELS } from '@/lib/meters';
@@ -763,18 +764,27 @@ export function ConsumoPanel({ entries, suppliers, toKwh = {}, toM3 = {}, toKg =
           </div>
         </div>
 
-        <div style={{
-          background: 'var(--color-surface-1)', border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-lg)', padding: 'var(--space-5)',
-        }}>
-          <OverviewChart
-            summaries={chartSummaries}
-            year={selectedYear}
-            suppliers={suppliers}
-            filteredSupplierIds={selectedSuppliers}
-            svgRef={svgRef}
-          />
-        </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`${selectedYear}-${effectiveCategoryFilter ?? 'all'}`}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            style={{
+              background: 'var(--color-surface-1)', border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-lg)', padding: 'var(--space-5)',
+            }}
+          >
+            <OverviewChart
+              summaries={chartSummaries}
+              year={selectedYear}
+              suppliers={suppliers}
+              filteredSupplierIds={selectedSuppliers}
+              svgRef={svgRef}
+            />
+          </motion.div>
+        </AnimatePresence>
       </section>
 
       {/* Meter detail section */}
@@ -806,16 +816,34 @@ export function ConsumoPanel({ entries, suppliers, toKwh = {}, toM3 = {}, toKg =
               effectiveMeterId={effectiveMeterId}
               onSelect={setSelectedMeterId}
             />
-            {selectedSummary ? (
-              <MeterDetail summary={selectedSummary} year={selectedYear} />
-            ) : (
-              <div style={{
-                flex: 1, display: 'grid', placeItems: 'center',
-                minHeight: '300px', color: 'var(--color-ink-3)', fontSize: 'var(--text-sm)',
-              }}>
-                Selecciona un medidor
-              </div>
-            )}
+            <AnimatePresence mode="wait">
+              {selectedSummary ? (
+                <motion.div
+                  key={effectiveMeterId ?? 'empty'}
+                  initial={{ opacity: 0, x: 8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -8 }}
+                  transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+                  style={{ flex: 1, minWidth: 0 }}
+                >
+                  <MeterDetail summary={selectedSummary} year={selectedYear} />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="empty"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.14 }}
+                  style={{
+                    flex: 1, display: 'grid', placeItems: 'center',
+                    minHeight: '300px', color: 'var(--color-ink-3)', fontSize: 'var(--text-sm)',
+                  }}
+                >
+                  Selecciona un medidor
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
       </section>

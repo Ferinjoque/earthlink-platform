@@ -269,42 +269,64 @@ export function parseCsvText(text: string): ParsedCsvRow[] {
   return dataLines.map((line, i) => parseRow(line, sep, colMap, i + 1));
 }
 
-export function getCsvTemplate(): string {
+interface SupplierRef {
+  id: string;
+  name: string;
+}
+
+/**
+ * Genera la plantilla CSV. Si se pasan proveedores, incluye un bloque de referencia
+ * al inicio con el UUID de cada uno para que el usuario pueda copiarlo fácilmente.
+ */
+export function getCsvTemplate(suppliers?: SupplierRef[]): string {
+  const refLines: string[] =
+    suppliers && suppliers.length > 0
+      ? [
+          '# ============================================================',
+          '# REFERENCIA DE PROVEEDORES — copiar el UUID correspondiente',
+          ...suppliers.map((s) => `# ${s.name}: ${s.id}`),
+          '# ============================================================',
+        ]
+      : [];
+
+  const ejemplo = suppliers?.[0]?.id ?? '<UUID-del-proveedor>';
+
   return [
+    ...refLines,
     'supplier_id,year_month,source_type,secondary,raw_quantity,raw_unit,data_quality,notes',
     '# --- Combustion estacionaria (Alcance 1) | secondary: natural_gas | diesel | lpg | fuel_oil_no2 | propane',
     '# --- Unidades: m3_ng | ft3_ng | L | gallon | kBtu | therms | MMBtu | MBtu | MJ | GJ | kWh',
-    '<UUID-del-proveedor>,2026-01,stationary_combustion,natural_gas,1000,m3_ng,measured,Caldera A',
-    '<UUID-del-proveedor>,2026-01,stationary_combustion,diesel,500,L,measured,Generador de emergencia',
-    '<UUID-del-proveedor>,2026-01,stationary_combustion,lpg,200,L,estimated,Cocina industrial',
-    '<UUID-del-proveedor>,2026-01,stationary_combustion,fuel_oil_no2,300,kBtu,measured,Caldera auxiliar',
-    '<UUID-del-proveedor>,2026-01,stationary_combustion,propane,100,L,estimated,Calefaccion exterior',
+    `${ejemplo},2026-01,stationary_combustion,natural_gas,1000,m3_ng,measured,Caldera A`,
+    `${ejemplo},2026-01,stationary_combustion,diesel,500,L,measured,Generador de emergencia`,
+    `${ejemplo},2026-01,stationary_combustion,lpg,200,L,estimated,Cocina industrial`,
+    `${ejemplo},2026-01,stationary_combustion,fuel_oil_no2,300,kBtu,measured,Caldera auxiliar`,
+    `${ejemplo},2026-01,stationary_combustion,propane,100,L,estimated,Calefaccion exterior`,
     '# --- Combustion movil (Alcance 1) | secondary: diesel | gasoline | lpg',
     '# --- Unidades: L | gallon | imp_gallon',
-    '<UUID-del-proveedor>,2026-01,mobile_combustion,diesel,200,L,measured,Flota de vehiculos',
-    '<UUID-del-proveedor>,2026-01,mobile_combustion,gasoline,150,L,measured,Vehiculos livianos',
-    '<UUID-del-proveedor>,2026-01,mobile_combustion,lpg,80,L,estimated,Montacargas',
+    `${ejemplo},2026-01,mobile_combustion,diesel,200,L,measured,Flota de vehiculos`,
+    `${ejemplo},2026-01,mobile_combustion,gasoline,150,L,measured,Vehiculos livianos`,
+    `${ejemplo},2026-01,mobile_combustion,lpg,80,L,estimated,Montacargas`,
     '# --- Electricidad comprada (Alcance 2) | secondary: SEIN_PERU | LATAM_AVG | US_AVERAGE | EU_AVERAGE',
     '# --- Unidades: kWh | MWh | GJ',
-    '<UUID-del-proveedor>,2026-01,purchased_electricity,SEIN_PERU,5000,kWh,measured,Piso 2 oficinas',
-    '<UUID-del-proveedor>,2026-01,purchased_electricity,LATAM_AVG,1200,kWh,measured,Sede regional',
+    `${ejemplo},2026-01,purchased_electricity,SEIN_PERU,5000,kWh,measured,Piso 2 oficinas`,
+    `${ejemplo},2026-01,purchased_electricity,LATAM_AVG,1200,kWh,measured,Sede regional`,
     '# --- Vapor comprado (Alcance 2) | secondary: (vacio)',
     '# --- Unidades: kWh | MWh | GJ',
-    '<UUID-del-proveedor>,2026-01,purchased_steam,,100,GJ,calculated,',
+    `${ejemplo},2026-01,purchased_steam,,100,GJ,calculated,`,
     '# --- Emisiones fugitivas (Alcance 1) | secondary: R410A | R134A | R32',
     '# --- Unidades: kg | lb | tonne',
-    '<UUID-del-proveedor>,2026-01,fugitive,R410A,5,kg,measured,Mantenimiento HVAC',
-    '<UUID-del-proveedor>,2026-01,fugitive,R134A,2,kg,measured,Camara frigorifica',
-    '<UUID-del-proveedor>,2026-01,fugitive,R32,1.5,kg,measured,Minisplit oficina',
+    `${ejemplo},2026-01,fugitive,R410A,5,kg,measured,Mantenimiento HVAC`,
+    `${ejemplo},2026-01,fugitive,R134A,2,kg,measured,Camara frigorifica`,
+    `${ejemplo},2026-01,fugitive,R32,1.5,kg,measured,Minisplit oficina`,
     '# --- Agua (GRESB) | secondary: all_sources | potable_mixed | potable_indoor | reclaimed_mixed | well_outdoor | other_mixed',
     '# --- Unidades: kgal_us | megaliter | m3 | L | gallon',
-    '<UUID-del-proveedor>,2026-01,water_use,potable_mixed,150,kgal_us,measured,Medidor principal',
-    '<UUID-del-proveedor>,2026-01,water_use,reclaimed_mixed,30,kgal_us,estimated,Riego exterior',
-    '<UUID-del-proveedor>,2026-01,water_use,well_outdoor,20,m3,estimated,Pozo norte',
+    `${ejemplo},2026-01,water_use,potable_mixed,150,kgal_us,measured,Medidor principal`,
+    `${ejemplo},2026-01,water_use,reclaimed_mixed,30,kgal_us,estimated,Riego exterior`,
+    `${ejemplo},2026-01,water_use,well_outdoor,20,m3,estimated,Pozo norte`,
     '# --- Residuos (GRESB) | secondary: disposed_trash | recycled | composted',
     '# --- Unidades: ton_us | tonne | kg | lb',
-    '<UUID-del-proveedor>,2026-01,waste,disposed_trash,2.5,ton_us,measured,Contenedor general',
-    '<UUID-del-proveedor>,2026-01,waste,recycled,1.2,ton_us,measured,Reciclaje papel/carton',
-    '<UUID-del-proveedor>,2026-01,waste,composted,0.8,tonne,measured,Compost residuos organicos',
+    `${ejemplo},2026-01,waste,disposed_trash,2.5,ton_us,measured,Contenedor general`,
+    `${ejemplo},2026-01,waste,recycled,1.2,ton_us,measured,Reciclaje papel/carton`,
+    `${ejemplo},2026-01,waste,composted,0.8,tonne,measured,Compost residuos organicos`,
   ].join('\n');
 }
