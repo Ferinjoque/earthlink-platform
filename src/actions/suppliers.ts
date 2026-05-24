@@ -181,13 +181,15 @@ export async function archiveSupplier(
   if (typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
     return { error: 'ID de proveedor inválido' };
 
+  type SupplierWithArchived = SupplierData & { archived_at: string | null };
   const { data: rawSupplier } = await supabase
     .from('suppliers')
-    .select('organization_id')
+    .select('organization_id, archived_at')
     .eq('id', id)
     .maybeSingle();
-  const supplier = rawSupplier as SupplierData | null;
+  const supplier = rawSupplier as SupplierWithArchived | null;
   if (!supplier) return { error: 'Proveedor no encontrado' };
+  if (supplier.archived_at) return { error: 'El proveedor ya está archivado' };
 
   const { data: rawMembership } = await supabase
     .from('memberships')

@@ -33,6 +33,7 @@ type MockBehavior = {
   supplierOrg?: string | null;
   memberRole?: string | null;
   insertError?: string | null;
+  archivedAt?: string | null;
 };
 
 function mockClient({
@@ -40,6 +41,7 @@ function mockClient({
   supplierOrg = ORG_UUID,
   memberRole = 'admin',
   insertError = null,
+  archivedAt = null,
 }: MockBehavior = {}) {
   const client = {
     auth: {
@@ -53,7 +55,7 @@ function mockClient({
         data:
           table === 'suppliers'
             ? supplierOrg !== null
-              ? { organization_id: supplierOrg }
+              ? { organization_id: supplierOrg, archived_at: archivedAt }
               : null
             : memberRole !== null
               ? { role: memberRole }
@@ -127,6 +129,12 @@ describe('createPeriod', () => {
     mockClient({ supplierOrg: null });
     const result = await createPeriod(null, makeFormData(validFields));
     expect(result.error).toMatch(/encontrado/i);
+  });
+
+  it('returns error when supplier is archived', async () => {
+    mockClient({ archivedAt: '2024-01-01T00:00:00Z' });
+    const result = await createPeriod(null, makeFormData(validFields));
+    expect(result.error).toMatch(/archivado/i);
   });
 
   it('returns error when user lacks membership', async () => {

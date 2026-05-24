@@ -36,6 +36,7 @@ function mockClient({
   membershipFound = true,
   insertError = null as null | { message: string },
   updateError = null as null | { message: string },
+  archivedAt = null as string | null,
 }: {
   role?: string;
   supplierOrgId?: string;
@@ -43,10 +44,11 @@ function mockClient({
   membershipFound?: boolean;
   insertError?: null | { message: string };
   updateError?: null | { message: string };
+  archivedAt?: string | null;
 } = {}) {
   const singleMock = vi.fn().mockImplementation((table: string) => {
     if (table === 'suppliers') {
-      const data = supplierFound ? { organization_id: supplierOrgId } : null;
+      const data = supplierFound ? { organization_id: supplierOrgId, archived_at: archivedAt } : null;
       return Promise.resolve({ data, error: null });
     }
     if (table === 'memberships') {
@@ -241,6 +243,13 @@ describe('archiveSupplier', () => {
     const fd = makeFormData({ id: VALID_SUPPLIER_ID });
     const result = await archiveSupplier(null, fd);
     expect(result.success).toBe(true);
+  });
+
+  it('returns error when supplier is already archived', async () => {
+    mockClient({ archivedAt: '2024-01-01T00:00:00Z' });
+    const fd = makeFormData({ id: VALID_SUPPLIER_ID });
+    const result = await archiveSupplier(null, fd);
+    expect(result.error).toMatch(/ya está archivado/i);
   });
 });
 
