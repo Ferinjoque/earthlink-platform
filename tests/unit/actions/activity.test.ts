@@ -824,10 +824,11 @@ function makeDeleteChain(error: { message: string } | null = null) {
 function mockDeleteClient({
   memberRole = 'admin' as string | null,
   deleteError = null as { message: string } | null,
+  periodStatus = 'open' as string,
 } = {}) {
   const entryData = {
     reporting_period_id: PERIOD_ID,
-    reporting_periods: { status: 'open', suppliers: { organization_id: 'org-001' } },
+    reporting_periods: { status: periodStatus, suppliers: { organization_id: 'org-001' } },
   };
   // Simula el filtro .in('role', ['admin', 'consultant']) de la DB:
   // solo devuelve fila si el rol es uno de los permitidos
@@ -876,6 +877,12 @@ describe('deleteActivityEntry — control de roles', () => {
     mockDeleteClient({ deleteError: { message: 'foreign key violation' } });
     const result = await deleteActivityEntry(null, makeFormData({ entry_id: ENTRY_ID }));
     expect(result.error).toMatch(/eliminar/i);
+  });
+
+  it('returns error when period is locked', async () => {
+    mockDeleteClient({ periodStatus: 'locked' });
+    const result = await deleteActivityEntry(null, makeFormData({ entry_id: ENTRY_ID }));
+    expect(result.error).toMatch(/bloqueado/i);
   });
 });
 

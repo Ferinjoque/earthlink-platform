@@ -376,7 +376,7 @@ export async function calculateYear(
     .eq('supplier_id', supplier_id)
     .gte('start_date', startOfYear)
     .lte('start_date', endOfYear)
-    .in('status', ['open', 'under_review']);
+    .eq('status', 'open');
 
   const candidatos = (periodsRaw ?? []) as FilaPeriodo[];
   if (candidatos.length === 0) {
@@ -411,12 +411,6 @@ export async function calculateYear(
   const errores: string[] = [];
 
   for (const p of candidatos) {
-    // Solo calcular periodos abiertos — 'under_review' ya fue calculado
-    if (p.status !== 'open') {
-      skipped = skipped + 1;
-      continue;
-    }
-
     try {
       await auditSvc.transitionStatus(p.id, 'calculating', user.id);
     } catch {
@@ -689,6 +683,12 @@ export async function unlockPeriod(
     .eq('id', periodId);
 
   if (updateError) return { error: 'Error al desbloquear el periodo. Intenta nuevamente.' };
+
+  const auditLogRepo = new AuditLogRepository(supabase);
+  await auditLogRepo.log('UNLOCK', 'reporting_periods', periodId, user.id, {
+    oldValues: { status: 'locked' },
+    newValues: { status: 'under_review' },
+  });
 
   revalidatePath('/audit');
   revalidatePath('/dashboard');
