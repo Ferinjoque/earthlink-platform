@@ -164,6 +164,22 @@ async function findOrCreatePeriod(
     .single();
 
   if (insertError || !newPeriod) {
+    // Conflicto de unicidad: otra solicitud concurrente creó el periodo primero
+    if (insertError?.code === '23505') {
+      const { data: retryRaw } = await supabase
+        .from('reporting_periods')
+        .select('id, status')
+        .eq('supplier_id', supplierId)
+        .eq('start_date', startDate)
+        .maybeSingle();
+      const retryPeriod = retryRaw as PeriodRow | null;
+      if (retryPeriod) {
+        if (retryPeriod.status === 'locked') {
+          return { error: 'El periodo de ese mes está bloqueado y no acepta nuevas entradas' };
+        }
+        return { periodId: retryPeriod.id };
+      }
+    }
     return { error: 'No se pudo crear el periodo de reporte' };
   }
 
@@ -544,6 +560,7 @@ export async function voidActivityEntry(
     .select('role')
     .eq('user_id', user.id)
     .eq('organization_id', orgId)
+    .in('role', ['admin', 'consultant'])
     .maybeSingle();
   const mem = memRaw as { role: string } | null;
   if (!mem) return { error: 'Sin permisos para este registro' };

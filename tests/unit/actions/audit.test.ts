@@ -17,6 +17,10 @@ const mocks = vi.hoisted(() => ({
   buildFactorTable: vi.fn().mockResolvedValue(new Map()),
   buildConversionTable: vi.fn().mockResolvedValue(new Map()),
   adminRpc: vi.fn(),
+  adminFrom: vi.fn().mockReturnValue({
+    update: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+  }),
 }));
 
 // ── Module mocks ──────────────────────────────────────────────────────────────
@@ -32,7 +36,10 @@ vi.mock('next/headers', () => ({
 }));
 vi.mock('../../../src/services/supabase/server', () => ({
   createServerClient: vi.fn(),
-  createAdminClient: vi.fn(() => ({ rpc: mocks.adminRpc })),
+  createAdminClient: vi.fn(() => ({
+    rpc: mocks.adminRpc,
+    from: mocks.adminFrom,
+  })),
 }));
 
 vi.mock('../../../src/repos/ReportingPeriodRepository', () => ({
@@ -621,6 +628,18 @@ describe('recalculatePeriod', () => {
     mocks.evaluate.mockRejectedValueOnce(new Error('factor not found'));
     const result = await recalculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
     expect(result.error).toMatch(/recalcular.*emisiones/i);
+  });
+
+  it('resets period to under_review on evaluate failure to avoid locked period with no results', async () => {
+    mocks.findById.mockResolvedValueOnce(makePeriod('locked'));
+    mockRecalculateClient();
+    mocks.evaluate.mockRejectedValueOnce(new Error('eval failure'));
+    mocks.adminFrom.mockClear();
+
+    const result = await recalculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
+
+    expect(result.error).toBeDefined();
+    expect(mocks.adminFrom).toHaveBeenCalledWith('reporting_periods');
   });
 
   it('returns success with updated totals', async () => {

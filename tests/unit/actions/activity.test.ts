@@ -787,6 +787,7 @@ describe('voidActivityEntry — validación de ID', () => {
       from: vi.fn().mockImplementation(() => ({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValue({
           data: {
             voided_at: null,
@@ -937,7 +938,7 @@ describe('voidActivityEntry — success', () => {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
       from: vi.fn()
         .mockReturnValueOnce(makeMaybeSingleChain(entryData))
-        .mockReturnValueOnce(makeMaybeSingleChain({ role: 'consultant' }))
+        .mockReturnValueOnce(makeChainWithIn({ role: 'consultant' }))
         .mockReturnValueOnce(updateChain),
     };
     vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
@@ -945,6 +946,139 @@ describe('voidActivityEntry — success', () => {
     const result = await voidActivityEntry(null, makeFormData({ entry_id: ENTRY_ID, void_reason: 'Dato incorrecto' }));
     expect(result.success).toBe(true);
     expect(result.error).toBeUndefined();
+  });
+});
+
+// ── voidActivityEntry — control de roles ──────────────────────────────────────
+
+function mockVoidClient({
+  memberRole = 'admin' as string | null,
+  voidUpdateError = null as { message: string } | null,
+  periodStatus = 'open' as string,
+} = {}) {
+  const entryData = {
+    voided_at: null,
+    reporting_period_id: PERIOD_ID,
+    reporting_periods: { status: periodStatus, suppliers: { organization_id: 'org-001' } },
+  };
+  const allowedRoles = ['admin', 'consultant'];
+  const membershipData =
+    memberRole && allowedRoles.includes(memberRole) ? { role: memberRole } : null;
+  const updateChain = {
+    update: () => ({ eq: () => Promise.resolve({ error: voidUpdateError }) }),
+  };
+  const client = {
+    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+    from: vi.fn()
+      .mockReturnValueOnce(makeMaybeSingleChain(entryData))
+      .mockReturnValueOnce(makeChainWithIn(membershipData))
+      .mockReturnValueOnce(updateChain),
+  };
+  vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
+  return client;
+}
+
+describe('voidActivityEntry — control de roles', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns error when user has supplier role (not admin/consultant)', async () => {
+    mockVoidClient({ memberRole: 'supplier' });
+    const result = await voidActivityEntry(
+      null,
+      makeFormData({ entry_id: ENTRY_ID, void_reason: 'corrección' }),
+    );
+    expect(result.error).toMatch(/permiso/i);
+  });
+
+  it('returns error when user has no membership', async () => {
+    mockVoidClient({ memberRole: null });
+    const result = await voidActivityEntry(
+      null,
+      makeFormData({ entry_id: ENTRY_ID, void_reason: 'corrección' }),
+    );
+    expect(result.error).toMatch(/permiso/i);
+  });
+
+  it('returns success for admin role', async () => {
+    mockVoidClient({ memberRole: 'admin' });
+    const result = await voidActivityEntry(
+      null,
+      makeFormData({ entry_id: ENTRY_ID, void_reason: 'corrección' }),
+    );
+    expect(result.success).toBe(true);
+  });
+
+  it('returns success for consultant role', async () => {
+    mockVoidClient({ memberRole: 'consultant' });
+    const result = await voidActivityEntry(
+      null,
+      makeFormData({ entry_id: ENTRY_ID, void_reason: 'corrección' }),
+    );
+    expect(result.success).toBe(true);
+  });
+});
+
+// ── findOrCreatePeriod — TOCTOU 23505 retry ───────────────────────────────────
+
+describe('createActivityEntry — findOrCreatePeriod 23505 retry', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('recovers from unique constraint violation by retrying select', async () => {
+    const RETRY_PERIOD_ID = '00000000-0000-4000-8000-000000000099';
+
+    const insertChain23505 = {
+      insert: () => ({
+        select: () => ({
+          single: () =>
+            Promise.resolve({ data: null, error: { code: '23505', message: 'duplicate' } }),
+        }),
+      }),
+    };
+    const retrySelectChain = (() => {
+      const p = Promise.resolve({ data: { id: RETRY_PERIOD_ID, status: 'open' } });
+      const c: Record<string, unknown> = {};
+      c['select'] = () => c;
+      c['eq'] = () => c;
+      c['maybeSingle'] = () => p;
+      return c;
+    })();
+    const anomalyChain = (() => {
+      const p = Promise.resolve({ data: [], error: null });
+      const c: Record<string, unknown> = {};
+      c['select'] = () => c;
+      c['eq'] = () => c;
+      c['gte'] = () => c;
+      c['lte'] = () => c;
+      c['then'] = (p as Promise<unknown>).then.bind(p);
+      c['catch'] = (p as Promise<unknown>).catch.bind(p);
+      return c;
+    })();
+
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+      from: vi.fn()
+        .mockReturnValueOnce(makeMaybeSingleChain({ organization_id: 'org-001' })) // suppliers
+        .mockReturnValueOnce(makeMaybeSingleChain({ role: 'admin' }))             // memberships
+        .mockReturnValueOnce(makeMaybeSingleChain(null))                          // period find → null
+        .mockReturnValueOnce(insertChain23505)                                    // period insert → 23505
+        .mockReturnValueOnce(retrySelectChain)                                    // period retry select
+        .mockReturnValueOnce(anomalyChain),                                       // anomaly baseline
+    };
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
+
+    const result = await createActivityEntry(
+      null,
+      makeFormData({
+        supplier_id: VALID_UUID,
+        year_month: VALID_YM,
+        source_type: 'stationary_combustion',
+        secondary: 'natural_gas',
+        raw_quantity: '1000',
+        raw_unit: 'm3_ng',
+      }),
+    );
+
+    expect(result.success).toBe(true);
   });
 });
 
