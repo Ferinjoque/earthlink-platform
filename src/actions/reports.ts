@@ -79,13 +79,12 @@ export async function exportCsv(
   const { data: suppliersRaw } = await supabase
     .from('suppliers')
     .select('id, name, organization_id')
-    .in('id', supplierIds);
+    .in('id', supplierIds)
+    .in('organization_id', orgIds);
   const suppliers = (suppliersRaw ?? []) as FilaSupplier[];
 
-  // Autorización: solo periodos de orgs del usuario
-  const allowedSupplierIds = new Set(
-    suppliers.filter((s) => orgIds.includes(s.organization_id)).map((s) => s.id),
-  );
+  // Autorización: solo periodos de orgs del usuario (ya filtrado en la query)
+  const allowedSupplierIds = new Set(suppliers.map((s) => s.id));
   const authorizedPeriodIds = periods
     .filter((p) => allowedSupplierIds.has(p.supplier_id))
     .map((p) => p.id);

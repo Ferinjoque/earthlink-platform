@@ -11,7 +11,6 @@ import { AnomalyFlagRepository } from '@/repos/AnomalyFlagRepository';
 import { parseCsvText } from '@/lib/csv';
 import { parseXlsxBuffer } from '@/lib/xlsx';
 import type { ActivityKind, Unit, WaterSubtype, WasteSubtype } from '@/calc/types';
-import type { EmissionSourceType } from '@/types/database';
 
 
 const SOURCE_TYPES_ENUM = [
@@ -458,10 +457,10 @@ export async function importActivityBulk(
 
   for (const row of bulkRows) {
     const periodResult = await findOrCreatePeriod(supabase, row.supplier_id, row.year_month);
-    if ('error' in periodResult) { skippedCount++; continue; }
+    if ('error' in periodResult) { skippedCount = skippedCount + 1; continue; }
 
     const activityKind = buildActivityKind(row.source_type, row.secondary);
-    if (!activityKind) { skippedCount++; continue; }
+    if (!activityKind) { skippedCount = skippedCount + 1; continue; }
 
     const entryId = crypto.randomUUID();
     const entry = new ActivityEntry({
@@ -481,10 +480,10 @@ export async function importActivityBulk(
 
     try {
       await entryRepo.save(entry);
-      importedCount++;
+      importedCount = importedCount + 1;
       createdIds.push(entryId);
     } catch {
-      skippedCount++;
+      skippedCount = skippedCount + 1;
     }
   }
 
@@ -627,6 +626,8 @@ export async function deleteActivityEntry(
   if (deleteError) return { error: 'Error al eliminar el registro. Intenta nuevamente.' };
 
   revalidatePath('/activity');
+  revalidatePath('/suppliers');
+  revalidatePath('/dashboard');
   return { success: true };
 }
 
@@ -682,10 +683,10 @@ export async function importActivityXlsx(
     if (!row.data) continue;
 
     const periodResult = await findOrCreatePeriod(supabase, row.data.supplier_id, row.data.year_month);
-    if ('error' in periodResult) { skipped++; continue; }
+    if ('error' in periodResult) { skipped = skipped + 1; continue; }
 
     const activityKind = buildActivityKind(row.data.source_type, row.data.secondary);
-    if (!activityKind) { skipped++; continue; }
+    if (!activityKind) { skipped = skipped + 1; continue; }
 
     const entry = new ActivityEntry({
       id: crypto.randomUUID(),
@@ -704,9 +705,9 @@ export async function importActivityXlsx(
 
     try {
       await entryRepo.save(entry);
-      importedCount++;
+      importedCount = importedCount + 1;
     } catch {
-      skipped++;
+      skipped = skipped + 1;
     }
   }
 

@@ -126,7 +126,7 @@ describe('AuditService.transitionStatus()', () => {
   });
 
   it('writes STATUS_CHANGE event to audit log', async () => {
-    const { service, auditLogRepo } = makeService();
+    const { service, auditLogRepo } = makeService(makePeriod('calculating'));
     await service.transitionStatus('period-001', 'under_review', 'user-001');
     expect(auditLogRepo.log).toHaveBeenCalledWith(
       'STATUS_CHANGE',
@@ -135,5 +135,25 @@ describe('AuditService.transitionStatus()', () => {
       'user-001',
       expect.objectContaining({ newValues: { status: 'under_review' } }),
     );
+  });
+
+  it('rechaza transición inválida open → under_review', async () => {
+    const { service } = makeService(makePeriod('open'));
+    await expect(
+      service.transitionStatus('period-001', 'under_review', 'user-001'),
+    ).rejects.toThrow('Transición inválida');
+  });
+
+  it('rechaza transición inválida calculating → calculating', async () => {
+    const { service } = makeService(makePeriod('calculating'));
+    await expect(
+      service.transitionStatus('period-001', 'calculating', 'user-001'),
+    ).rejects.toThrow('Transición inválida');
+  });
+
+  it('transitions calculating → under_review', async () => {
+    const { service, reportingPeriodRepo } = makeService(makePeriod('calculating'));
+    await service.transitionStatus('period-001', 'under_review', 'user-001');
+    expect(reportingPeriodRepo.updateStatus).toHaveBeenCalledWith('period-001', 'under_review');
   });
 });
