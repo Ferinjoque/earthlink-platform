@@ -45,7 +45,7 @@ export class EvaluationRepository {
     if (!summary) {
       return {
         totalCo2eKg: 0,
-        byScope: { scope1: 0, scope2: 0 } as Record<GhgScope, number>,
+        byScope: { scope1: 0, scope2: 0, none: 0 },
         byActivity: {},
         recordCount: 0,
       };
@@ -56,7 +56,8 @@ export class EvaluationRepository {
       byScope: {
         scope1: summary.scope1Co2eKg,
         scope2: summary.scope2Co2eKg,
-      } as Record<GhgScope, number>,
+        none: 0,
+      },
       byActivity: {},
       recordCount: summary.resultCount,
     };
