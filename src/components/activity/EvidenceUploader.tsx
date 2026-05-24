@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useActionState, useEffect, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { Paperclip, X, FileText, Image } from 'lucide-react';
 import { uploadEvidence, deleteEvidence } from '@/actions/evidence';
 import type { EvidenceActionState, EvidenceFileView, DeleteEvidenceState } from '@/actions/evidence';
@@ -43,10 +44,15 @@ function EvidenceDeleteButton({ fileId }: { fileId: string }) {
     null,
   );
   const { toast } = useToast();
+  const router = useRouter();
 
   useEffect(() => {
     if (state?.error) toast(state.error, 'error');
-  }, [state, toast]);
+    else if (state?.success) {
+      toast('Evidencia eliminada', 'success');
+      router.refresh();
+    }
+  }, [state, toast, router]);
 
   return (
     <form action={action}>
@@ -80,6 +86,7 @@ export function EvidenceUploader({
 }: EvidenceUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const router = useRouter();
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [, startTransition] = useTransition();
 
@@ -97,8 +104,9 @@ export function EvidenceUploader({
       toast('Evidencia adjuntada', 'success');
       setPendingFile(null);
       onSuccess?.();
+      router.refresh();
     }
-  }, [state, toast, onSuccess]);
+  }, [state, toast, onSuccess, router]);
 
   function handleFileChange() {
     const file = inputRef.current?.files?.[0];
