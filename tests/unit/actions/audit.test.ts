@@ -960,6 +960,27 @@ describe('calculateYear', () => {
     expect(result.skipped).toBe(1);
     expect(result.errors).toHaveLength(1);
   });
+
+  it('restablece el periodo a open en el lote cuando evaluate lanza error', async () => {
+    makeCalculateYearClient({
+      candidatos: [{ id: VALID_UUID, status: 'open' }],
+    });
+    mocks.findByPeriodIds.mockResolvedValueOnce([]);
+    mocks.transitionStatus.mockResolvedValue(makePeriod('calculating'));
+    mocks.evaluate.mockRejectedValueOnce(new Error('factor missing'));
+
+    const updateMock = vi.fn().mockReturnValue({
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    });
+    mocks.adminFrom.mockReturnValueOnce({ update: updateMock });
+
+    await calculateYear(
+      null,
+      makeFormData({ supplier_id: CALC_YEAR_SUPPLIER_ID, year: '2026' }),
+    );
+
+    expect(updateMock).toHaveBeenCalledWith({ status: 'open' });
+  });
 });
 
 // ── unlockPeriod ─────────────────────────────────────────────────────────────
