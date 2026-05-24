@@ -1,5 +1,5 @@
 -- =============================================================================
--- Migration 021: Función RPC para borrado de emission_results (recalculación)
+-- Migración 021: Función RPC para borrado de emission_results (recalculación)
 --
 -- recalculatePeriod necesita borrar resultados previos de un periodo para
 -- recalcular desde cero, pero el trigger trg_emission_results_no_delete bloquea

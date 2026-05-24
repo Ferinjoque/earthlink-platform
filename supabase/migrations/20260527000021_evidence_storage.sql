@@ -1,5 +1,5 @@
 -- =============================================================================
--- Migration 021: Supabase Storage — bucket de evidencias
+-- Migración 021: Supabase Storage — bucket de evidencias
 -- Archivos opcionales (imagen o PDF) adjuntos a una activity_entry como justificante.
 -- Rutas: evidence/{org_id}/{entry_id}/{uuid}.{ext}
 -- =============================================================================

@@ -316,7 +316,7 @@ CREATE OR REPLACE FUNCTION public.fn_prevent_mutation()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
   RAISE EXCEPTION
-    'Table "%" is append-only. Mutating record "%" is not permitted.',
+    'La tabla "%" es solo-append. No está permitido mutar el registro "%".',
     TG_TABLE_NAME, OLD.id
     USING ERRCODE = 'restrict_violation';
 END;

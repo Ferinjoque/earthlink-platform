@@ -10,7 +10,7 @@ export function traducirMensajeAnomalia(msg: string): string {
   if (!msg) return msg;
   if (msg.includes('sobre la media histórica') || msg.includes('Verificar datos')) return msg;
 
-  // Formato del seed: "X consumption of Y Z in P is Nσ above the Q baseline of B Z. Verify ..."
+  // Detecta mensajes en inglés del seed con formato: "X consumption of Y Z in P is Nσ above the Q baseline of B Z."
   const m1 = msg.match(
     /^(.+?)\s+consumption of ([\d,.]+)\s+(\S+)\s+in\s+(.+?)\s+is\s+([\d.]+)σ\s+above the\s+(.+?)\s+baseline of\s+([\d,.]+)\s+\S+\./i,
   );

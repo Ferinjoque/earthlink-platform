@@ -99,8 +99,8 @@ INSERT INTO public.unit_conversions (from_unit, to_unit, factor, notes) VALUES
 ON CONFLICT (from_unit, to_unit) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
--- 5. Update fn_compute_ef_key trigger to handle water_use / waste
--- (source_type check doesn't apply to these — key is set directly via activity_key)
+-- 5. Actualizar trigger fn_compute_ef_key para manejar water_use / waste
+-- (el chequeo de source_type no aplica a estos tipos — activity_key se asigna directamente)
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_compute_ef_key()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
