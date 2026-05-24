@@ -34,7 +34,11 @@ vi.mock('../../../src/services/EvaluationService', () => ({
   EvaluationService: class { evaluate = vi.fn(); },
 }));
 vi.mock('../../../src/repos/ActivityEntryRepository', () => ({
-  ActivityEntryRepository: class { findByPeriodId = vi.fn().mockResolvedValue([]); findByPeriodIds = vi.fn().mockResolvedValue([]); },
+  ActivityEntryRepository: class {
+    findByPeriodId = vi.fn().mockResolvedValue([]);
+    findByPeriodIds = vi.fn().mockResolvedValue([]);
+    save = vi.fn().mockResolvedValue(undefined);
+  },
 }));
 vi.mock('../../../src/repos/EmissionFactorRepository', () => ({
   EmissionFactorRepository: class {},
@@ -56,6 +60,7 @@ vi.mock('../../../src/lib/xlsx', () => ({
 }));
 
 import { createServerClient, createAdminClient } from '../../../src/services/supabase/server';
+import { parseXlsxBuffer } from '../../../src/lib/xlsx';
 import {
   calculatePeriod,
   lockPeriod,
@@ -623,5 +628,109 @@ describe('deleteEvidence — solo admin puede eliminar archivos ajenos', () => {
     vi.mocked(createAdminClient).mockReturnValue(adminMock as never);
     const result = await deleteEvidence(VALID_UUID, null, new FormData());
     expect(result.success).toBe(true);
+  });
+});
+
+// ── importActivityXlsx — flujo de importación exitoso ────────────────────────
+
+describe('importActivityXlsx — flujo de importación', () => {
+  beforeEach(() => { vi.clearAllMocks(); mockAuthClient(); });
+
+  function makeXlsxFormData(bytes = [0x50, 0x4b, 0x03, 0x04]): FormData {
+    const buf = new Uint8Array(bytes.concat(new Array(100).fill(0)));
+    const file = new File([buf], 'test.xlsx');
+    const fd = new FormData();
+    fd.append('xlsx_file', file);
+    return fd;
+  }
+
+  function makeValidRow() {
+    return {
+      rowIndex: 1,
+      data: {
+        supplier_id: VALID_SUPPLIER,
+        year_month: '2026-01',
+        source_type: 'stationary_combustion' as const,
+        secondary: 'natural_gas',
+        raw_quantity: 100,
+        raw_unit: 'kWh',
+        data_quality: 'measured' as const,
+        notes: undefined,
+      },
+      errors: [] as string[],
+    };
+  }
+
+  it('importa correctamente filas válidas y retorna success', async () => {
+    const client = mockAuthClient();
+
+    // Mock por tabla: supplier access + period lookup
+    let callCount = 0;
+    client.from = vi.fn().mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        // verifySupplierAccess: supplier check
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({ data: { organization_id: VALID_ORG } }),
+        };
+      }
+      if (callCount === 2) {
+        // verifySupplierAccess: membership check
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({ data: { role: 'admin', supplier_id: null } }),
+        };
+      }
+      if (callCount === 3) {
+        // findOrCreatePeriod: existing period check
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({ data: { id: VALID_UUID, status: 'open' } }),
+        };
+      }
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null }),
+      };
+    }) as typeof client.from;
+    vi.mocked(createServerClient).mockResolvedValue(client as never);
+
+    vi.mocked(parseXlsxBuffer).mockResolvedValueOnce([makeValidRow()]);
+
+    const result = await importActivityXlsx(null, makeXlsxFormData());
+    expect(result.success).toBe(true);
+    expect(result.imported).toBe(1);
+    expect(result.skipped).toBe(0);
+  });
+
+  it('retorna error cuando no hay filas válidas en el archivo', async () => {
+    vi.mocked(parseXlsxBuffer).mockResolvedValueOnce([
+      { rowIndex: 1, data: null, errors: ['Formato incorrecto'] },
+    ]);
+
+    const result = await importActivityXlsx(null, makeXlsxFormData());
+    expect(result.error).toMatch(/No se encontraron filas válidas/);
+  });
+
+  it('salta filas con proveedor sin acceso', async () => {
+    const client = mockAuthClient();
+
+    // verifySupplierAccess: supplier not found
+    client.from = vi.fn().mockImplementation(() => ({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null }),
+    })) as typeof client.from;
+    vi.mocked(createServerClient).mockResolvedValue(client as never);
+
+    vi.mocked(parseXlsxBuffer).mockResolvedValueOnce([makeValidRow()]);
+
+    const result = await importActivityXlsx(null, makeXlsxFormData());
+    expect(result.error).toMatch(/proveedor/i);
   });
 });
