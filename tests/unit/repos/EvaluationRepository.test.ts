@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { EvaluationRepository } from '../../../src/repos/EvaluationRepository';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-function makeClient(rows: Array<{ co2e_kg: number; scope: number }> | null, error = null) {
+function makeClient(rows: Array<{ co2e_kg: number; scope: number }> | null, error: { message: string } | null = null) {
   return {
     from: vi.fn().mockReturnValue({
       select: vi.fn().mockReturnValue({

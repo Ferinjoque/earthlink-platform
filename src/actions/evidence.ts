@@ -18,6 +18,15 @@ const EXT_POR_MIME: Record<MimePermitido, string> = {
 
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 
+// Valida los magic bytes del buffer contra el MIME declarado por el cliente
+function validarMagicBytes(buffer: Buffer, mime: MimePermitido): boolean {
+  if (mime === 'image/jpeg') return buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+  if (mime === 'image/png') return buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47;
+  if (mime === 'image/webp') return buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 && buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50;
+  if (mime === 'application/pdf') return buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46;
+  return false;
+}
+
 export interface EvidenceActionState {
   error?: string;
   success?: boolean;
@@ -93,8 +102,11 @@ export async function uploadEvidence(
 
   if (!memCheck) return { error: 'Sin permisos para esta organización' };
 
-  // Leer buffer, calcular sha256
+  // Leer buffer, validar magic bytes y calcular sha256
   const buffer = Buffer.from(await file.arrayBuffer());
+  if (buffer.length < 12 || !validarMagicBytes(buffer, mime)) {
+    return { error: 'El contenido del archivo no coincide con el formato declarado.' };
+  }
   const sha256 = createHash('sha256').update(buffer).digest('hex');
 
   // Evitar duplicados por hash en la misma entry
@@ -303,7 +315,7 @@ export async function deleteEvidence(
       .eq('organization_id', orgId)
       .maybeSingle();
 
-    if (!mem || !['admin', 'consultant'].includes(mem.role)) {
+    if (!mem || mem.role !== 'admin') {
       return { error: 'No tienes permisos para eliminar este archivo' };
     }
   }

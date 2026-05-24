@@ -8,7 +8,7 @@ export class EmissionResultRepository {
     const row = {
       activity_entry_id: result.activityRecordId,
       reporting_period_id: periodId,
-      scope: result.scope === 'scope1' ? 1 : 2,
+      scope: result.scope === 'scope1' ? 1 : result.scope === 'scope2' ? 2 : null,
       co2e_kg: result.co2eKg,
       factor_used: factor.factorKgCo2ePerUnit,
       factor_unit: factor.standardUnit,
@@ -29,7 +29,7 @@ export class EmissionResultRepository {
     const rows = results.map(({ result, periodId, factor }) => ({
       activity_entry_id: result.activityRecordId,
       reporting_period_id: periodId,
-      scope: result.scope === 'scope1' ? 1 : 2,
+      scope: result.scope === 'scope1' ? 1 : result.scope === 'scope2' ? 2 : null,
       co2e_kg: result.co2eKg,
       factor_used: factor.factorKgCo2ePerUnit,
       factor_unit: factor.standardUnit,

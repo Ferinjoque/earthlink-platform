@@ -30,7 +30,7 @@ export class EvaluationService {
 
   async evaluate(periodId: string): Promise<EvaluationOutcome> {
     const period = await this.reportingPeriodRepo.findById(periodId);
-    if (!period) throw new Error(`Reporting period "${periodId}" not found`);
+    if (!period) throw new Error(`Periodo de reporte "${periodId}" no encontrado`);
 
     const [entries, factors, conversions] = await Promise.all([
       this.activityEntryRepo.findByPeriodId(periodId),
@@ -51,18 +51,18 @@ export class EvaluationService {
       if (NO_GHG_KINDS.has(record.activity.kind)) {
         const calcResult = calculate(record, factors, conversions);
         if (calcResult.ok) noGhgResults.push(calcResult.value);
-        else errors.push({ entryId: entry.id, message: `Calc error: ${calcResult.error.type}` });
+        else errors.push({ entryId: entry.id, message: `Error de cálculo: ${calcResult.error.type}` });
         continue;
       }
 
       const factorResult = _internals.resolveFactor(record.activity, factors);
       if (!factorResult.ok) {
-        errors.push({ entryId: entry.id, message: `Missing factor: ${factorResult.error.type}` });
+        errors.push({ entryId: entry.id, message: `Factor faltante: ${factorResult.error.type}` });
         continue;
       }
       const calcResult = calculate(record, factors, conversions);
       if (!calcResult.ok) {
-        errors.push({ entryId: entry.id, message: `Calc error: ${calcResult.error.type}` });
+        errors.push({ entryId: entry.id, message: `Error de cálculo: ${calcResult.error.type}` });
         continue;
       }
       successes.push({ result: calcResult.value, periodId, factor: factorResult.value });

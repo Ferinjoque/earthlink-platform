@@ -56,7 +56,7 @@ export class AnomalyService {
 
       const values = baseline.map((h) => h.rawQuantity);
       const z = AnomalyService.zScore(entry.rawQuantity, values);
-      if (z === null || z < AnomalyService.Z_THRESHOLD_LOW) continue;
+      if (z === null || Math.abs(z) < AnomalyService.Z_THRESHOLD_LOW) continue;
 
       const mean = AnomalyService.mean(values);
       const stddev = AnomalyService.stddev(values, mean);
@@ -85,7 +85,7 @@ export class AnomalyService {
         historicalMean: mean,
         historicalStddev: stddev,
         severity,
-        message: `${sourceLabel}${secondaryLabel}: ${entry.rawQuantity.toLocaleString('es', { maximumFractionDigits: 2 })} ${entry.rawUnit} es ${z.toFixed(2)}σ ${direction} la media histórica (${mean.toFixed(2)} ${entry.rawUnit}). Verificar datos.`,
+        message: `${sourceLabel}${secondaryLabel}: ${entry.rawQuantity.toLocaleString('es', { maximumFractionDigits: 2 })} ${entry.rawUnit} es ${Math.abs(z).toFixed(2)}σ ${direction} la media histórica (${mean.toFixed(2)} ${entry.rawUnit}). Verificar datos.`,
       });
     }
 
@@ -126,7 +126,7 @@ export class AnomalyService {
     const m = AnomalyService.mean(population);
     const s = AnomalyService.stddev(population, m);
     if (s === 0) return null;
-    return Math.abs(value - m) / s;
+    return (value - m) / s;
   }
 
   private static mean(values: readonly number[]): number {
@@ -142,8 +142,9 @@ export class AnomalyService {
   }
 
   private static severityFor(z: number): DetectedAnomaly['severity'] {
-    if (z >= AnomalyService.Z_THRESHOLD_HIGH) return 'high';
-    if (z >= AnomalyService.Z_THRESHOLD_MEDIUM) return 'medium';
+    const absZ = Math.abs(z);
+    if (absZ >= AnomalyService.Z_THRESHOLD_HIGH) return 'high';
+    if (absZ >= AnomalyService.Z_THRESHOLD_MEDIUM) return 'medium';
     return 'low';
   }
 

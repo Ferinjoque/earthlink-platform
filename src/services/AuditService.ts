@@ -13,8 +13,8 @@ export class AuditService {
 
   async lock(periodId: string, userId: string): Promise<ReportingPeriod> {
     const period = await this.reportingPeriodRepo.findById(periodId);
-    if (!period) throw new Error(`Reporting period "${periodId}" not found`);
-    if (period.isLocked()) throw new Error(`Reporting period "${periodId}" is already locked`);
+    if (!period) throw new Error(`Periodo de reporte "${periodId}" no encontrado`);
+    if (period.isLocked()) throw new Error(`El periodo de reporte "${periodId}" ya está bloqueado`);
 
     const locked = await this.reportingPeriodRepo.updateStatus(periodId, 'locked');
     await this.auditLogRepo.log('LOCK', 'reporting_periods', periodId, userId, {
@@ -30,8 +30,8 @@ export class AuditService {
     userId: string,
   ): Promise<ReportingPeriod> {
     const period = await this.reportingPeriodRepo.findById(periodId);
-    if (!period) throw new Error(`Reporting period "${periodId}" not found`);
-    if (period.isLocked()) throw new Error(`Reporting period "${periodId}" is locked`);
+    if (!period) throw new Error(`Periodo de reporte "${periodId}" no encontrado`);
+    if (period.isLocked()) throw new Error(`El periodo de reporte "${periodId}" está bloqueado`);
 
     const updated = await this.reportingPeriodRepo.updateStatus(periodId, targetStatus);
     await this.auditLogRepo.log('STATUS_CHANGE', 'reporting_periods', periodId, userId, {

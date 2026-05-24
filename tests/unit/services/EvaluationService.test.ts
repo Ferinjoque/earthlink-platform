@@ -115,7 +115,7 @@ function makeService(overrides = {}) {
 describe('EvaluationService.evaluate()', () => {
   it('throws when period not found', async () => {
     const { service } = makeService({ period: null });
-    await expect(service.evaluate('period-001')).rejects.toThrow('not found');
+    await expect(service.evaluate('period-001')).rejects.toThrow('no encontrado');
   });
 
   it('returns zero totals for empty period', async () => {

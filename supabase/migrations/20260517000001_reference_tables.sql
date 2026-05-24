@@ -1,6 +1,6 @@
 -- =============================================================================
--- Migration 001: Reference / Lookup Tables (5 tables)
--- GHG Protocol Scope 1 & 2 master data
+-- Migración 001: Tablas de referencia / lookup (5 tablas)
+-- Datos maestros GHG Protocol Alcance 1 y 2
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------

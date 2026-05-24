@@ -738,6 +738,7 @@ export type Database = {
     Functions: {
       fn_is_org_member: { Args: { p_org_id: string }; Returns: boolean };
       fn_user_role_in_org: { Args: { p_org_id: string }; Returns: string };
+      fn_admin_delete_period_results: { Args: { p_period_id: string }; Returns: number };
     };
     Enums: {
       [_ in never]: never;

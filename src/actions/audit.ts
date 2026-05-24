@@ -282,8 +282,7 @@ export async function recalculatePeriod(
   // emission_results es append-only (trigger bloquea DELETE directo).
   // fn_admin_delete_period_results usa set_config local para autorizar el borrado.
   const adminClient = createAdminClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: deleteError } = await (adminClient as any).rpc(
+  const { error: deleteError } = await adminClient.rpc(
     'fn_admin_delete_period_results',
     { p_period_id: periodId },
   );
@@ -455,7 +454,7 @@ export async function calculateYear(
           );
         }
       } catch {
-        
+        // Detección de anomalías no crítica — no bloquear el cálculo del lote
       }
 
       await auditSvc.transitionStatus(p.id, 'under_review', user.id);
