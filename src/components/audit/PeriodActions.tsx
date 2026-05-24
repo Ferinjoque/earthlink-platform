@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { calculatePeriod, lockPeriod } from '@/actions/audit';
 import type { AuditActionState } from '@/actions/audit';
 import type { PeriodStatus } from '@/domain/ReportingPeriod';
@@ -42,24 +43,10 @@ function MensajeError({ msg }: { msg: string }) {
   );
 }
 
-function MensajeExito({ msg }: { msg: string }) {
-  return (
-    <span
-      style={{
-        display: 'block',
-        marginTop: 'var(--space-2)',
-        fontSize: 'var(--text-xs)',
-        color: 'var(--color-signal-ok)',
-        fontFamily: 'var(--font-mono)',
-      }}
-    >
-      {msg}
-    </span>
-  );
-}
 
 export function PeriodActions({ periodId, status }: PeriodActionsProps) {
   const { toast } = useToast();
+  const router = useRouter();
   const [calcState, calcAction, calcPending] = useActionState<AuditActionState | null, FormData>(
     calculatePeriod,
     null,
@@ -70,10 +57,19 @@ export function PeriodActions({ periodId, status }: PeriodActionsProps) {
   );
 
   useEffect(() => {
+    if (calcState?.success) {
+      const tco2e = calcState.totals ? (calcState.totals.totalCo2eKg / 1000).toFixed(3) : '—';
+      toast(`Listo — ${tco2e} tCO₂e calculados. Pendiente de revisión.`, 'success');
+      router.refresh();
+    }
+  }, [calcState?.success, toast, router]);
+
+  useEffect(() => {
     if (lockState?.success) {
       toast('Periodo bloqueado — los datos son ahora inmutables.', 'success');
+      router.refresh();
     }
-  }, [lockState?.success, toast]);
+  }, [lockState?.success, toast, router]);
 
   if (status === 'open') {
     return (
@@ -96,11 +92,6 @@ export function PeriodActions({ periodId, status }: PeriodActionsProps) {
           </button>
         </form>
         {calcState?.error && <MensajeError msg={calcState.error} />}
-        {calcState?.success && calcState.totals && (
-          <MensajeExito
-            msg={`Listo — ${(calcState.totals.totalCo2eKg / 1000).toFixed(3)} tCO₂e en ${calcState.totals.entryCount} registros`}
-          />
-        )}
       </div>
     );
   }
