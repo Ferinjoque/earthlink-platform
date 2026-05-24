@@ -47,45 +47,61 @@ function mockSupabaseWithUser(user: { id: string } | null) {
   return mockClient;
 }
 
-// Re-implementación para testear la lógica exacta de src/proxy.ts
+// Reimplementación de la nueva lógica URL-based de safeNextPath en src/proxy.ts
 function safeNextPath(raw: string): string | null {
-  if (raw.startsWith('/') && !raw.startsWith('//') && !raw.startsWith('/\\')) {
-    return raw;
+  if (!raw.startsWith('/')) return null;
+  try {
+    const url = new URL(raw, 'http://localhost');
+    if (url.host !== 'localhost') return null;
+    const safe = url.pathname + url.search;
+    return safe.startsWith('/') ? safe : null;
+  } catch {
+    return null;
   }
-  return null;
 }
 
-describe('safeNextPath — open redirect prevention', () => {
-  it('accepts a normal absolute path', () => {
+describe('safeNextPath — prevención de open redirect', () => {
+  it('acepta ruta absoluta normal', () => {
     expect(safeNextPath('/dashboard')).toBe('/dashboard');
   });
 
-  it('accepts path with query string', () => {
+  it('acepta ruta con query string', () => {
     expect(safeNextPath('/audit?status=open')).toBe('/audit?status=open');
   });
 
-  it('rejects protocol-relative URL (//evil.com)', () => {
+  it('rechaza URL protocol-relative (//evil.com)', () => {
     expect(safeNextPath('//evil.com')).toBeNull();
   });
 
-  it('rejects backslash redirect (/\\evil.com)', () => {
+  it('rechaza redirect con barra invertida (/\\evil.com)', () => {
     expect(safeNextPath('/\\evil.com')).toBeNull();
   });
 
-  it('rejects fully qualified URL', () => {
+  it('rechaza URL absoluta completa', () => {
     expect(safeNextPath('https://evil.com')).toBeNull();
   });
 
-  it('rejects empty string', () => {
+  it('rechaza cadena vacía', () => {
     expect(safeNextPath('')).toBeNull();
   });
 
-  it('rejects relative path without leading slash', () => {
+  it('rechaza ruta relativa sin barra inicial', () => {
     expect(safeNextPath('dashboard')).toBeNull();
   });
 
-  it('accepts deeply nested path', () => {
+  it('acepta ruta profunda anidada', () => {
     expect(safeNextPath('/suppliers/abc/periods')).toBe('/suppliers/abc/periods');
+  });
+
+  it('acepta ruta con backslash codificado (/%5C) como path válido', () => {
+    // /%5C = backslash codificado → se mantiene como path component, host sigue siendo localhost
+    const result = safeNextPath('/%5Cevil.com');
+    expect(result).toBe('/%5Cevil.com');
+  });
+
+  it('rechaza URL con esquema http externo', () => {
+    const result = safeNextPath('http://evil.com/steal');
+    expect(result).toBeNull();
   });
 });
 

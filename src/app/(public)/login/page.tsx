@@ -19,14 +19,14 @@ const PILARES = [
   { icono: <CheckCircle size={14} />, texto: 'Motor de cálculo verificado' },
 ];
 
-/* ─── Hidden next-redirect input (must be in Suspense for SSR) ──────── */
+/* ─── Input oculto para redirección post-login (Suspense necesario para SSR) ─ */
 function NextRedirectInput() {
   const searchParams = useSearchParams();
   const next = searchParams.get('next') ?? '';
   return next ? <input type="hidden" name="next" value={next} /> : null;
 }
 
-/* ─── Page ─────────────────────────────────────────────────────────── */
+/* ─── Página ───────────────────────────────────────────────────────── */
 export default function LoginPage() {
   const [state, action, isPending] = useActionState<State, FormData>(signIn, undefined);
 

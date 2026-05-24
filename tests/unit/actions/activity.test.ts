@@ -324,6 +324,22 @@ describe('createActivityEntry', () => {
     const result = await createActivityEntry(null, fd);
     expect(result.error).toMatch(/permisos/i);
   });
+
+  it('invalida la caché de /dashboard al crear entrada exitosa', async () => {
+    const { revalidatePath } = await import('next/cache');
+    mockAuthenticatedClient();
+    const fd = makeFormData({
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
+      source_type: 'stationary_combustion',
+      secondary: 'natural_gas',
+      raw_quantity: '100',
+      raw_unit: 'm3_ng',
+    });
+    const result = await createActivityEntry(null, fd);
+    expect(result.success).toBe(true);
+    expect(revalidatePath).toHaveBeenCalledWith('/dashboard');
+  });
 });
 
 // ── importActivityCsv ─────────────────────────────────────────────────────────

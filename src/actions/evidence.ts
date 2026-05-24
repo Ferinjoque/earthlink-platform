@@ -235,6 +235,7 @@ export async function getEvidenceFiles(entryId: string): Promise<EvidenceFileVie
 const UUID_BATCH_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const MAX_BATCH_EVIDENCIA = 200;
+const MAX_STORAGE_PATHS = 500;
 
 export async function getEvidenceFilesBatch(
   entryIds: string[],
@@ -291,7 +292,8 @@ export async function getEvidenceFilesBatch(
   if (!rows?.length) return new Map();
 
   const admin = createAdminClient();
-  const paths = rows.map((r) => r.storage_path);
+  // Limitar rutas al máximo permitido para prevenir DoS en la API de Storage
+  const paths = rows.map((r) => r.storage_path).slice(0, MAX_STORAGE_PATHS);
   const { data: signedList } = await admin.storage.from('evidence').createSignedUrls(paths, 3600);
   const signedMap = new Map((signedList ?? []).map((s) => [s.path, s.signedUrl]));
 
@@ -345,32 +347,34 @@ export async function deleteEvidence(
 
   if (!file) return { error: 'Archivo no encontrado' };
 
-  // Solo el uploader o un admin de la org puede borrar
-  if (file.uploaded_by !== user.id) {
-    type EntryJoin = {
-      reporting_periods: {
-        suppliers: { organization_id: string } | null;
-      } | null;
-    };
-    const { data: entryData } = await supabase
-      .from('activity_entries')
-      .select('reporting_periods(suppliers(organization_id))')
-      .eq('id', file.activity_entry_id)
-      .maybeSingle();
+  // Verificar siempre que el usuario pertenece a la org — incluso si es el uploader,
+  // porque su membresía puede haber sido revocada o degradada desde que subió el archivo.
+  type EntryJoin = {
+    reporting_periods: {
+      suppliers: { organization_id: string } | null;
+    } | null;
+  };
+  const { data: entryData } = await supabase
+    .from('activity_entries')
+    .select('reporting_periods(suppliers(organization_id))')
+    .eq('id', file.activity_entry_id)
+    .maybeSingle();
 
-    const orgId = (entryData as EntryJoin | null)?.reporting_periods?.suppliers?.organization_id;
-    if (!orgId) return { error: 'Sin permisos' };
+  const orgId = (entryData as EntryJoin | null)?.reporting_periods?.suppliers?.organization_id;
+  if (!orgId) return { error: 'Sin permisos' };
 
-    const { data: mem } = await supabase
-      .from('memberships')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('organization_id', orgId)
-      .maybeSingle();
+  const { data: mem } = await supabase
+    .from('memberships')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('organization_id', orgId)
+    .maybeSingle();
 
-    if (!mem || mem.role !== 'admin') {
-      return { error: 'No tienes permisos para eliminar este archivo' };
-    }
+  if (!mem) return { error: 'Sin permisos' };
+
+  // El uploader puede borrar sus propios archivos; solo admin puede borrar cualquier archivo
+  if (file.uploaded_by !== user.id && mem.role !== 'admin') {
+    return { error: 'No tienes permisos para eliminar este archivo' };
   }
 
   // Borrar registro BD primero: si falla, el archivo en Storage sigue intacto (recuperable)

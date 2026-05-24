@@ -513,9 +513,7 @@ export async function calculateYear(
     } catch (err) {
       // Restablecer a 'open' para que el periodo pueda reintentarse
       await adminClientYear.from('reporting_periods').update({ status: 'open' }).eq('id', p.id);
-      errores.push(
-        `Periodo ${p.id}: ${err instanceof Error ? err.message : 'error desconocido'}`,
-      );
+      errores.push(`Periodo ${calculated + skipped + 1} de ${candidatos.length}: error al calcular`);
       skipped = skipped + 1;
     }
   }

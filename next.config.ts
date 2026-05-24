@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  // Strict compilation — treat warnings as errors in CI
+  // Compilación estricta — errores de TypeScript bloquean el build
   typescript: {
     ignoreBuildErrors: false,
   },

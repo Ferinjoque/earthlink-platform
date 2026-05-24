@@ -598,8 +598,8 @@ describe('deleteEvidence — solo admin puede eliminar archivos ajenos', () => {
     expect(result.error).toMatch(/permisos/i);
   });
 
-  it('permite al propio uploader borrar su archivo (sin verificar rol)', async () => {
-    // El caller y uploader son el mismo — no entra al bloque de verificación de rol
+  it('permite al propio uploader borrar su archivo si mantiene membresía activa', async () => {
+    // El caller y uploader son el mismo Y tiene membresía activa → puede borrar
     let callCount = 0;
     const callerId = VALID_UUID;
     const adminMock = {
@@ -610,6 +610,7 @@ describe('deleteEvidence — solo admin puede eliminar archivos ajenos', () => {
       from: vi.fn().mockImplementation(() => {
         callCount++;
         if (callCount === 1) {
+          // SELECT evidence_files
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
@@ -618,7 +619,25 @@ describe('deleteEvidence — solo admin puede eliminar archivos ajenos', () => {
             }),
           };
         }
-        // BD delete
+        if (callCount === 2) {
+          // SELECT activity_entries → org info
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { reporting_periods: { suppliers: { organization_id: VALID_ORG } } },
+            }),
+          };
+        }
+        if (callCount === 3) {
+          // SELECT memberships → rol válido
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({ data: { role: 'consultant' } }),
+          };
+        }
+        // DELETE evidence_files
         return {
           delete: vi.fn().mockReturnThis(),
           eq: vi.fn().mockResolvedValue({ error: null }),
