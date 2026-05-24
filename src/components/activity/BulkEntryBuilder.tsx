@@ -1,8 +1,9 @@
 'use client';
 
-import { useActionState, useState, useEffect, useRef } from 'react';
+import { useActionState, useState, useEffect, useRef, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import { importActivityBulk } from '@/actions/activity';
+import { uploadEvidence } from '@/actions/evidence';
 import type { CsvImportState } from '@/actions/activity';
 import { EvidenceUploader } from '@/components/activity/EvidenceUploader';
 import type { EmissionSourceType } from '@/types/database';
@@ -909,6 +910,9 @@ export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuil
   ]);
   const [pendingDelete, setPendingDelete] = useState<number | null>(null);
   const [evidenceStep, setEvidenceStep] = useState<{ entryIds: string[] } | null>(null);
+  // Archivos seleccionados por el usuario, listos para subir al presionar Listo
+  const [pendingEvidences, setPendingEvidences] = useState<Map<string, File>>(new Map());
+  const [isUploadingEvidence, startUploadTransition] = useTransition();
   const [state, formAction, isPending] = useActionState<CsvImportState | null, FormData>(
     importActivityBulk,
     null,
@@ -935,8 +939,33 @@ export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuil
     }
   }, [state?.submittedAt]);
 
-  function cerrarEvidenceStep() {
-    setEvidenceStep(null);
+  function handlePendingFileChange(entryId: string, file: File | null) {
+    setPendingEvidences((prev) => {
+      const next = new Map(prev);
+      if (file) next.set(entryId, file);
+      else next.delete(entryId);
+      return next;
+    });
+  }
+
+  function handleListo() {
+    startUploadTransition(async () => {
+      // Subir todos los archivos en paralelo
+      const uploads = Array.from(pendingEvidences.entries()).map(([eid, file]) => {
+        const fd = new FormData();
+        fd.append('evidence', file);
+        return uploadEvidence(eid, null, fd);
+      });
+      const resultados = await Promise.all(uploads);
+      const errores = resultados.filter((r) => r?.error).map((r) => r!.error!);
+      if (errores.length > 0) {
+        toast(`Error al subir ${errores.length} archivo${errores.length !== 1 ? 's' : ''}`, 'error');
+      } else if (pendingEvidences.size > 0) {
+        toast(`${pendingEvidences.size} evidencia${pendingEvidences.size !== 1 ? 's' : ''} adjuntada${pendingEvidences.size !== 1 ? 's' : ''}`, 'success');
+      }
+      setPendingEvidences(new Map());
+      setEvidenceStep(null);
+    });
   }
 
   function addRow() {
@@ -1077,28 +1106,56 @@ export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuil
               >
                 Registro {idx + 1}
               </span>
-              <EvidenceUploader entryId={entryId} files={[]} />
+              <EvidenceUploader
+                entryId={entryId}
+                files={[]}
+                onPendingFileChange={(file) => handlePendingFileChange(entryId, file)}
+              />
             </div>
           ))}
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
+          {pendingEvidences.size > 0 && !isUploadingEvidence && (
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)' }}>
+              {pendingEvidences.size} archivo{pendingEvidences.size !== 1 ? 's' : ''} listo{pendingEvidences.size !== 1 ? 's' : ''} para subir
+            </span>
+          )}
           <button
             type="button"
-            onClick={cerrarEvidenceStep}
+            onClick={handleListo}
+            disabled={isUploadingEvidence}
             style={{
               padding: 'var(--space-2) var(--space-6)',
-              background: 'var(--color-accent)',
+              background: isUploadingEvidence ? 'var(--color-ink-3)' : 'var(--color-accent)',
               color: 'white',
               border: 'none',
               borderRadius: 'var(--radius-md)',
               fontSize: 'var(--text-sm)',
               fontFamily: 'var(--font-sans)',
               fontWeight: 500,
-              cursor: 'pointer',
+              cursor: isUploadingEvidence ? 'not-allowed' : 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 'var(--space-2)',
             }}
           >
-            Listo
+            {isUploadingEvidence ? (
+              <>
+                <span
+                  style={{
+                    width: '12px',
+                    height: '12px',
+                    border: '2px solid rgba(255,255,255,0.3)',
+                    borderTopColor: 'white',
+                    borderRadius: '50%',
+                    display: 'inline-block',
+                    animation: 'ringSpin 0.7s linear infinite',
+                  }}
+                />
+                Subiendo…
+              </>
+            ) : 'Listo'}
           </button>
         </div>
       </div>

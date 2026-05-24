@@ -11,6 +11,12 @@ interface EvidenceUploaderProps {
   files: EvidenceFileView[];
   onSuccess?: () => void;
   readOnly?: boolean;
+  /**
+   * Modo batch: cuando se provee esta función, el componente solo gestiona
+   * la selección y preview del archivo. La subida la controla el padre.
+   * Llama con null para indicar cancelación/limpieza.
+   */
+  onPendingFileChange?: (file: File | null) => void;
 }
 
 function iconoPorMime(mime: string) {
@@ -65,19 +71,24 @@ function EvidenceDeleteButton({ fileId }: { fileId: string }) {
   );
 }
 
-export function EvidenceUploader({ entryId, files, onSuccess, readOnly = false }: EvidenceUploaderProps) {
+export function EvidenceUploader({
+  entryId,
+  files,
+  onSuccess,
+  readOnly = false,
+  onPendingFileChange,
+}: EvidenceUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [isTransitioning, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
+  // Modo standalone: sube directamente con useActionState
   const uploadWithId = uploadEvidence.bind(null, entryId);
   const [state, action, isActionPending] = useActionState<EvidenceActionState | null, FormData>(
     uploadWithId,
     null,
   );
-
-  const isPending = isActionPending || isTransitioning;
 
   useEffect(() => {
     if (state?.error) {
@@ -93,25 +104,28 @@ export function EvidenceUploader({ entryId, files, onSuccess, readOnly = false }
     const file = inputRef.current?.files?.[0];
     if (!file) return;
     setPendingFile(file);
+    // En modo batch: notificar al padre, no subir aquí
+    onPendingFileChange?.(file);
   }
 
-  function handleConfirmUpload() {
+  function handleStandaloneUpload() {
     if (!pendingFile) return;
     const fd = new FormData();
     fd.append('evidence', pendingFile);
-    startTransition(() => {
-      action(fd);
-    });
+    startTransition(() => { action(fd); });
   }
 
   function handleCancel() {
     setPendingFile(null);
     if (inputRef.current) inputRef.current.value = '';
+    onPendingFileChange?.(null);
   }
+
+  const isBatchMode = typeof onPendingFileChange !== 'undefined';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
-      {/* Lista de archivos adjuntos */}
+      {/* Lista de archivos ya subidos */}
       {files.length > 0 && (
         <ul
           style={{
@@ -176,7 +190,7 @@ export function EvidenceUploader({ entryId, files, onSuccess, readOnly = false }
         </ul>
       )}
 
-      {/* Input oculto — siempre presente para poder resetearlo */}
+      {/* Input de archivo oculto */}
       {!readOnly && (
         <input
           ref={inputRef}
@@ -185,14 +199,13 @@ export function EvidenceUploader({ entryId, files, onSuccess, readOnly = false }
           accept="image/jpeg,image/png,image/webp,application/pdf"
           style={{ display: 'none' }}
           onChange={handleFileChange}
-          disabled={isPending}
+          disabled={isActionPending}
         />
       )}
 
-      {/* Vista según estado: previsualización o botón de adjuntar */}
+      {/* Vista: preview del archivo seleccionado o botón para seleccionar */}
       {!readOnly && (
         pendingFile ? (
-          /* Previsualización del archivo seleccionado */
           <div
             style={{
               display: 'flex',
@@ -222,26 +235,29 @@ export function EvidenceUploader({ entryId, files, onSuccess, readOnly = false }
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', flexShrink: 0 }}>
               {formatBytes(pendingFile.size)}
             </span>
-            <button
-              type="button"
-              onClick={handleConfirmUpload}
-              disabled={isPending}
-              style={{
-                fontSize: 'var(--text-xs)',
-                fontWeight: 600,
-                color: 'var(--color-surface-0)',
-                background: isPending ? 'var(--color-ink-3)' : 'var(--color-accent)',
-                border: 'none',
-                borderRadius: 'var(--radius-sm)',
-                padding: 'var(--space-1) var(--space-2)',
-                cursor: isPending ? 'not-allowed' : 'pointer',
-                fontFamily: 'var(--font-sans)',
-                flexShrink: 0,
-              }}
-            >
-              {isPending ? 'Subiendo…' : 'Subir'}
-            </button>
-            {!isPending && (
+            {/* En modo standalone: botón Subir explícito */}
+            {!isBatchMode && (
+              <button
+                type="button"
+                onClick={handleStandaloneUpload}
+                disabled={isActionPending}
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  fontWeight: 600,
+                  color: 'var(--color-surface-0)',
+                  background: isActionPending ? 'var(--color-ink-3)' : 'var(--color-accent)',
+                  border: 'none',
+                  borderRadius: 'var(--radius-sm)',
+                  padding: 'var(--space-1) var(--space-2)',
+                  cursor: isActionPending ? 'not-allowed' : 'pointer',
+                  fontFamily: 'var(--font-sans)',
+                  flexShrink: 0,
+                }}
+              >
+                {isActionPending ? 'Subiendo…' : 'Subir'}
+              </button>
+            )}
+            {!isActionPending && (
               <button
                 type="button"
                 onClick={handleCancel}
@@ -255,18 +271,17 @@ export function EvidenceUploader({ entryId, files, onSuccess, readOnly = false }
                   alignItems: 'center',
                   flexShrink: 0,
                 }}
-                title="Cancelar"
+                title="Quitar archivo"
               >
                 <X size={12} aria-hidden="true" />
               </button>
             )}
           </div>
         ) : (
-          /* Botón para seleccionar archivo */
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            disabled={isPending}
+            disabled={isActionPending}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
