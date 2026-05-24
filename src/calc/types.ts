@@ -1,6 +1,6 @@
 /**
- * Core types for the FP calculation engine.
- * All types are readonly — mutation is never allowed inside calc/.
+ * Tipos base del motor de cálculo FP.
+ * Todos los tipos son readonly — la mutación nunca está permitida dentro de calc/.
  */
 
 
@@ -34,12 +34,12 @@ export type ActivityKind =
   | { readonly kind: 'water_use'; readonly subtype: WaterSubtype }
   | { readonly kind: 'waste'; readonly subtype: WasteSubtype };
 
-// Scope 'none' = consumption tracked but no direct GHG (water, waste recycled/composted)
+// Alcance 'none' = consumo rastreado pero sin emisión GHG directa (agua, residuos reciclados/compostados)
 export type GhgScope = 'scope1' | 'scope2' | 'none';
 
 
 export type Unit =
-  // Energy — standard for gas & electricity
+  // Energía — estándar para gas y electricidad
   | 'kWh'
   | 'MWh'
   | 'GJ'
@@ -50,14 +50,14 @@ export type Unit =
   | 'MBtu'
   | 'BTU'
   | 'kBtu'       // Mil BTU — gas natural / combustibles en EE.UU. (GRESB)
-  // Natural gas volume
+  // Volumen de gas natural
   | 'm3_ng'
   | 'ft3_ng'
-  // Liquid fuels — standard for diesel, LPG, gasoline, fuel oil
+  // Combustibles líquidos — estándar para diesel, GLP, gasolina, fuel oil
   | 'L'
   | 'gallon'
   | 'imp_gallon'
-  // Mass — standard for refrigerants
+  // Masa — estándar para refrigerantes
   | 'kg'
   | 'tonne'
   | 'lb'

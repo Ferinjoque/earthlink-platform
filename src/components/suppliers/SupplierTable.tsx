@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, useState, useEffect, useActionState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { Plus, Pencil, Archive, X, Check, Search } from 'lucide-react';
 import {
@@ -426,7 +427,7 @@ export function SupplierTable({ suppliers, organizationId, organizations }: Prop
         >
           <Search size={14} style={{ color: 'var(--color-ink-3)', flexShrink: 0 }} />
           <input
-            type="search"
+            type="text"
             placeholder="Buscar por nombre o categoría…"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
@@ -494,14 +495,25 @@ export function SupplierTable({ suppliers, organizationId, organizations }: Prop
         }}
       >
         {/* Form crear inline */}
-        {mostrarFormCrear && (
-          <FormProveedor
-            organizationId={organizationId}
-            {...(organizations ? { organizations } : {})}
-            mode="create"
-            onCancel={() => setMostrarFormCrear(false)}
-          />
-        )}
+        <AnimatePresence>
+          {mostrarFormCrear && (
+            <motion.div
+              key="form-crear"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              style={{ overflow: 'hidden' }}
+            >
+              <FormProveedor
+                organizationId={organizationId}
+                {...(organizations ? { organizations } : {})}
+                mode="create"
+                onCancel={() => setMostrarFormCrear(false)}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <style>{`.supplier-row:hover td { background: var(--color-surface-2) !important; }`}</style>
 
@@ -641,25 +653,57 @@ export function SupplierTable({ suppliers, organizationId, organizations }: Prop
                       </div>
                     </td>
                   </tr>
-                  {editandoId === s.id && (
-                    <tr>
-                      <td colSpan={5} style={{ padding: 0 }}>
-                        <FormProveedor
-                          organizationId={s.organization_id}
-                          initial={s}
-                          mode="edit"
-                          onCancel={() => setEditandoId(null)}
-                        />
-                      </td>
-                    </tr>
-                  )}
-                  {archivandoId === s.id && (
-                    <tr>
-                      <td colSpan={5} style={{ padding: 0 }}>
-                        <ConfirmacionArchivo supplier={s} onCancel={() => setArchivandoId(null)} />
-                      </td>
-                    </tr>
-                  )}
+                  <AnimatePresence>
+                    {editandoId === s.id && (
+                      <motion.tr
+                        key={`edit-${s.id}`}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.18 }}
+                      >
+                        <td colSpan={5} style={{ padding: 0 }}>
+                          <motion.div
+                            initial={{ height: 0 }}
+                            animate={{ height: 'auto' }}
+                            exit={{ height: 0 }}
+                            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                            style={{ overflow: 'hidden' }}
+                          >
+                            <FormProveedor
+                              organizationId={s.organization_id}
+                              initial={s}
+                              mode="edit"
+                              onCancel={() => setEditandoId(null)}
+                            />
+                          </motion.div>
+                        </td>
+                      </motion.tr>
+                    )}
+                  </AnimatePresence>
+                  <AnimatePresence>
+                    {archivandoId === s.id && (
+                      <motion.tr
+                        key={`archive-${s.id}`}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.18 }}
+                      >
+                        <td colSpan={5} style={{ padding: 0 }}>
+                          <motion.div
+                            initial={{ height: 0 }}
+                            animate={{ height: 'auto' }}
+                            exit={{ height: 0 }}
+                            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                            style={{ overflow: 'hidden' }}
+                          >
+                            <ConfirmacionArchivo supplier={s} onCancel={() => setArchivandoId(null)} />
+                          </motion.div>
+                        </td>
+                      </motion.tr>
+                    )}
+                  </AnimatePresence>
                 </Fragment>
               ))}
             </tbody>

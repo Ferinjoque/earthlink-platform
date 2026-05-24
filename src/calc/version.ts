@@ -1,5 +1,5 @@
 /**
- * Engine version — bump manually on any behavioral change.
- * Stored in every EmissionResult row for provenance.
+ * Versión del motor — incrementar manualmente ante cualquier cambio de comportamiento.
+ * Se almacena en cada fila EmissionResult para trazabilidad.
  */
 export const ENGINE_VERSION = '1.0.0' as const;

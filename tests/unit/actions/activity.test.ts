@@ -44,7 +44,13 @@ vi.mock('../../../src/services/AnomalyService', () => ({
 }));
 
 import { createServerClient } from '../../../src/services/supabase/server';
-import { createActivityEntry, importActivityCsv } from '../../../src/actions/activity';
+import {
+  createActivityEntry,
+  importActivityCsv,
+  importActivityBulk,
+  voidActivityEntry,
+  deleteActivityEntry,
+} from '../../../src/actions/activity';
 
 type MockClient = Awaited<ReturnType<typeof createServerClient>>;
 
@@ -638,6 +644,102 @@ describe('importActivityCsv — ownership check', () => {
     expect(result.success).toBe(true);
     expect(result.imported).toBe(0);
     expect(result.skipped).toBe(1);
+  });
+});
+
+// ── importActivityBulk — validación de tamaño ────────────────────────────────
+
+describe('importActivityBulk — límite de tamaño', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns error when not authenticated', async () => {
+    mockUnauthenticatedClient();
+    const fd = makeFormData({ json_entries: JSON.stringify([]) });
+    const result = await importActivityBulk(null, fd);
+    expect(result.error).toMatch(/autenticado/i);
+  });
+
+  it('returns error when json_entries is missing', async () => {
+    mockAuthenticatedClient();
+    const fd = makeFormData({});
+    const result = await importActivityBulk(null, fd);
+    expect(result.error).toMatch(/datos/i);
+  });
+
+  it('returns error when JSON payload exceeds 500 KB', async () => {
+    mockAuthenticatedClient();
+    const bigJson = 'x'.repeat(501_000);
+    const fd = makeFormData({ json_entries: bigJson });
+    const result = await importActivityBulk(null, fd);
+    expect(result.error).toMatch(/límite/i);
+  });
+
+  it('returns error for malformed JSON', async () => {
+    mockAuthenticatedClient();
+    const fd = makeFormData({ json_entries: '{not valid json' });
+    const result = await importActivityBulk(null, fd);
+    expect(result.error).toMatch(/inválido/i);
+  });
+
+  it('returns error when array is empty after Zod validation', async () => {
+    mockAuthenticatedClient();
+    const fd = makeFormData({ json_entries: JSON.stringify([]) });
+    const result = await importActivityBulk(null, fd);
+    expect(result.error).toBeDefined();
+  });
+});
+
+// ── voidActivityEntry — validación UUID ───────────────────────────────────────
+
+describe('voidActivityEntry — validación de ID', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns error when not authenticated', async () => {
+    mockUnauthenticatedClient();
+    const fd = makeFormData({ entry_id: VALID_UUID, void_reason: 'error de captura' });
+    const result = await voidActivityEntry(null, fd);
+    expect(result.error).toMatch(/autenticado/i);
+  });
+
+  it('returns error for invalid entry_id format', async () => {
+    mockAuthenticatedClient();
+    const fd = makeFormData({ entry_id: 'not-a-uuid', void_reason: 'error de captura' });
+    const result = await voidActivityEntry(null, fd);
+    expect(result.error).toMatch(/inválido/i);
+  });
+
+  it('returns error when void_reason is empty', async () => {
+    mockAuthenticatedClient();
+    const fd = makeFormData({ entry_id: VALID_UUID, void_reason: '' });
+    const result = await voidActivityEntry(null, fd);
+    expect(result.error).toMatch(/razón/i);
+  });
+});
+
+// ── deleteActivityEntry — validación UUID ─────────────────────────────────────
+
+describe('deleteActivityEntry — validación de ID', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns error when not authenticated', async () => {
+    mockUnauthenticatedClient();
+    const fd = makeFormData({ entry_id: VALID_UUID });
+    const result = await deleteActivityEntry(null, fd);
+    expect(result.error).toMatch(/autenticado/i);
+  });
+
+  it('returns error for invalid entry_id format', async () => {
+    mockAuthenticatedClient();
+    const fd = makeFormData({ entry_id: '../../../etc/passwd' });
+    const result = await deleteActivityEntry(null, fd);
+    expect(result.error).toMatch(/inválido/i);
+  });
+
+  it('returns error for empty entry_id', async () => {
+    mockAuthenticatedClient();
+    const fd = makeFormData({ entry_id: '' });
+    const result = await deleteActivityEntry(null, fd);
+    expect(result.error).toMatch(/inválido/i);
   });
 });
 

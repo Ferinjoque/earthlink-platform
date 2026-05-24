@@ -1,6 +1,6 @@
 /**
- * Abstract base class for all domain entities.
- * Provides identity, equality, and audit timestamps.
+ * Clase base abstracta para todas las entidades de dominio.
+ * Proporciona identidad, igualdad y marcas de tiempo de auditoría.
  */
 export abstract class Entity<TId extends string = string> {
   readonly id: TId;

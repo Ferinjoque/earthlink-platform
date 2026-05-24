@@ -1,10 +1,10 @@
 /**
- * OOP hierarchy for GHG emission sources.
+ * Jerarquía POO para fuentes de emisión GHG.
  *
- * Polymorphism is real, not decorative:
- *   - validate(raw) — each subclass enforces its own unit whitelist + evidence rules
- *   - factorKey()   — each subclass knows the (activity_type, region) tuple for factor lookup
- *   - scope()       — returns the GHG Protocol scope for this source type
+ * El polimorfismo es funcional, no decorativo:
+ *   - validate(raw) — cada subclase aplica su propia lista blanca de unidades + reglas de evidencia
+ *   - factorKey()   — cada subclase conoce la tupla (activity_type, region) para lookup de factores
+ *   - scope()       — devuelve el alcance GHG Protocol de esta fuente
  */
 import type { Unit, GhgScope, ActivityKind, GridRegion, WaterSubtype, WasteSubtype } from '../calc/types';
 
