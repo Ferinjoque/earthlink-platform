@@ -8,8 +8,12 @@ const createPeriodSchema = z
   .object({
     supplier_id: z.string().uuid('ID de proveedor inválido'),
     label: z.string().min(1, 'El label es obligatorio').max(50),
-    fecha_inicio: z.string().min(1, 'La fecha de inicio es obligatoria'),
-    fecha_fin: z.string().min(1, 'La fecha de fin es obligatoria'),
+    fecha_inicio: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha de inicio inválida (YYYY-MM-DD)'),
+    fecha_fin: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha de fin inválida (YYYY-MM-DD)'),
+  })
+  .refine((d) => !Number.isNaN(Date.parse(d.fecha_inicio)) && !Number.isNaN(Date.parse(d.fecha_fin)), {
+    message: 'Las fechas deben ser fechas del calendario válidas',
+    path: ['fecha_inicio'],
   })
   .refine((d) => new Date(d.fecha_fin) > new Date(d.fecha_inicio), {
     message: 'La fecha de fin debe ser posterior a la fecha de inicio',
@@ -76,7 +80,7 @@ export async function createPeriod(
     status: 'open' as const,
   });
 
-  if (error) return { error: error.message };
+  if (error) return { error: 'Error al crear el periodo. Intenta nuevamente.' };
 
   revalidatePath(`/suppliers/${supplier_id}`);
   revalidatePath('/suppliers');

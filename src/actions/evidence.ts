@@ -119,8 +119,10 @@ export async function uploadEvidence(
     });
 
   if (uploadError) {
-    return { error: `Error al subir el archivo: ${uploadError.message}` };
+    return { error: 'Error al subir el archivo. Intenta nuevamente.' };
   }
+
+  const originalName = file.name.slice(0, 255);
 
   // Registrar en BD
   const { data: inserted, error: insertError } = await supabase
@@ -130,7 +132,7 @@ export async function uploadEvidence(
       storage_path: storagePath,
       mime_type: mime,
       file_size_bytes: file.size,
-      original_name: file.name.slice(0, 255),
+      original_name: originalName,
       sha256,
       uploaded_by: user.id,
     })
@@ -140,7 +142,7 @@ export async function uploadEvidence(
   if (insertError) {
     // Limpiar archivo huérfano si el insert falla
     await admin.storage.from('evidence').remove([storagePath]);
-    return { error: `Error al registrar evidencia: ${insertError.message}` };
+    return { error: 'Error al registrar el archivo de evidencia. Intenta nuevamente.' };
   }
 
   revalidatePath('/activity');
@@ -194,10 +196,16 @@ export async function getEvidenceFiles(entryId: string): Promise<EvidenceFileVie
  * Carga archivos de evidencia para múltiples entradas en una sola query.
  * Devuelve un mapa entry_id → archivos con URLs firmadas.
  */
+const UUID_BATCH_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function getEvidenceFilesBatch(
   entryIds: string[],
 ): Promise<Map<string, EvidenceFileView[]>> {
   if (!entryIds.length) return new Map();
+
+  // Rechazar cualquier ID con formato inválido para evitar consultas innecesarias
+  const validIds = entryIds.filter((id) => UUID_BATCH_RE.test(id));
+  if (!validIds.length) return new Map();
 
   const supabase = await createServerClient();
   const {
@@ -208,7 +216,7 @@ export async function getEvidenceFilesBatch(
   const { data: rows } = await supabase
     .from('evidence_files')
     .select('id, original_name, mime_type, file_size_bytes, sha256, uploaded_at, storage_path, activity_entry_id')
-    .in('activity_entry_id', entryIds)
+    .in('activity_entry_id', validIds)
     .order('uploaded_at', { ascending: true });
 
   if (!rows?.length) return new Map();

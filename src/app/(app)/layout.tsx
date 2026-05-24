@@ -49,8 +49,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         .order('name'),
       supabase
         .from('anomaly_flags')
-        .select('id', { count: 'exact', head: true })
-        .eq('is_resolved', false),
+        .select('id, activity_entries!inner(reporting_periods!inner(suppliers!inner(organization_id)))', { count: 'exact', head: true })
+        .eq('is_resolved', false)
+        .in('activity_entries.reporting_periods.suppliers.organization_id', orgIds),
     ]);
     if (suppliersResult.data) searchSuppliers.push(...(suppliersResult.data as SupplierOption[]));
     anomaliaCount = anomaliaResult.count ?? 0;

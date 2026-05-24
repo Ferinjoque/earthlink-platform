@@ -13,6 +13,7 @@ import { ReportingPeriodRepository } from '@/repos/ReportingPeriodRepository';
 import { AuditLogRepository } from '@/repos/AuditLogRepository';
 import { AnomalyService } from '@/services/AnomalyService';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface AuditActionState {
   error?: string | undefined;
@@ -40,7 +41,7 @@ export async function calculatePeriod(
   if (!user) return { error: 'No autenticado' };
 
   const periodId = formData.get('period_id');
-  if (typeof periodId !== 'string' || !periodId) return { error: 'Falta el ID del periodo' };
+  if (typeof periodId !== 'string' || !UUID_RE.test(periodId)) return { error: 'ID de periodo inválido' };
 
   const periodRepo = new ReportingPeriodRepository(supabase);
   const auditLogRepo = new AuditLogRepository(supabase);
@@ -172,7 +173,7 @@ export async function lockPeriod(
   if (!user) return { error: 'No autenticado' };
 
   const periodId = formData.get('period_id');
-  if (typeof periodId !== 'string' || !periodId) return { error: 'Falta el ID del periodo' };
+  if (typeof periodId !== 'string' || !UUID_RE.test(periodId)) return { error: 'ID de periodo inválido' };
 
   const periodRepo = new ReportingPeriodRepository(supabase);
   const auditLogRepo = new AuditLogRepository(supabase);
@@ -244,7 +245,7 @@ export async function recalculatePeriod(
   if (!user) return { error: 'No autenticado' };
 
   const periodId = formData.get('period_id');
-  if (typeof periodId !== 'string' || !periodId) return { error: 'Falta el ID del periodo' };
+  if (typeof periodId !== 'string' || !UUID_RE.test(periodId)) return { error: 'ID de periodo inválido' };
 
   const periodRepo = new ReportingPeriodRepository(supabase);
 
@@ -274,7 +275,7 @@ export async function recalculatePeriod(
     .from('emission_results')
     .delete()
     .eq('reporting_period_id', periodId);
-  if (deleteError) return { error: `Error al limpiar resultados previos: ${deleteError.message}` };
+  if (deleteError) return { error: 'Error al limpiar resultados previos. Intenta nuevamente.' };
 
   const evalSvc = new EvaluationService(
     new ActivityEntryRepository(supabase),
@@ -560,9 +561,10 @@ export async function resolveAnomaly(
   if (!user) return { error: 'No autenticado' };
 
   const flagId = formData.get('flag_id');
-  if (typeof flagId !== 'string' || !flagId) return { error: 'Falta el ID de la anomalía' };
+  if (typeof flagId !== 'string' || !UUID_RE.test(flagId)) return { error: 'ID de anomalía inválido' };
   const resolutionNote = formData.get('resolution_note');
-  const note = typeof resolutionNote === 'string' && resolutionNote.trim() ? resolutionNote.trim() : null;
+  const rawNote = typeof resolutionNote === 'string' ? resolutionNote.trim().slice(0, 1000) : '';
+  const note = rawNote || null;
 
   // Verificar que el usuario pertenece a la misma org que la anomalía
   type FlagOrg = {
@@ -596,7 +598,7 @@ export async function resolveAnomaly(
     })
     .eq('id', flagId);
 
-  if (error) return { error: `Error al resolver anomalía: ${error.message}` };
+  if (error) return { error: 'Error al resolver la anomalía. Intenta nuevamente.' };
 
   revalidatePath('/audit');
   return { success: true };
@@ -620,9 +622,12 @@ export async function unlockPeriod(
 
   const periodId = formData.get('period_id');
   const reason = formData.get('unlock_reason');
-  if (typeof periodId !== 'string' || !periodId) return { error: 'Falta el ID del periodo' };
+  if (typeof periodId !== 'string' || !UUID_RE.test(periodId)) return { error: 'ID de periodo inválido' };
   if (typeof reason !== 'string' || !reason.trim()) {
     return { error: 'La razón de desbloqueo es obligatoria' };
+  }
+  if (reason.trim().length > 1000) {
+    return { error: 'La razón de desbloqueo no puede superar 1000 caracteres' };
   }
 
   const periodRepo = new ReportingPeriodRepository(supabase);
@@ -661,7 +666,7 @@ export async function unlockPeriod(
     })
     .eq('id', periodId);
 
-  if (updateError) return { error: `Error al desbloquear: ${updateError.message}` };
+  if (updateError) return { error: 'Error al desbloquear el periodo. Intenta nuevamente.' };
 
   revalidatePath('/audit');
   revalidatePath('/dashboard');
