@@ -397,6 +397,26 @@ describe('score', () => {
     expect(s.score).toBe(75);
     expect(s.level).toBe('critical');
   });
+
+  it('score alcanza 65 exactamente en ≥1083 tCO2e (factor 0.06)', () => {
+    // 1_083_000 kg = 1083 tCO2e → 1083 * 0.06 = 64.98 → rounds to 65
+    const s = score(makeTotals(1_083_000), []);
+    expect(s.score).toBe(65);
+  });
+
+  it('score es proporcional a las emisiones por debajo del tope', () => {
+    // 541_500 kg = 541.5 tCO2e → 541.5 * 0.06 = 32.49 → rounds to 32
+    const s = score(makeTotals(541_500), []);
+    expect(s.score).toBe(32);
+    expect(s.level).toBe('medium');
+  });
+
+  it('score bajo para emisiones pequeñas (100 tCO2e)', () => {
+    // 100_000 kg = 100 tCO2e → 100 * 0.06 = 6 → rounds to 6 → low
+    const s = score(makeTotals(100_000), []);
+    expect(s.score).toBe(6);
+    expect(s.level).toBe('low');
+  });
 });
 
 // ── GRESB: water_use / waste zero-CO2e path ──────────────────────────────────
