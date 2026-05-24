@@ -16,22 +16,11 @@ import type {
   AuditLogRow,
   MembershipRow,
   AnomalyFlagRow,
+  AnomalySeverity,
 } from '@/types/database';
 import { variantEstadoPeriodo, etiquetaEstadoPeriodo } from '@/lib/reporting-period';
-import { traducirMensajeAnomalia } from '@/lib/anomaly';
 import type { PeriodStatus } from '@/domain/ReportingPeriod';
-
-const COLOR_SEVERIDAD: Record<string, string> = {
-  low: 'var(--color-signal-ok)',
-  medium: 'var(--color-signal-md)',
-  high: 'var(--color-signal-hi)',
-};
-
-const ETIQUETA_SEVERIDAD: Record<string, string> = {
-  low: 'Baja',
-  medium: 'Media',
-  high: 'Alta',
-};
+import { AnomaliaItem, type AnomaliaDetalle } from '@/components/audit/AnomaliaItem';
 
 export const metadata: Metadata = { title: 'Detalle de periodo' };
 
@@ -175,6 +164,21 @@ export default async function DetallePeriodoPage({
   void resultEntryIds;
 
   const flagsData = (flagsRaw.data ?? []) as FilaFlag[];
+
+  const anomaliasDetalle: AnomaliaDetalle[] = flagsData.map((f) => {
+    const entrada = entryMap.get(f.activity_entry_id);
+    return {
+      id: f.id,
+      activity_entry_id: f.activity_entry_id,
+      source_type: entrada?.source_type ?? '',
+      severity: f.severity as AnomalySeverity,
+      z_score: f.z_score,
+      message: f.message,
+      flagged_at: f.flagged_at,
+      raw_quantity: entrada?.raw_quantity ?? null,
+      raw_unit: entrada?.raw_unit ?? null,
+    };
+  });
 
   // Totales agregados
   let totalCo2e = 0;
@@ -370,78 +374,12 @@ export default async function DetallePeriodoPage({
                 background: 'var(--color-surface-1)',
                 border: '1px solid var(--color-border)',
                 borderRadius: 'var(--radius-lg)',
-                overflow: 'hidden',
+                padding: '0 var(--space-4)',
               }}
             >
-              {flagsData.map((f, idx) => {
-                const entrada = entryMap.get(f.activity_entry_id);
-                return (
-                  <div
-                    key={f.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: 'var(--space-4)',
-                      padding: 'var(--space-4) var(--space-5)',
-                      borderBottom:
-                        idx < flagsData.length - 1 ? '1px solid var(--color-border)' : 'none',
-                      flexWrap: 'wrap',
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: 'var(--text-xs)',
-                        fontWeight: 700,
-                        color: COLOR_SEVERIDAD[f.severity] ?? 'var(--color-ink-2)',
-                        fontFamily: 'var(--font-mono)',
-                        minWidth: '40px',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {ETIQUETA_SEVERIDAD[f.severity] ?? f.severity}
-                    </span>
-                    {f.z_score !== null && (
-                      <span
-                        style={{
-                          fontSize: 'var(--text-xs)',
-                          fontFamily: 'var(--font-mono)',
-                          color: 'var(--color-ink-2)',
-                          flexShrink: 0,
-                        }}
-                      >
-                        z={f.z_score.toFixed(2)}
-                      </span>
-                    )}
-                    {entrada && (
-                      <span
-                        style={{
-                          fontSize: 'var(--text-xs)',
-                          fontFamily: 'var(--font-mono)',
-                          color: 'var(--color-ink-3)',
-                          flexShrink: 0,
-                        }}
-                      >
-                        {FUENTE_LABELS[entrada.source_type] ?? entrada.source_type}
-                      </span>
-                    )}
-                    <span
-                      style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)', flex: 1 }}
-                    >
-                      {traducirMensajeAnomalia(f.message)}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: '10px',
-                        color: 'var(--color-ink-3)',
-                        fontFamily: 'var(--font-mono)',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {new Date(f.flagged_at).toLocaleDateString('es')}
-                    </span>
-                  </div>
-                );
-              })}
+              {anomaliasDetalle.map((a) => (
+                <AnomaliaItem key={a.id} anomalia={a} />
+              ))}
             </div>
           </section>
         )}
