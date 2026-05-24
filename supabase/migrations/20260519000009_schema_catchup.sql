@@ -14,7 +14,7 @@ DROP TABLE IF EXISTS public.companies                 CASCADE;
 DROP TABLE IF EXISTS public.emission_factors          CASCADE;
 
 -- ---------------------------------------------------------------------------
--- 1. Reference tables
+-- 1. Tablas de referencia
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.fuel_types (
   id           uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -97,7 +97,7 @@ CREATE TABLE IF NOT EXISTS public.unit_conversions (
 );
 
 -- ---------------------------------------------------------------------------
--- 2. Access tables
+-- 2. Tablas de acceso
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_set_updated_at()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -159,7 +159,7 @@ CREATE TRIGGER trg_suppliers_updated_at
   FOR EACH ROW EXECUTE FUNCTION public.fn_set_updated_at();
 
 -- ---------------------------------------------------------------------------
--- 3. Transactional tables
+-- 3. Tablas transaccionales
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.reporting_periods (
   id          uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -274,7 +274,7 @@ CREATE INDEX IF NOT EXISTS idx_anomalies_entry    ON public.anomaly_flags (activ
 CREATE INDEX IF NOT EXISTS idx_anomalies_severity ON public.anomaly_flags (severity) WHERE NOT is_resolved;
 
 -- ---------------------------------------------------------------------------
--- 4. Audit tables
+-- 4. Tablas de auditoría
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.audit_log (
   id           uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -310,7 +310,7 @@ CREATE INDEX IF NOT EXISTS idx_exports_org       ON public.report_exports (organ
 CREATE INDEX IF NOT EXISTS idx_exports_generated ON public.report_exports (generated_at DESC);
 
 -- ---------------------------------------------------------------------------
--- 5. Triggers: append-only guards + auto-audit
+-- 5. Triggers: guardias solo-append + auto-auditoría
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_prevent_mutation()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -379,7 +379,7 @@ CREATE TRIGGER trg_audit_anomaly_flags
   FOR EACH ROW EXECUTE FUNCTION public.fn_audit_changes();
 
 -- ---------------------------------------------------------------------------
--- 6. Emission factor auto-key trigger (migration 006)
+-- 6. Trigger de clave automática para factores de emisión (migración 006)
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_compute_ef_key()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -416,7 +416,7 @@ CREATE TRIGGER trg_ef_key
   FOR EACH ROW EXECUTE FUNCTION public.fn_compute_ef_key();
 
 -- ---------------------------------------------------------------------------
--- 7. Row Level Security — enable + real policies (migration 005 + 007)
+-- 7. Row Level Security — activar + políticas reales (migración 005 + 007)
 -- ---------------------------------------------------------------------------
 ALTER TABLE public.fuel_types       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.refrigerants     ENABLE ROW LEVEL SECURITY;
@@ -642,7 +642,7 @@ CREATE POLICY "report_exports_read" ON public.report_exports FOR SELECT USING (t
 CREATE POLICY "report_exports_insert_phase1" ON public.report_exports FOR INSERT WITH CHECK (true);
 
 -- ---------------------------------------------------------------------------
--- 8. Seed data
+-- 8. Datos de seed
 -- ---------------------------------------------------------------------------
 INSERT INTO public.fuel_types (id, code, label, scope, activity_kind) VALUES
   ('11111111-0001-0001-0001-000000000001', 'natural_gas', 'Natural Gas',     1, 'stationary_combustion'),
@@ -813,7 +813,7 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
--- 9. Demo auth user + memberships
+-- 9. Usuario demo de autenticación + membresías
 -- email: admin@earthlink.test  |  password: Earthlink2025!
 -- ---------------------------------------------------------------------------
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
