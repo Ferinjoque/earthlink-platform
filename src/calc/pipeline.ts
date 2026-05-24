@@ -261,7 +261,7 @@ export function score(totals: EvaluationTotals, history: readonly EvaluationTota
   // Score normalizado: 0 tCO2e → 0, ≥1083 tCO2e → 65 (tope antes del ajuste por tendencia)
   // Con tendencia 'up' +10 → máx 75 → nivel 'critical'. Se topa en 65 para que 'critical' sea alcanzable.
   const tCo2e = totals.totalCo2eKg / 1000;
-  let rawScore = Math.round(Math.min(65, tCo2e * 0.6));
+  let rawScore = Math.round(Math.min(65, tCo2e * 0.06));
 
   if (trend === 'up') rawScore = Math.min(100, rawScore + 10);
   if (trend === 'down') rawScore = Math.max(0, rawScore - 5);

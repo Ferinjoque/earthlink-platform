@@ -682,6 +682,7 @@ export async function importActivityXlsx(
       submittedAt: now,
       submittedBy: user.id,
       createdAt: now,
+      dataQuality: row.data.data_quality,
     });
 
     try {
