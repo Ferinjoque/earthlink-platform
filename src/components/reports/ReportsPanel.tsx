@@ -224,7 +224,7 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
         .reports-year-toggle:hover { color: var(--color-ink-1) !important; }
         .reports-collapse-btn:hover { opacity: 0.7; }
 
-        /* Collapse/expand animation via CSS grid rows */
+        /* Animación colapso/expansión vía filas de grid CSS */
         .rp-year-content {
           display: grid;
           grid-template-rows: 1fr;

@@ -1,10 +1,8 @@
 /**
- * Pure FP calculation engine — Scope 1 & 2 GHG emissions.
+ * Motor de cálculo FP puro — emisiones GHG Alcance 1 y 2.
  *
- * This module is I/O-free by architectural contract (enforced by ESLint boundaries).
- * All external data is injected as parameters; no imports from repos/, services/, or supabase.
- *
- * Implemented in Phase 2 (feat/phase-2-calc-engine).
+ * Este módulo está libre de I/O por contrato arquitectónico.
+ * Todos los datos externos se inyectan como parámetros; sin imports de repos/, services/ o supabase.
  */
 
 export { calculate, aggregate, score } from './pipeline';
