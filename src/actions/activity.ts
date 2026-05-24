@@ -229,7 +229,7 @@ export async function createActivityEntry(
     return { fieldErrors };
   }
 
-  const { supplier_id, year_month, source_type, secondary, raw_quantity, raw_unit, data_quality } = parsed.data;
+  const { supplier_id, year_month, source_type, secondary, raw_quantity, raw_unit, data_quality, notes } = parsed.data;
 
   const accessCheck = await verifySupplierAccess(supabase, supplier_id, user.id);
   if ('error' in accessCheck) return { error: accessCheck.error, submittedAt: Date.now() };
@@ -263,6 +263,7 @@ export async function createActivityEntry(
     submittedBy: user.id,
     createdAt: now,
     dataQuality: data_quality,
+    notes: notes ?? null,
   });
 
   try {
@@ -374,6 +375,7 @@ export async function importActivityCsv(
       submittedBy: user.id,
       createdAt: now,
       dataQuality: row.data.data_quality,
+      notes: row.data.notes ?? null,
     });
 
     try {
@@ -465,6 +467,7 @@ export async function importActivityBulk(
       submittedBy: user.id,
       createdAt: now,
       dataQuality: row.data_quality,
+      notes: row.notes ?? null,
     });
 
     try {
@@ -683,6 +686,7 @@ export async function importActivityXlsx(
       submittedBy: user.id,
       createdAt: now,
       dataQuality: row.data.data_quality,
+      notes: row.data.notes ?? null,
     });
 
     try {
