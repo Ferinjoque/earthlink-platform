@@ -69,7 +69,7 @@ test.describe('Login page — comportamiento del formulario', () => {
   test('login con credenciales vacías muestra error o no navega', async ({ page }) => {
     await page.goto('/login');
     await page.locator('button[type="submit"]').click();
-    // Either stays on /login or shows an error — must not navigate to /dashboard
+    // Permanece en /login o muestra error — no debe navegar a /dashboard
     await expect(page).not.toHaveURL(/\/dashboard/);
   });
 
@@ -86,7 +86,7 @@ test.describe('Login page — comportamiento del formulario', () => {
     await page.locator('input[name="email"]').fill('incorrecto@ejemplo.com');
     await page.locator('input[name="password"]').fill('clave-incorrecta');
     await page.locator('button[type="submit"]').click();
-    // Wait for response — either error message visible or still on /login
+    // Espera respuesta — mensaje de error visible o todavía en /login
     await expect(page).toHaveURL(/\/login/);
   });
 });

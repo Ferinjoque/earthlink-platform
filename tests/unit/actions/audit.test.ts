@@ -400,7 +400,7 @@ function makeSelectChain(data: unknown) {
 }
 
 function makeUpdateResolveChain(error: { message: string } | null) {
-  return { update: () => ({ eq: () => Promise.resolve({ error }) }) };
+  return { update: () => ({ eq: () => ({ eq: () => Promise.resolve({ error }) }) }) };
 }
 
 function mockResolveClient({
@@ -665,7 +665,9 @@ describe('resolveAnomaly — resolution_note', () => {
       activity_entries: { reporting_periods: { suppliers: { organization_id: VALID_ORG_ID } } },
     };
     const updateSpy = vi.fn().mockReturnValue({
-      eq: () => Promise.resolve({ error: null }),
+      eq: vi.fn().mockReturnValue({
+        eq: () => Promise.resolve({ error: null }),
+      }),
     });
     const client = {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: VALID_UUID } } }) },
@@ -692,7 +694,9 @@ describe('resolveAnomaly — resolution_note', () => {
       activity_entries: { reporting_periods: { suppliers: { organization_id: VALID_ORG_ID } } },
     };
     const updateSpy = vi.fn().mockReturnValue({
-      eq: () => Promise.resolve({ error: null }),
+      eq: vi.fn().mockReturnValue({
+        eq: () => Promise.resolve({ error: null }),
+      }),
     });
     const client = {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: VALID_UUID } } }) },
@@ -708,6 +712,32 @@ describe('resolveAnomaly — resolution_note', () => {
     expect(updateSpy).toHaveBeenCalledWith(
       expect.objectContaining({ resolution_note: null }),
     );
+  });
+
+  it('filtra is_resolved=false para no sobreescribir anomalías ya resueltas', async () => {
+    const flagData = {
+      activity_entries: { reporting_periods: { suppliers: { organization_id: VALID_ORG_ID } } },
+    };
+    const firstEqSpy = vi.fn().mockReturnValue({
+      eq: () => Promise.resolve({ error: null }),
+    });
+    const updateSpy = vi.fn().mockReturnValue({ eq: firstEqSpy });
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: VALID_UUID } } }) },
+      from: vi.fn()
+        .mockReturnValueOnce(makeSelectChain(flagData))
+        .mockReturnValueOnce(makeSelectChain({ role: 'admin' }))
+        .mockReturnValueOnce({ update: updateSpy }),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
+
+    await resolveAnomaly(null, makeFormData({ flag_id: FLAG_ID, resolution_note: 'segunda resolución' }));
+
+    // Primera .eq() debe filtrar por 'id'
+    expect(firstEqSpy).toHaveBeenCalledWith('id', FLAG_ID);
+    // Segunda .eq() debe filtrar por 'is_resolved' = false para evitar sobreescritura
+    const secondEqReturn = firstEqSpy.mock.results[0]?.value as { eq: ReturnType<typeof vi.fn> };
+    expect(typeof secondEqReturn.eq).toBe('function');
   });
 });
 

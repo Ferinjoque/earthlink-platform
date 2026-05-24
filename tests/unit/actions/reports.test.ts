@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 vi.mock('next/headers', () => ({
   cookies: vi.fn(() =>
     Promise.resolve({
@@ -56,7 +57,7 @@ function mockClient({
     in: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
     then: vi.fn().mockResolvedValue({ data: returnData }),
-    // Make the chain thenable so await works
+    // Hacer la cadena thenable para que await funcione
     [Symbol.for('nodejs.util.inspect.custom')]: undefined,
   });
 
@@ -81,7 +82,7 @@ function mockClient({
         in: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: dataMap[table] ?? [] }),
       };
-      // Make select().eq().then() work
+      // Hacer que select().eq().then() funcione
       chain.select.mockReturnValue({
         ...chain,
         order: vi.fn().mockResolvedValue({ data: dataMap[table] ?? [] }),
@@ -131,6 +132,15 @@ describe('exportCsv', () => {
     expect(result.error).toMatch(/inválido/i);
   });
 
+  it('returns error when more than 50 period_ids are provided', async () => {
+    mockClient();
+    const uuid = '00000000-0000-4000-8000-000000000001';
+    const manyIds = Array(51).fill(uuid).join(',');
+    const fd = makeFormData({ period_ids: manyIds });
+    const result = await exportCsv(null, fd);
+    expect(result.error).toMatch(/máximo 50/i);
+  });
+
   it('returns error when user has no org memberships', async () => {
     mockClient({ memberships: [] });
     const fd = makeFormData({ period_ids: PERIOD_ID });
@@ -166,7 +176,7 @@ describe('exportCsv', () => {
       report_exports: [],
     };
 
-    // Build a thenable chain so `await from(...).select(...).in(...)` resolves correctly
+    // Construir cadena thenable para que await from(...).select(...).in(...) resuelva correctamente
     function chain(table: string) {
       const resolved = Promise.resolve({ data: dataMap[table] ?? [] });
       const c: Record<string, unknown> = {
@@ -199,7 +209,7 @@ describe('exportCsv', () => {
   });
 
   it('returns error when periods do not belong to authorized suppliers', async () => {
-    // Periods exist but their supplier_id is not in the org's suppliers
+    // Los periodos existen pero supplier_id no pertenece a los proveedores de la org
     const dataMap: Record<string, unknown[]> = {
       memberships: [{ organization_id: ORG_ID }],
       reporting_periods: [{ id: PERIOD_ID, label: 'Q1-2026', supplier_id: 'other-supplier-id' }],
@@ -287,7 +297,7 @@ describe('exportCsv', () => {
     const dataMap: Record<string, unknown[]> = {
       memberships: [{ organization_id: ORG_ID }],
       reporting_periods: [{ id: PERIOD_ID, label: 'Q1-2026', supplier_id: SUPPLIER_ID }],
-      // Supplier name with comma → triggers csvEscape quoting
+      // Nombre de proveedor con coma → activa el escape CSV
       suppliers: [{ id: SUPPLIER_ID, name: 'Test, Corp "Inc"', organization_id: ORG_ID }],
       emission_results: resultsData,
       activity_entries: [{ id: ENTRY_ID, source_type: 'stationary_combustion', raw_quantity: 100, raw_unit: 'kWh' }],
@@ -387,7 +397,7 @@ describe('exportCsv', () => {
       reporting_periods: [{ id: PERIOD_ID, label: 'Q1-2026', supplier_id: SUPPLIER_ID }],
       suppliers: [{ id: SUPPLIER_ID, name: 'Test Corp', organization_id: ORG_ID }],
       emission_results: resultsData,
-      activity_entries: [], // entry not found
+      activity_entries: [], // entrada no encontrada
       report_exports: [],
     };
 

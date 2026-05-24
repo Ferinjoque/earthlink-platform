@@ -2,6 +2,7 @@
 
 import { createHash } from 'crypto';
 import { z } from 'zod';
+import { revalidatePath } from 'next/cache';
 import { createServerClient } from '@/services/supabase/server';
 import type {
   MembershipRow,
@@ -44,6 +45,7 @@ export async function exportCsv(
 
   const periodIds = parsed.data.period_ids.split(',').filter(Boolean);
   if (periodIds.length === 0) return { error: 'Selecciona al menos un periodo' };
+  if (periodIds.length > 50) return { error: 'Máximo 50 periodos por exportación' };
 
   const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (periodIds.some((id) => !uuidRe.test(id))) {
@@ -203,6 +205,7 @@ export async function exportCsv(
     });
   }
 
+  revalidatePath('/reports');
   return { success: true, csvContent, filename, sha256 };
 }
 

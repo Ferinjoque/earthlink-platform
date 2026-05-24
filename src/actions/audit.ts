@@ -301,10 +301,13 @@ export async function recalculatePeriod(
   } catch {
     // Los resultados ya fueron eliminados — restablecer a under_review para que
     // el periodo no quede bloqueado sin resultados y pueda recalcularse.
-    await adminClient
+    const { error: recoveryError } = await adminClient
       .from('reporting_periods')
       .update({ status: 'under_review' })
       .eq('id', periodId);
+    if (recoveryError) {
+      return { error: 'Error crítico al recalcular: no se pudo restablecer el estado del periodo. Contacta al administrador.' };
+    }
     return { error: 'Error al recalcular las emisiones del periodo. Intenta nuevamente.' };
   }
 
@@ -659,7 +662,8 @@ export async function resolveAnomaly(
       resolved_at: new Date().toISOString(),
       resolution_note: note,
     })
-    .eq('id', flagId);
+    .eq('id', flagId)
+    .eq('is_resolved', false);
 
   if (error) return { error: 'Error al resolver la anomalía. Intenta nuevamente.' };
 

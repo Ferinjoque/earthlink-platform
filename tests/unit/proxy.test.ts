@@ -47,7 +47,7 @@ function mockSupabaseWithUser(user: { id: string } | null) {
   return mockClient;
 }
 
-// Re-implement to test the exact logic from src/proxy.ts
+// Re-implementación para testear la lógica exacta de src/proxy.ts
 function safeNextPath(raw: string): string | null {
   if (raw.startsWith('/') && !raw.startsWith('//') && !raw.startsWith('/\\')) {
     return raw;

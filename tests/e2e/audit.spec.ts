@@ -24,7 +24,7 @@ test.describe('Auditoría — consola principal', () => {
   });
 
   test('muestra tabla de periodos o estado vacío', async ({ page }) => {
-    // Either the audit table is visible or an empty state message
+    // La tabla de auditoría es visible o se muestra un mensaje de estado vacío
     const table = page.locator('table').first();
     const isEmpty = page.getByText(/sin periodos/i).or(page.getByText(/no hay periodos/i));
     const hasTable = await table.count() > 0;
@@ -48,7 +48,7 @@ test.describe('Auditoría — detalle de periodo', () => {
     await page.waitForLoadState('networkidle');
     const periodLink = page.locator('a[href^="/audit/"]').first();
     const count = await periodLink.count();
-    if (count === 0) return; // skip if no linked periods
+    if (count === 0) return; // omitir si no hay periodos vinculados
     await periodLink.click();
     await page.waitForLoadState('networkidle');
     await expect(page).toHaveURL(/\/audit\/.+/);

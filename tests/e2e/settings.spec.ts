@@ -23,7 +23,7 @@ test.describe('Configuración — cuenta y organización', () => {
   });
 
   test('muestra el rol del usuario', async ({ page }) => {
-    // Admin, Consultor, or Proveedor
+    // Administrador, Consultor o Proveedor
     await expect(page.getByText(/Administrador|Consultor|Proveedor/)).toBeVisible();
   });
 

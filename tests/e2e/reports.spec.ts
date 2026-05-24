@@ -17,7 +17,7 @@ test.describe('Reportes — exportación', () => {
   });
 
   test('tiene sección de periodos exportables o estado vacío descriptivo', async ({ page }) => {
-    // Either shows periods table or a message about no reportable periods
+    // Muestra tabla de periodos o un mensaje indicando que no hay periodos exportables
     const body = await page.locator('main').textContent();
     expect(body).toBeTruthy();
     expect(body!.length).toBeGreaterThan(50);
