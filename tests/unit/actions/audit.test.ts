@@ -725,17 +725,19 @@ describe('recalculatePeriod — validación de estado', () => {
 const CALC_YEAR_SUPPLIER_ID = '60000000-0000-4000-8000-000000000060';
 
 function makeQueryChain(resolvedData: unknown) {
+  const resolved = Promise.resolve({ data: resolvedData });
   const c: Record<string, unknown> = {};
-  const resolve = () => Promise.resolve({ data: resolvedData });
   c['select'] = () => c;
   c['eq'] = () => c;
   c['gte'] = () => c;
   c['lte'] = () => c;
-  // .in() terminates the chain y resuelve la promesa
-  c['in'] = resolve;
+  c['in'] = () => c;
   c['maybeSingle'] = () => Promise.resolve({ data: resolvedData });
   c['delete'] = () => c;
   c['insert'] = () => Promise.resolve({ error: null });
+  // Encadenable en cualquier punto: await chain resuelve la promesa
+  c['then'] = (onFulfilled: (v: unknown) => unknown) => resolved.then(onFulfilled);
+  c['catch'] = (onRejected: (e: unknown) => unknown) => resolved.catch(onRejected);
   return c;
 }
 
@@ -816,18 +818,15 @@ describe('calculateYear', () => {
     expect(result.calculated).toBe(0);
   });
 
-  it('skips under_review periods (already calculated)', async () => {
-    makeCalculateYearClient({
-      candidatos: [{ id: VALID_UUID, status: 'under_review' }],
-    });
-    mocks.findByPeriodIds.mockResolvedValueOnce([]);
+  it('returns 0 calculated when no open periods found (only open status queried)', async () => {
+    makeCalculateYearClient({ candidatos: [] });
     const result = await calculateYear(
       null,
       makeFormData({ supplier_id: CALC_YEAR_SUPPLIER_ID, year: '2026' }),
     );
     expect(result.success).toBe(true);
     expect(result.calculated).toBe(0);
-    expect(result.skipped).toBe(1);
+    expect(result.skipped).toBe(0);
   });
 
   it('calculates open period successfully', async () => {
@@ -912,6 +911,26 @@ describe('unlockPeriod', () => {
     expect(result.error).toMatch(/autenticado/i);
   });
 
+  it('returns error when unlock_reason is empty', async () => {
+    const { unlockPeriod } = await import('../../../src/actions/audit');
+    makeUnlockClient();
+    const result = await unlockPeriod(
+      null,
+      makeFormData({ period_id: VALID_UUID, unlock_reason: '' }),
+    );
+    expect(result.error).toMatch(/razón/i);
+  });
+
+  it('returns error when unlock_reason is whitespace only', async () => {
+    const { unlockPeriod } = await import('../../../src/actions/audit');
+    makeUnlockClient();
+    const result = await unlockPeriod(
+      null,
+      makeFormData({ period_id: VALID_UUID, unlock_reason: '   ' }),
+    );
+    expect(result.error).toMatch(/razón/i);
+  });
+
   it('returns error when period not found', async () => {
     makeUnlockClient();
     mocks.findById.mockResolvedValueOnce(null);
@@ -977,6 +996,23 @@ describe('unlockPeriod', () => {
     );
     expect(result.success).toBe(true);
     expect(result.error).toBeUndefined();
+  });
+
+  it('writes UNLOCK event to audit log', async () => {
+    mocks.findById.mockResolvedValueOnce(makePeriod('locked'));
+    makeUnlockClient();
+    const { unlockPeriod } = await import('../../../src/actions/audit');
+    await unlockPeriod(
+      null,
+      makeFormData({ period_id: VALID_UUID, unlock_reason: 'Revisión contable' }),
+    );
+    expect(mocks.auditLog).toHaveBeenCalledWith(
+      'UNLOCK',
+      'reporting_periods',
+      VALID_UUID,
+      VALID_UUID,
+      expect.objectContaining({ oldValues: { status: 'locked' }, newValues: { status: 'under_review' } }),
+    );
   });
 });
 
