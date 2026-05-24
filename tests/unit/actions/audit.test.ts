@@ -221,6 +221,39 @@ describe('calculatePeriod', () => {
     expect(result.success).toBe(true);
     expect(result.totals?.errorCount).toBe(1);
   });
+
+  it('restablece el periodo a open cuando evaluate lanza error', async () => {
+    mockAuth();
+    mocks.findById.mockResolvedValueOnce(makePeriod('open'));
+    mocks.transitionStatus.mockResolvedValue(makePeriod('calculating'));
+    mocks.evaluate.mockRejectedValueOnce(new Error('fallo de cálculo'));
+
+    const updateMock = vi.fn().mockReturnValue({
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    });
+    mocks.adminFrom.mockReturnValueOnce({ update: updateMock });
+
+    const result = await calculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
+
+    expect(result.error).toMatch(/calcular/i);
+    expect(updateMock).toHaveBeenCalledWith({ status: 'open' });
+  });
+
+  it('retorna error crítico si el restablecimiento del periodo falla', async () => {
+    mockAuth();
+    mocks.findById.mockResolvedValueOnce(makePeriod('open'));
+    mocks.transitionStatus.mockResolvedValue(makePeriod('calculating'));
+    mocks.evaluate.mockRejectedValueOnce(new Error('fallo de cálculo'));
+
+    const updateMock = vi.fn().mockReturnValue({
+      eq: vi.fn().mockResolvedValue({ error: { message: 'DB error' } }),
+    });
+    mocks.adminFrom.mockReturnValueOnce({ update: updateMock });
+
+    const result = await calculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
+
+    expect(result.error).toMatch(/crítico/i);
+  });
 });
 
 // ── lockPeriod ────────────────────────────────────────────────────────────────
