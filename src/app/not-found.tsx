@@ -69,7 +69,7 @@ export default function NotFound() {
           {/* "404" tipográfico integrado en la copa */}
           <text
             x="110"
-            y="90"
+            y="78"
             textAnchor="middle"
             dominantBaseline="middle"
             fontFamily="Georgia, serif"
