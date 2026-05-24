@@ -42,7 +42,8 @@ export class ActivityEntryRepository extends SupabaseRepository<ActivityEntry> {
       .from(this.tableName)
       .select(COLS)
       .eq('reporting_period_id', periodId)
-      .eq('status', status);
+      .eq('status', status)
+      .is('voided_at', null);
     if (error ?? !data) return [];
     return (data as Record<string, unknown>[]).map((row) => this.toEntity(row));
   }
