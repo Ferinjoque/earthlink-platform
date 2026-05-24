@@ -5,7 +5,7 @@ import type { ActivityKind, Unit } from '../calc/types';
 import type { ActivityEntryStatus, EmissionSourceType } from '../types/database';
 
 const COLS =
-  'id, reporting_period_id, source_type, activity_kind, raw_quantity, raw_unit, status, submitted_at, submitted_by, created_at, data_quality';
+  'id, reporting_period_id, source_type, activity_kind, raw_quantity, raw_unit, status, submitted_at, submitted_by, created_at, data_quality, notes';
 
 export class ActivityEntryRepository extends SupabaseRepository<ActivityEntry> {
   protected readonly tableName = 'activity_entries';
@@ -60,6 +60,7 @@ export class ActivityEntryRepository extends SupabaseRepository<ActivityEntry> {
       submittedBy: (row['submitted_by'] as string | null) ?? null,
       createdAt: new Date(row['created_at'] as string),
       dataQuality: (row['data_quality'] as DataQuality | null) ?? 'measured',
+      notes: (row['notes'] as string | null) ?? null,
     });
   }
 
@@ -76,6 +77,7 @@ export class ActivityEntryRepository extends SupabaseRepository<ActivityEntry> {
       submitted_by: entity.submittedBy,
       created_at: entity.createdAt.toISOString(),
       data_quality: entity.dataQuality,
+      notes: entity.notes,
     };
   }
 }
