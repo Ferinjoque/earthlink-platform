@@ -472,6 +472,8 @@ export async function importActivityCsv(
 
   revalidatePath('/activity');
   revalidatePath('/audit');
+  revalidatePath('/dashboard');
+  revalidatePath('/suppliers');
   return { success: true, imported: entryRows.length, skipped, submittedAt: Date.now() };
 }
 
@@ -550,6 +552,8 @@ export async function importActivityBulk(
 
   revalidatePath('/activity');
   revalidatePath('/audit');
+  revalidatePath('/dashboard');
+  revalidatePath('/suppliers');
   return {
     success: true,
     imported: entryRows.length,
@@ -786,5 +790,7 @@ export async function importActivityXlsx(
 
   revalidatePath('/activity');
   revalidatePath('/audit');
+  revalidatePath('/dashboard');
+  revalidatePath('/suppliers');
   return { success: true, imported: entryRows.length, skipped, submittedAt: Date.now() };
 }
