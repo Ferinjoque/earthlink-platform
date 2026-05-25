@@ -194,11 +194,13 @@ export default async function DetallePeriodoPage({
     day: '2-digit',
     month: 'long',
     year: 'numeric',
+    timeZone: 'UTC',
   });
   const finFmt = new Date(period.end_date).toLocaleDateString('es-PE', {
     day: '2-digit',
     month: 'long',
     year: 'numeric',
+    timeZone: 'UTC',
   });
 
   return (

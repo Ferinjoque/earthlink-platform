@@ -101,8 +101,12 @@ export async function calculatePeriod(
       .update({ status: 'open' })
       .eq('id', periodId);
     if (recoveryError) {
+      revalidatePath('/audit');
+      revalidatePath('/dashboard');
       return { error: 'Error crítico al calcular: no se pudo restablecer el estado del periodo. Contacta al administrador.' };
     }
+    revalidatePath('/audit');
+    revalidatePath('/dashboard');
     return { error: 'Error al calcular las emisiones del periodo. Intenta nuevamente.' };
   }
 
@@ -151,6 +155,8 @@ export async function calculatePeriod(
   try {
     await auditSvc.transitionStatus(periodId, 'under_review', user.id);
   } catch {
+    revalidatePath('/audit');
+    revalidatePath('/dashboard');
     return { error: 'Evaluación completada pero error al transicionar el periodo a revisión' };
   }
 
@@ -316,8 +322,12 @@ export async function recalculatePeriod(
       .update({ status: 'under_review' })
       .eq('id', periodId);
     if (recoveryError) {
+      revalidatePath('/audit');
+      revalidatePath('/dashboard');
       return { error: 'Error crítico al recalcular: no se pudo restablecer el estado del periodo. Contacta al administrador.' };
     }
+    revalidatePath('/audit');
+    revalidatePath('/dashboard');
     return { error: 'Error al recalcular las emisiones del periodo. Intenta nuevamente.' };
   }
 

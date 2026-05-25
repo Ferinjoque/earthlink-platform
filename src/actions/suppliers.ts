@@ -158,7 +158,8 @@ export async function updateSupplier(
       contact_email: contacto || null,
       ruc: ruc || null,
     })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('organization_id', supplier.organization_id);
 
   if (error) return { error: 'Error al guardar el proveedor. Intenta nuevamente.' };
 
@@ -217,7 +218,8 @@ export async function archiveSupplier(
   const { error } = await supabase
     .from('suppliers')
     .update({ archived_at: new Date().toISOString() })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('organization_id', supplier.organization_id);
 
   if (error) return { error: 'Error al guardar el proveedor. Intenta nuevamente.' };
 

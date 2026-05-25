@@ -412,7 +412,7 @@ function EntradaFila({
                     gap: '2px',
                     fontSize: '10px',
                     fontFamily: 'var(--font-mono)',
-                    color: expandidaEvidencia === entry.id ? 'var(--color-accent)' : 'var(--color-accent)',
+                    color: expandidaEvidencia === entry.id ? 'var(--color-accent)' : 'var(--color-ink-3)',
                     background: 'none',
                     border: 'none',
                     padding: 0,
