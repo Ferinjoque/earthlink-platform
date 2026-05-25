@@ -56,6 +56,7 @@ export default async function DetalleProveedorPage({
     .from('suppliers')
     .select('id, name, category, contact_email, ruc, organization_id, created_at')
     .eq('id', id)
+    .is('archived_at', null)
     .maybeSingle();
 
   if (!rawSupplier) notFound();
@@ -86,18 +87,19 @@ export default async function DetalleProveedorPage({
 
   const periodIds = periods.map((p) => p.id);
 
-  // Fetch paralelo: emission_results y entradas recientes (ambos dependen de periodIds)
-  type FilaResultado = { reporting_period_id: string; co2e_kg: number };
+  // Fetch paralelo: emission_results, entradas recientes y voided status (todos dependen de periodIds)
+  type FilaResultado = { reporting_period_id: string; co2e_kg: number; activity_entry_id: string };
   type FilaEntrada = Pick<
     ActivityEntryRow,
     'id' | 'source_type' | 'raw_quantity' | 'raw_unit' | 'status' | 'created_at'
   >;
+  type FilaVoidCheck = { id: string; voided_at: string | null };
 
-  const [resultsRaw, rawEntriesRaw] = periodIds.length
+  const [resultsRaw, rawEntriesRaw, allEntriesVoidRaw] = periodIds.length
     ? await Promise.all([
         supabase
           .from('emission_results')
-          .select('reporting_period_id, co2e_kg')
+          .select('reporting_period_id, co2e_kg, activity_entry_id')
           .in('reporting_period_id', periodIds),
         supabase
           .from('activity_entries')
@@ -106,11 +108,26 @@ export default async function DetalleProveedorPage({
           .is('voided_at', null)
           .order('created_at', { ascending: false })
           .limit(5),
+        supabase
+          .from('activity_entries')
+          .select('id, voided_at')
+          .in('reporting_period_id', periodIds),
       ])
-    : [{ data: [] as FilaResultado[] }, { data: [] as FilaEntrada[] }];
+    : [
+        { data: [] as FilaResultado[] },
+        { data: [] as FilaEntrada[] },
+        { data: [] as FilaVoidCheck[] },
+      ];
+
+  const voidedEntryIds = new Set(
+    ((allEntriesVoidRaw.data ?? []) as FilaVoidCheck[])
+      .filter((e) => e.voided_at !== null)
+      .map((e) => e.id),
+  );
 
   const co2eByPeriod = new Map<string, number>();
   for (const r of (resultsRaw.data ?? []) as FilaResultado[]) {
+    if (voidedEntryIds.has(r.activity_entry_id)) continue;
     co2eByPeriod.set(
       r.reporting_period_id,
       (co2eByPeriod.get(r.reporting_period_id) ?? 0) + r.co2e_kg,
