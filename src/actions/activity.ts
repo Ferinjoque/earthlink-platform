@@ -183,6 +183,9 @@ async function findOrCreatePeriod(
         if (retryPeriod.status === 'locked') {
           return { error: 'El periodo de ese mes está bloqueado y no acepta nuevas entradas' };
         }
+        if (retryPeriod.status === 'calculating') {
+          return { error: 'El periodo de ese mes está siendo calculado. Espera a que finalice.' };
+        }
         return { periodId: retryPeriod.id };
       }
     }
