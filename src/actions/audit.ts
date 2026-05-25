@@ -371,10 +371,14 @@ export async function recalculatePeriod(
     // Detección de anomalías no crítica — no bloquear el recálculo
   }
 
-  await auditLogRepo.log('RECALCULATE', 'reporting_periods', periodId, user.id, {
-    oldValues: { status: period.status },
-    newValues: { recalculated_at: new Date().toISOString() },
-  });
+  try {
+    await auditLogRepo.log('RECALCULATE', 'reporting_periods', periodId, user.id, {
+      oldValues: { status: period.status },
+      newValues: { recalculated_at: new Date().toISOString() },
+    });
+  } catch {
+    // El log de auditoría es no-crítico — no bloquear el recálculo exitoso
+  }
 
   revalidatePath('/audit');
   revalidatePath('/dashboard');
@@ -767,10 +771,14 @@ export async function unlockPeriod(
   if (updateError) return { error: 'Error al desbloquear el periodo. Intenta nuevamente.' };
 
   const auditLogRepo = new AuditLogRepository(supabase);
-  await auditLogRepo.log('UNLOCK', 'reporting_periods', periodId, user.id, {
-    oldValues: { status: 'locked' },
-    newValues: { status: 'under_review' },
-  });
+  try {
+    await auditLogRepo.log('UNLOCK', 'reporting_periods', periodId, user.id, {
+      oldValues: { status: 'locked' },
+      newValues: { status: 'under_review' },
+    });
+  } catch {
+    // El log de auditoría es no-crítico — no bloquear el desbloqueo exitoso
+  }
 
   revalidatePath('/audit');
   revalidatePath('/dashboard');
