@@ -17,10 +17,14 @@ export class AuditService {
     if (period.isLocked()) throw new Error(`El periodo de reporte "${periodId}" ya está bloqueado`);
 
     const locked = await this.reportingPeriodRepo.updateStatus(periodId, 'locked');
-    await this.auditLogRepo.log('LOCK', 'reporting_periods', periodId, userId, {
-      oldValues: { status: period.status },
-      newValues: { status: 'locked' },
-    });
+    try {
+      await this.auditLogRepo.log('LOCK', 'reporting_periods', periodId, userId, {
+        oldValues: { status: period.status },
+        newValues: { status: 'locked' },
+      });
+    } catch {
+      // Log de auditoría no-crítico — no revertir un bloqueo ya aplicado en DB
+    }
     return locked;
   }
 
@@ -46,10 +50,14 @@ export class AuditService {
     }
 
     const updated = await this.reportingPeriodRepo.updateStatus(periodId, targetStatus);
-    await this.auditLogRepo.log('STATUS_CHANGE', 'reporting_periods', periodId, userId, {
-      oldValues: { status: period.status },
-      newValues: { status: targetStatus },
-    });
+    try {
+      await this.auditLogRepo.log('STATUS_CHANGE', 'reporting_periods', periodId, userId, {
+        oldValues: { status: period.status },
+        newValues: { status: targetStatus },
+      });
+    } catch {
+      // Log de auditoría no-crítico — no revertir una transición ya aplicada en DB
+    }
     return updated;
   }
 }
