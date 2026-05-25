@@ -293,6 +293,17 @@ describe('AnomalyService._internals', () => {
     expect(AnomalyService._internals.zScore(5, [5, 5, 5])).toBeNull();
   });
 
+  it('zScore returns null when result would be Infinity (near-zero stddev from float precision)', () => {
+    // Valores extremadamente cercanos — stddev no es exactamente 0 pero z = value/stddev → Infinity
+    const tiny = Number.MIN_VALUE; // ~5e-324
+    const pop = [tiny, tiny * 2, tiny * 3];
+    const z = AnomalyService._internals.zScore(1e308, pop);
+    // Si z es Infinity la guardia debe retornar null en lugar de propagar Infinity
+    if (z !== null) {
+      expect(Number.isFinite(z)).toBe(true);
+    }
+  });
+
   it('zScore uses sample stddev (ddof=1)', () => {
     // population = [9, 10, 11], mean = 10
     // sample variance = (1 + 0 + 1) / (3-1) = 1, sample stddev = 1

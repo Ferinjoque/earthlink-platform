@@ -180,6 +180,20 @@ describe('createActivityEntry', () => {
     expect(result.fieldErrors?.raw_quantity).toBeDefined();
   });
 
+  it('accepts zero quantity (nonnegative — ESG period with no consumption)', async () => {
+    mockAuthenticatedClient();
+    const fd = makeFormData({
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
+      source_type: 'stationary_combustion',
+      secondary: 'natural_gas',
+      raw_quantity: '0',
+      raw_unit: 'm3_ng',
+    });
+    const result = await createActivityEntry(null, fd);
+    expect(result.fieldErrors?.raw_quantity).toBeUndefined();
+  });
+
   it('returns error for invalid secondary with combustion source', async () => {
     mockAuthenticatedClient();
     const fd = makeFormData({

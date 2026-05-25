@@ -120,13 +120,16 @@ export class AnomalyService {
     }
   }
 
-  // Retorna null si la población es muy pequeña o tiene varianza cero
+  // Retorna null si la población es muy pequeña, varianza cero, o resultado no finito
   private static zScore(value: number, population: readonly number[]): number | null {
     if (population.length < AnomalyService.MIN_BASELINE) return null;
     const m = AnomalyService.mean(population);
     const s = AnomalyService.stddev(population, m);
     if (s === 0) return null;
-    return (value - m) / s;
+    const z = (value - m) / s;
+    // Desviaciones estándar muy pequeñas (cerca de 0 por punto flotante) pueden producir Infinity
+    if (!Number.isFinite(z)) return null;
+    return z;
   }
 
   private static mean(values: readonly number[]): number {

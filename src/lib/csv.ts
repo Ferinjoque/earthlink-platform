@@ -17,7 +17,7 @@ const csvRowSchema = z.object({
   year_month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Formato mes inválido (YYYY-MM, ej: 2026-01)'),
   source_type: z.enum(SOURCE_TYPES, { message: 'Tipo de fuente inválido' }),
   secondary: z.string().default(''),
-  raw_quantity: z.coerce.number().positive('Debe ser un número positivo'),
+  raw_quantity: z.coerce.number().nonnegative('Debe ser un número mayor o igual a cero'),
   raw_unit: z.string().min(1, 'Unidad obligatoria'),
   data_quality: z.enum(DATA_QUALITY_VALUES).default('measured'),
   notes: z.string().max(1000).optional(),
