@@ -429,6 +429,7 @@ function makeSelectChain(data: unknown) {
   c['select'] = () => c;
   c['eq'] = () => c;
   c['in'] = () => c;
+  c['is'] = () => c;
   c['maybeSingle'] = () => Promise.resolve({ data });
   return c;
 }
