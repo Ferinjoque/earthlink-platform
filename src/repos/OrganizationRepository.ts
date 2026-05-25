@@ -5,6 +5,11 @@ export class OrganizationRepository extends SupabaseRepository<Organization> {
   protected readonly tableName = 'organizations';
   protected override readonly selectColumns = 'id, name, industry, ruc, created_at';
 
+  /** Prohibido en repos tenant-scoped — usar findByMembership() con filtro explícito. */
+  override findAll(): never {
+    throw new Error('OrganizationRepository.findAll() no permitido — usar findByMembership()');
+  }
+
   protected toEntity(row: Record<string, unknown>): Organization {
     return new Organization({
       id: row['id'] as string,

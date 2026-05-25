@@ -130,14 +130,15 @@ function agruparPorAnio(periodos: PeriodoFila[]): GrupoAnual[] {
 }
 
 function mesesFaltantes(periodos: PeriodoFila[], year: number): number[] {
-  const presentes = new Set(periodos.map((p) => new Date(p.start_date).getMonth() + 1));
+  // Usar getUTCMonth para evitar variaciones de timezone cuando start_date es "YYYY-MM-01"
+  const presentes = new Set(periodos.map((p) => new Date(p.start_date).getUTCMonth() + 1));
   const faltantes: number[] = [];
   for (let m = 1; m <= 12; m++) {
     if (!presentes.has(m)) faltantes.push(m);
   }
   const ahora = new Date();
-  const mesActual = ahora.getMonth() + 1;
-  const anioActual = ahora.getFullYear();
+  const mesActual = ahora.getUTCMonth() + 1;
+  const anioActual = ahora.getUTCFullYear();
   if (year === anioActual) {
     return faltantes.filter((m) => m < mesActual);
   }
@@ -955,7 +956,7 @@ function YearGroupRow({
             year={grupo.year}
             canCalculate={canCalc}
             canClose={canClose}
-            periodCount={grupo.periodos.filter((p) => p.status === 'under_review').length}
+            periodCount={grupo.periodos.length}
           />
         )}
       </td>

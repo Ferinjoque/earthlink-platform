@@ -7,6 +7,11 @@ export class AnomalyFlagRepository extends SupabaseRepository<AnomalyFlag> {
   protected override readonly selectColumns =
     'id, activity_entry_id, detector, severity, z_score, threshold_used, message, is_resolved, resolved_by, resolved_at, flagged_at';
 
+  /** Prohibido en repos tenant-scoped — usar findByActivityEntryId() o findUnresolvedByOrg(). */
+  override findAll(): never {
+    throw new Error('AnomalyFlagRepository.findAll() no permitido — usar findUnresolvedByOrg()');
+  }
+
   async findByActivityEntryId(entryId: string): Promise<readonly AnomalyFlag[]> {
     const { data, error } = await this.client
       .from(this.tableName)
@@ -18,13 +23,15 @@ export class AnomalyFlagRepository extends SupabaseRepository<AnomalyFlag> {
     return (data as Record<string, unknown>[]).map((row) => this.toEntity(row));
   }
 
-  async findUnresolved(): Promise<readonly AnomalyFlag[]> {
+  async findUnresolvedByOrg(orgId: string): Promise<readonly AnomalyFlag[]> {
+    // Filtra por org via cadena: anomaly_flags → activity_entries → reporting_periods → suppliers → organization_id
     const { data, error } = await this.client
       .from(this.tableName)
       .select(
-        'id, activity_entry_id, detector, severity, z_score, threshold_used, message, is_resolved, resolved_by, resolved_at, flagged_at',
+        'id, activity_entry_id, detector, severity, z_score, threshold_used, message, is_resolved, resolved_by, resolved_at, flagged_at, activity_entries!inner(reporting_periods!inner(suppliers!inner(organization_id)))',
       )
       .eq('is_resolved', false)
+      .eq('activity_entries.reporting_periods.suppliers.organization_id', orgId)
       .order('flagged_at', { ascending: false });
     if (error ?? !data) return [];
     return (data as Record<string, unknown>[]).map((row) => this.toEntity(row));
