@@ -25,4 +25,18 @@ describe('formatearKg', () => {
   it('boundary: 1 000.000 switches to tCO₂e', () => {
     expect(formatearKg(1_000)).toMatch(/tCO₂e$/);
   });
+
+  it('returns em-dash for NaN', () => {
+    expect(formatearKg(NaN)).toBe('—');
+  });
+
+  it('returns em-dash for Infinity', () => {
+    expect(formatearKg(Infinity)).toBe('—');
+    expect(formatearKg(-Infinity)).toBe('—');
+  });
+
+  it('returns em-dash for negative values', () => {
+    expect(formatearKg(-1)).toBe('—');
+    expect(formatearKg(-0.001)).toBe('—');
+  });
 });
