@@ -12,10 +12,10 @@ describe('formatearKg', () => {
     expect(formatearKg(999.99)).toBe('999.99 kg');
   });
 
-  it('returns tCO₂e with 3 decimals for values >= 1 000', () => {
-    expect(formatearKg(1_000)).toBe('1.000 tCO₂e');
-    expect(formatearKg(1_500)).toBe('1.500 tCO₂e');
-    expect(formatearKg(12_345)).toBe('12.345 tCO₂e');
+  it('returns tCO₂e with 2 decimals for values >= 1 000', () => {
+    expect(formatearKg(1_000)).toBe('1.00 tCO₂e');
+    expect(formatearKg(1_500)).toBe('1.50 tCO₂e');
+    expect(formatearKg(12_345)).toBe('12.35 tCO₂e');
   });
 
   it('boundary: 999.999 stays in kg', () => {

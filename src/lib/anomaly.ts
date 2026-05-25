@@ -4,6 +4,8 @@ const SOURCE_LABELS: Record<string, string> = {
   purchased_electricity: 'Electricidad',
   purchased_steam: 'Vapor',
   fugitive: 'Emisiones fugitivas',
+  water_use: 'Consumo de agua',
+  waste: 'Generación de residuos',
 };
 
 export function traducirMensajeAnomalia(msg: string): string {

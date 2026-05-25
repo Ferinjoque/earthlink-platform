@@ -362,7 +362,7 @@ export async function recalculatePeriod(
 
   await auditLogRepo.log('RECALCULATE', 'reporting_periods', periodId, user.id, {
     oldValues: { status: period.status },
-    newValues: { status: period.status, recalculated_at: new Date().toISOString() },
+    newValues: { recalculated_at: new Date().toISOString() },
   });
 
   revalidatePath('/audit');

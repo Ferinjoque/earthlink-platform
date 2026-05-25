@@ -68,4 +68,18 @@ describe('traducirMensajeAnomalia', () => {
     const result = traducirMensajeAnomalia(msg);
     expect(result).toContain('unknown_source');
   });
+
+  it('translates water_use to Spanish label', () => {
+    const msg = 'water_use quantity 500 kgal_us is 4.10σ above historical mean of 120 kgal_us. Verify.';
+    const result = traducirMensajeAnomalia(msg);
+    expect(result).toContain('Consumo de agua');
+    expect(result).not.toContain('water_use quantity');
+  });
+
+  it('translates waste to Spanish label', () => {
+    const msg = 'waste quantity 8.5 ton_us is 5.20σ above historical mean of 2 ton_us. Verify.';
+    const result = traducirMensajeAnomalia(msg);
+    expect(result).toContain('Generación de residuos');
+    expect(result).not.toContain('waste quantity');
+  });
 });
