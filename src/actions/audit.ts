@@ -112,7 +112,7 @@ export async function calculatePeriod(
 
   // Detección de anomalías usando entradas del año anterior como línea base
   try {
-    const priorYear = period.startDate.getFullYear() - 1;
+    const priorYear = period.startDate.getUTCFullYear() - 1;
     const { data: priorPeriodsRaw } = await supabase
       .from('reporting_periods')
       .select('id')
@@ -333,7 +333,7 @@ export async function recalculatePeriod(
 
   // Re-ejecutar detección de anomalías con los resultados actualizados
   try {
-    const priorYear = period.startDate.getFullYear() - 1;
+    const priorYear = period.startDate.getUTCFullYear() - 1;
     const { data: priorPeriodsRaw } = await supabase
       .from('reporting_periods')
       .select('id')
