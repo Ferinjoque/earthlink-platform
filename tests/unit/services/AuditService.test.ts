@@ -102,6 +102,14 @@ describe('AuditService.lock()', () => {
     const [, , , , meta] = auditLogRepo.log.mock.calls[0]!;
     expect(meta).toMatchObject({ oldValues: { status: 'open' } });
   });
+
+  it('no lanza si el log de auditoría falla — el bloqueo ya aplicado no debe revertirse', async () => {
+    const repos = makeRepos();
+    repos.auditLogRepo.log.mockRejectedValue(new Error('DB error'));
+    const service = new AuditService(repos.reportingPeriodRepo, repos.auditLogRepo);
+    await expect(service.lock('period-001', 'user-001')).resolves.toBeInstanceOf(ReportingPeriod);
+    expect(repos.reportingPeriodRepo.updateStatus).toHaveBeenCalledWith('period-001', 'locked');
+  });
 });
 
 describe('AuditService.transitionStatus()', () => {
@@ -155,5 +163,15 @@ describe('AuditService.transitionStatus()', () => {
     const { service, reportingPeriodRepo } = makeService(makePeriod('calculating'));
     await service.transitionStatus('period-001', 'under_review', 'user-001');
     expect(reportingPeriodRepo.updateStatus).toHaveBeenCalledWith('period-001', 'under_review');
+  });
+
+  it('no lanza si el log de auditoría falla — la transición ya aplicada no debe revertirse', async () => {
+    const repos = makeRepos(makePeriod('open'));
+    repos.auditLogRepo.log.mockRejectedValue(new Error('DB error'));
+    const service = new AuditService(repos.reportingPeriodRepo, repos.auditLogRepo);
+    await expect(
+      service.transitionStatus('period-001', 'calculating', 'user-001'),
+    ).resolves.toBeInstanceOf(ReportingPeriod);
+    expect(repos.reportingPeriodRepo.updateStatus).toHaveBeenCalledWith('period-001', 'calculating');
   });
 });
