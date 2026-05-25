@@ -290,9 +290,9 @@ describe('createActivityEntry', () => {
     const mockSupabase = {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
       from: vi.fn()
-        .mockReturnValueOnce(makeMaybySingleChain({ organization_id: 'org-001' }))
-        .mockReturnValueOnce(makeMaybySingleChain({ role: 'admin' }))
-        .mockReturnValueOnce(makeMaybySingleChain({ id: PERIOD_ID, status: 'open' })),
+        .mockReturnValueOnce(makeMaybeSingleChain({ organization_id: 'org-001' }))
+        .mockReturnValueOnce(makeMaybeSingleChain({ role: 'admin' }))
+        .mockReturnValueOnce(makeMaybeSingleChain({ id: PERIOD_ID, status: 'open' })),
     };
     vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
     const fd = makeFormData({
@@ -311,9 +311,9 @@ describe('createActivityEntry', () => {
     const mockSupabase = {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
       from: vi.fn()
-        .mockReturnValueOnce(makeMaybySingleChain({ organization_id: 'org-001' }))
-        .mockReturnValueOnce(makeMaybySingleChain({ role: 'admin' }))
-        .mockReturnValueOnce(makeMaybySingleChain({ id: PERIOD_ID, status: 'locked' })),
+        .mockReturnValueOnce(makeMaybeSingleChain({ organization_id: 'org-001' }))
+        .mockReturnValueOnce(makeMaybeSingleChain({ role: 'admin' }))
+        .mockReturnValueOnce(makeMaybeSingleChain({ id: PERIOD_ID, status: 'locked' })),
     };
     vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
     const fd = makeFormData({
@@ -328,10 +328,31 @@ describe('createActivityEntry', () => {
     expect(result.error).toMatch(/bloqueado/i);
   });
 
+  it('returns error when period is calculating', async () => {
+    const mockSupabase = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+      from: vi.fn()
+        .mockReturnValueOnce(makeMaybeSingleChain({ organization_id: 'org-001' }))
+        .mockReturnValueOnce(makeMaybeSingleChain({ role: 'admin' }))
+        .mockReturnValueOnce(makeMaybeSingleChain({ id: PERIOD_ID, status: 'calculating' })),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
+    const fd = makeFormData({
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
+      source_type: 'stationary_combustion',
+      secondary: 'diesel',
+      raw_quantity: '100',
+      raw_unit: 'L',
+    });
+    const result = await createActivityEntry(null, fd);
+    expect(result.error).toMatch(/calculado/i);
+  });
+
   it('returns error when supplier not found in DB', async () => {
     const mockSupabase = {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
-      from: vi.fn().mockReturnValueOnce(makeMaybySingleChain(null)),
+      from: vi.fn().mockReturnValueOnce(makeMaybeSingleChain(null)),
     };
     vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
     const fd = makeFormData({
