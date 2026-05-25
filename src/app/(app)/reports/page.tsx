@@ -69,6 +69,20 @@ export default async function ReportesPage() {
 
   // Cargar resúmenes de resultados de emisión con desglose por alcance
   const periodIds = periodsData.map((p) => p.id);
+
+  // Construir set de IDs de entradas anuladas para excluirlas del resumen
+  const voidedEntryIds = new Set<string>();
+  if (periodIds.length) {
+    const { data } = await supabase
+      .from('activity_entries')
+      .select('id')
+      .in('reporting_period_id', periodIds)
+      .not('voided_at', 'is', null);
+    for (const e of (data ?? []) as Array<{ id: string }>) {
+      voidedEntryIds.add(e.id);
+    }
+  }
+
   const mapaResumen = new Map<
     string,
     { totalCo2eKg: number; scope1Kg: number; scope2Kg: number; nResultados: number }
@@ -76,10 +90,11 @@ export default async function ReportesPage() {
   if (periodIds.length) {
     const { data } = await supabase
       .from('emission_results')
-      .select('reporting_period_id, co2e_kg, scope')
+      .select('reporting_period_id, activity_entry_id, co2e_kg, scope')
       .in('reporting_period_id', periodIds);
     if (data) {
-      for (const r of data as Array<{ reporting_period_id: string; co2e_kg: number; scope: number }>) {
+      for (const r of data as Array<{ reporting_period_id: string; activity_entry_id: string | null; co2e_kg: number; scope: number }>) {
+        if (r.activity_entry_id && voidedEntryIds.has(r.activity_entry_id)) continue;
         const prev = mapaResumen.get(r.reporting_period_id) ?? {
           totalCo2eKg: 0,
           scope1Kg: 0,

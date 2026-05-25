@@ -131,7 +131,8 @@ export async function exportCsv(
   const { data: entriesRaw } = await supabase
     .from('activity_entries')
     .select('id, source_type, raw_quantity, raw_unit')
-    .in('id', entryIds);
+    .in('id', entryIds)
+    .is('voided_at', null);
   const entries = (entriesRaw ?? []) as FilaEntrada[];
   const entryMap = new Map(entries.map((e) => [e.id, e]));
 
