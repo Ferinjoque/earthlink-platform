@@ -349,6 +349,29 @@ describe('createActivityEntry', () => {
     expect(result.error).toMatch(/calculado/i);
   });
 
+  it('returns error when concurrent insert retry finds locked period', async () => {
+    const mockSupabase = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+      from: vi.fn()
+        .mockReturnValueOnce(makeMaybeSingleChain({ organization_id: 'org-001' }))
+        .mockReturnValueOnce(makeMaybeSingleChain({ role: 'admin' }))
+        .mockReturnValueOnce(makeMaybeSingleChain(null))
+        .mockReturnValueOnce(makeInsertChain(null, { code: '23505' }))
+        .mockReturnValueOnce(makeMaybeSingleChain({ id: PERIOD_ID, status: 'locked' })),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
+    const fd = makeFormData({
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
+      source_type: 'stationary_combustion',
+      secondary: 'diesel',
+      raw_quantity: '100',
+      raw_unit: 'L',
+    });
+    const result = await createActivityEntry(null, fd);
+    expect(result.error).toMatch(/bloqueado/i);
+  });
+
   it('returns error when concurrent insert retry finds calculating period', async () => {
     const mockSupabase = {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
@@ -388,6 +411,27 @@ describe('createActivityEntry', () => {
     });
     const result = await createActivityEntry(null, fd);
     expect(result.error).toMatch(/proveedor.*no encontrado/i);
+  });
+
+  it('returns error when supplier-role user tries to register for a different supplier', async () => {
+    const OTHER_SUPPLIER = '00000000-0000-4000-8000-000000000099';
+    const mockSupabase = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+      from: vi.fn()
+        .mockReturnValueOnce(makeMaybeSingleChain({ organization_id: 'org-001' }))
+        .mockReturnValueOnce(makeMaybeSingleChain({ role: 'supplier', supplier_id: OTHER_SUPPLIER })),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
+    const fd = makeFormData({
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
+      source_type: 'stationary_combustion',
+      secondary: 'diesel',
+      raw_quantity: '100',
+      raw_unit: 'L',
+    });
+    const result = await createActivityEntry(null, fd);
+    expect(result.error).toMatch(/permisos/i);
   });
 
   it('returns error when user has no membership for supplier org', async () => {
@@ -1155,6 +1199,24 @@ describe('voidActivityEntry — control de roles', () => {
       makeFormData({ entry_id: ENTRY_ID, void_reason: 'corrección' }),
     );
     expect(result.success).toBe(true);
+  });
+
+  it('returns error when non-admin tries to void in locked period', async () => {
+    mockVoidClient({ memberRole: 'consultant', periodStatus: 'locked' });
+    const result = await voidActivityEntry(
+      null,
+      makeFormData({ entry_id: ENTRY_ID, void_reason: 'corrección' }),
+    );
+    expect(result.error).toMatch(/bloqueado/i);
+  });
+
+  it('returns error when non-admin tries to void in under_review period', async () => {
+    mockVoidClient({ memberRole: 'consultant', periodStatus: 'under_review' });
+    const result = await voidActivityEntry(
+      null,
+      makeFormData({ entry_id: ENTRY_ID, void_reason: 'corrección' }),
+    );
+    expect(result.error).toMatch(/revisión/i);
   });
 });
 
