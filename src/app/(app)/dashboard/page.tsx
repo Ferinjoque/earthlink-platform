@@ -95,7 +95,8 @@ export default async function PanelPage({ searchParams }: PageProps) {
     const { data } = await supabase
       .from('suppliers')
       .select('id, name')
-      .in('organization_id', orgIds);
+      .in('organization_id', orgIds)
+      .is('archived_at', null);
     if (data) {
       for (const s of data as Array<{ id: string; name: string }>) {
         supplierNameMap.set(s.id, s.name);
@@ -162,7 +163,7 @@ export default async function PanelPage({ searchParams }: PageProps) {
     reporting_period_id: string;
   };
 
-  const [emissionsResult, activityEntriesResult] = periodIds.length
+  const [emissionsResult, activityEntriesResult, voidedEntriesResult] = periodIds.length
     ? await Promise.all([
         supabase
           .from('emission_results')
@@ -171,11 +172,22 @@ export default async function PanelPage({ searchParams }: PageProps) {
         supabase
           .from('activity_entries')
           .select('id, source_type, reporting_period_id')
-          .in('reporting_period_id', periodIds),
+          .in('reporting_period_id', periodIds)
+          .is('voided_at', null),
+        supabase
+          .from('activity_entries')
+          .select('id')
+          .in('reporting_period_id', periodIds)
+          .not('voided_at', 'is', null),
       ])
-    : [{ data: null }, { data: null }];
+    : [{ data: null }, { data: null }, { data: null }];
 
-  const emissionRows = (emissionsResult.data as EmissionRow[] | null) ?? [];
+  const voidedDashboardIds = new Set<string>(
+    ((voidedEntriesResult.data ?? []) as Array<{ id: string }>).map((e) => e.id),
+  );
+  const emissionRows = ((emissionsResult.data as EmissionRow[] | null) ?? []).filter(
+    (r) => !r.activity_entry_id || !voidedDashboardIds.has(r.activity_entry_id),
+  );
   const activityEntries = (activityEntriesResult.data as ActivityEntryRaw[] | null) ?? [];
 
   const entrySourceMap = new Map<string, string>();
