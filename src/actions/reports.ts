@@ -199,7 +199,7 @@ export async function exportCsv(
     reporting_period_ids: periodIdsForOrg,
     format: 'csv',
     scope_filter: [1, 2],
-    file_url: `local://${filename}`,
+    file_url: filename,
     file_sha256: sha256,
     generated_by: user.id,
   }));

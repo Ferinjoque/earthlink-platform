@@ -186,7 +186,7 @@ function VoidResultButton({ activityEntryId }: { activityEntryId: string }) {
       toast(state.error, 'error');
       setOpen(false);
     }
-  }, [state?.success, state?.error, toast, router]);
+  }, [state, toast, router]);
 
   return (
     <div style={{ position: 'relative', display: 'inline-block' }}>
@@ -305,7 +305,7 @@ function UnlockButton({ periodId }: { periodId: string }) {
       toast(state.error, 'error');
       setOpen(false);
     }
-  }, [state?.success, state?.error, toast, router]);
+  }, [state, toast, router]);
 
   if (open) {
     return (
@@ -398,14 +398,12 @@ function ScopeTable({
   rows,
   accentColor,
   periodStatus,
-  isAdmin,
 }: {
   rows: ResultadoDetalle[];
   accentColor: string;
   periodStatus: PeriodStatus;
-  isAdmin: boolean;
 }) {
-  const showVoid = periodStatus !== 'locked' || isAdmin;
+  const showVoid = periodStatus !== 'locked';
   const total = rows.reduce((s, r) => s + r.co2e_kg, 0);
   return (
     <div style={{ overflowX: 'auto' }}>
@@ -481,11 +479,9 @@ function ScopeTable({
 function ResultadosPanel({
   results,
   periodStatus,
-  isAdmin,
 }: {
   results: ResultadoDetalle[];
   periodStatus: PeriodStatus;
-  isAdmin: boolean;
 }) {
   if (results.length === 0) {
     return (
@@ -507,7 +503,7 @@ function ResultadosPanel({
               Alcance 1
             </span>
           </div>
-          <ScopeTable rows={scope1} accentColor="var(--color-accent)" periodStatus={periodStatus} isAdmin={isAdmin} />
+          <ScopeTable rows={scope1} accentColor="var(--color-accent)" periodStatus={periodStatus} />
         </div>
       )}
       {scope2.length > 0 && (
@@ -517,7 +513,7 @@ function ResultadosPanel({
               Alcance 2
             </span>
           </div>
-          <ScopeTable rows={scope2} accentColor="var(--color-scope2)" periodStatus={periodStatus} isAdmin={isAdmin} />
+          <ScopeTable rows={scope2} accentColor="var(--color-scope2)" periodStatus={periodStatus} />
         </div>
       )}
     </div>
@@ -545,7 +541,7 @@ function RecalculateButton({ periodId }: { periodId: string }) {
       toast(state.error, 'error');
       setConfirm(false);
     }
-  }, [state?.success, state?.error, toast, router]);
+  }, [state, toast, router]);
 
   if (confirm) {
     return (
@@ -1499,7 +1495,7 @@ function PeriodoRow({
                 ×
               </button>
             </div>
-            <ResultadosPanel results={p.results} periodStatus={p.status} isAdmin={isAdmin} />
+            <ResultadosPanel results={p.results} periodStatus={p.status} />
           </td>
         </tr>
       )}
