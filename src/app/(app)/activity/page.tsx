@@ -58,7 +58,8 @@ export default async function ActividadPage({ searchParams }: PageProps) {
     const { data } = await supabase
       .from('suppliers')
       .select('id, name')
-      .in('organization_id', adminOrgIds);
+      .in('organization_id', adminOrgIds)
+      .is('archived_at', null);
     if (data)
       adminSupplierIds.push(...(data as Pick<SupplierRow, 'id' | 'name'>[]).map((s) => s.id));
   }
@@ -74,14 +75,15 @@ export default async function ActividadPage({ searchParams }: PageProps) {
       .in('id', supplierIds);
     if (data) suppliersData.push(...(data as SupplierItem[]));
   }
-  // Solo proveedores activos para el panel de importación
+  // Solo proveedores activos para el panel de importación y la lista de actividad
   const activeSuppliersForImport = suppliersData.filter((s) => s.archived_at === null);
+  const activeSupplierIds = activeSuppliersForImport.map((s) => s.id);
   const periodsData: Pick<ReportingPeriodRow, 'id' | 'label' | 'supplier_id' | 'status' | 'start_date'>[] = [];
-  if (supplierIds.length) {
+  if (activeSupplierIds.length) {
     const { data } = await supabase
       .from('reporting_periods')
       .select('id, label, supplier_id, status, start_date')
-      .in('supplier_id', supplierIds)
+      .in('supplier_id', activeSupplierIds)
       .order('start_date', { ascending: false });
     if (data) periodsData.push(...data);
   }
