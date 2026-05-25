@@ -661,4 +661,74 @@ describe('exportCsv', () => {
     const dataRow = lines[1] ?? '';
     expect(dataRow).not.toMatch(/,=SUM/); // sin coma seguida de = sin escape
   });
+
+  it('realiza un único insert batch en report_exports al exportar múltiples orgs', async () => {
+    const ORG2 = 'eeee0000-0000-0000-0000-000000000099';
+    const SUPPLIER2 = 'ffff0000-0000-0000-0000-000000000099';
+    const PERIOD2 = '1111aaaa-0000-4000-8000-000000000099';
+    const RESULT2 = '2222bbbb-0000-4000-8000-000000000099';
+    const ENTRY2 = '3333cccc-0000-4000-8000-000000000099';
+
+    const resultsData = [
+      {
+        id: RESULT_ID, activity_entry_id: ENTRY_ID, reporting_period_id: PERIOD_ID,
+        scope: 1, co2e_kg: 10, factor_used: 1, factor_unit: 'kg CO2/unit',
+        calc_hash: 'abc', calc_version: '1.0', calculated_at: '2026-01-01T00:00:00Z',
+      },
+      {
+        id: RESULT2, activity_entry_id: ENTRY2, reporting_period_id: PERIOD2,
+        scope: 1, co2e_kg: 20, factor_used: 2, factor_unit: 'kg CO2/unit',
+        calc_hash: 'def', calc_version: '1.0', calculated_at: '2026-01-01T00:00:00Z',
+      },
+    ];
+
+    const dataMap: Record<string, unknown[]> = {
+      memberships: [{ organization_id: ORG_ID }, { organization_id: ORG2 }],
+      reporting_periods: [
+        { id: PERIOD_ID, label: 'Q1-2026', supplier_id: SUPPLIER_ID },
+        { id: PERIOD2, label: 'Q1-2026', supplier_id: SUPPLIER2 },
+      ],
+      suppliers: [
+        { id: SUPPLIER_ID, name: 'Corp A', organization_id: ORG_ID },
+        { id: SUPPLIER2, name: 'Corp B', organization_id: ORG2 },
+      ],
+      emission_results: resultsData,
+      activity_entries: [
+        { id: ENTRY_ID, source_type: 'stationary_combustion', raw_quantity: 10, raw_unit: 'kWh' },
+        { id: ENTRY2, source_type: 'stationary_combustion', raw_quantity: 20, raw_unit: 'kWh' },
+      ],
+      report_exports: [],
+    };
+
+    const insertSpy = vi.fn().mockResolvedValue({ error: null });
+
+    function chain(table: string) {
+      const resolved = Promise.resolve({ data: dataMap[table] ?? [] });
+      const c: Record<string, unknown> = {
+        select: () => c, eq: () => c, in: () => c,
+        insert: table === 'report_exports' ? insertSpy : vi.fn().mockResolvedValue({ error: null }),
+        order: () => resolved,
+        then: resolved.then.bind(resolved),
+        catch: resolved.catch.bind(resolved),
+      };
+      return c;
+    }
+
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: USER_ID } } }) },
+      from: vi.fn().mockImplementation((table: string) => chain(table)),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
+
+    const fd = makeFormData({ period_ids: `${PERIOD_ID},${PERIOD2}` });
+    const result = await exportCsv(null, fd);
+
+    expect(result.success).toBe(true);
+    // El insert debe haberse llamado exactamente UNA vez (batch, no N veces)
+    expect(insertSpy).toHaveBeenCalledTimes(1);
+    // Y debe haberse llamado con un array de 2 registros (una por org)
+    const insertArg = insertSpy.mock.calls[0]?.[0];
+    expect(Array.isArray(insertArg)).toBe(true);
+    expect((insertArg as unknown[]).length).toBe(2);
+  });
 });

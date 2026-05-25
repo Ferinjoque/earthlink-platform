@@ -193,16 +193,17 @@ export async function exportCsv(
     existing.push(p.id);
     periodIdsByOrg.set(orgId, existing);
   }
-  for (const [orgId, periodIdsForOrg] of periodIdsByOrg) {
-    await supabase.from('report_exports').insert({
-      organization_id: orgId,
-      reporting_period_ids: periodIdsForOrg,
-      format: 'csv',
-      scope_filter: [1, 2],
-      file_url: `local://${filename}`,
-      file_sha256: sha256,
-      generated_by: user.id,
-    });
+  const exportRows = [...periodIdsByOrg.entries()].map(([orgId, periodIdsForOrg]) => ({
+    organization_id: orgId,
+    reporting_period_ids: periodIdsForOrg,
+    format: 'csv',
+    scope_filter: [1, 2],
+    file_url: `local://${filename}`,
+    file_sha256: sha256,
+    generated_by: user.id,
+  }));
+  if (exportRows.length > 0) {
+    await supabase.from('report_exports').insert(exportRows);
   }
 
   revalidatePath('/reports');

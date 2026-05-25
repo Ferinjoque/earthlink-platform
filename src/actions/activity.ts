@@ -355,6 +355,14 @@ export async function importActivityCsv(
   const validRows = rows.filter((r) => r.errors.length === 0 && r.data !== null);
   let skipped = rows.length - validRows.length;
 
+  if (validRows.length > 500) {
+    return {
+      error: 'El CSV contiene más de 500 filas válidas. Divide el archivo en lotes de máximo 500 filas.',
+      skipped,
+      submittedAt: Date.now(),
+    };
+  }
+
   if (validRows.length === 0) {
     return {
       error: `No se encontraron filas válidas. ${skipped} fila(s) con errores de validación.`,
@@ -569,6 +577,9 @@ export async function voidActivityEntry(
   if (periodStatus === 'calculating') {
     return { error: 'No se puede anular registros mientras el periodo está siendo calculado' };
   }
+  if (periodStatus === 'under_review' && mem.role !== 'admin') {
+    return { error: 'Solo administradores pueden anular registros en periodos bajo revisión' };
+  }
   if (periodStatus === 'locked' && mem.role !== 'admin') {
     return { error: 'Solo administradores pueden anular registros en periodos bloqueados' };
   }
@@ -585,6 +596,8 @@ export async function voidActivityEntry(
 
   revalidatePath('/activity');
   revalidatePath('/audit');
+  revalidatePath('/dashboard');
+  revalidatePath('/suppliers');
   return { success: true };
 }
 

@@ -607,9 +607,12 @@ export async function closeYear(
       await auditSvc.lock(p.id, user.id);
       bloqueados = bloqueados + 1;
     } catch (err) {
-      errores.push(
-        `Periodo ${p.id}: ${err instanceof Error ? err.message : 'error desconocido'}`,
-      );
+      const idx = bloqueados + skipped + 1;
+      errores.push(`Periodo ${idx} de ${enRevision.length}: error al bloquear`);
+      if (err instanceof Error) {
+        // Log interno — no exponer al cliente
+        void err;
+      }
       skipped = skipped + 1;
     }
   }
