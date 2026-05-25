@@ -93,6 +93,7 @@ export async function uploadEvidence(
   };
   const periodo = entryCheck.reporting_periods as PeriodoConSupplier | null;
   if (periodo?.status === 'locked') return { error: 'No se puede modificar un periodo bloqueado' };
+  if (periodo?.status === 'calculating') return { error: 'No se puede adjuntar evidencia mientras el periodo está siendo calculado' };
   const orgId = periodo?.suppliers?.organization_id;
   if (!orgId) return { error: 'No se pudo determinar la organización' };
 
@@ -371,6 +372,9 @@ export async function deleteEvidence(
   const typedEntry = entryData as EntryJoin | null;
   if (typedEntry?.reporting_periods?.status === 'locked') {
     return { error: 'No se puede modificar un periodo bloqueado' };
+  }
+  if (typedEntry?.reporting_periods?.status === 'calculating') {
+    return { error: 'No se puede eliminar evidencia mientras el periodo está siendo calculado' };
   }
   const orgId = typedEntry?.reporting_periods?.suppliers?.organization_id;
   if (!orgId) return { error: 'Sin permisos' };
