@@ -103,6 +103,7 @@ export default async function DetalleProveedorPage({
           .from('activity_entries')
           .select('id, source_type, raw_quantity, raw_unit, status, created_at')
           .in('reporting_period_id', periodIds)
+          .is('voided_at', null)
           .order('created_at', { ascending: false })
           .limit(5),
       ])
