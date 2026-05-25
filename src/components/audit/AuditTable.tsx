@@ -1258,10 +1258,12 @@ function PeriodoRow({
   const inicioFmt = new Date(p.start_date).toLocaleDateString('es', {
     month: 'short',
     year: 'numeric',
+    timeZone: 'UTC',
   });
   const finFmt = new Date(p.end_date).toLocaleDateString('es', {
     month: 'short',
     year: 'numeric',
+    timeZone: 'UTC',
   });
   const hasResults = p.results.length > 0;
   const hasAnomalias = p.anomalias.length > 0;

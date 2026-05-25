@@ -58,7 +58,9 @@ function mockClient({
     return Promise.resolve({ data: null, error: null });
   });
 
-  const updateResult = { eq: vi.fn().mockResolvedValue({ error: updateError }) };
+  const updateResult = {
+    eq: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: updateError }) }),
+  };
 
   const chainBuilder = (table: string) => {
     const currentTable = table;

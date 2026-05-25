@@ -286,7 +286,7 @@ export default async function DetalleProveedorPage({
                             fontSize: 'var(--text-xs)',
                           }}
                         >
-                          {new Date(p.start_date).toLocaleDateString('es-PE')}
+                          {new Date(p.start_date).toLocaleDateString('es-PE', { timeZone: 'UTC' })}
                         </td>
                         <td
                           style={{
@@ -296,7 +296,7 @@ export default async function DetalleProveedorPage({
                             fontSize: 'var(--text-xs)',
                           }}
                         >
-                          {new Date(p.end_date).toLocaleDateString('es-PE')}
+                          {new Date(p.end_date).toLocaleDateString('es-PE', { timeZone: 'UTC' })}
                         </td>
                         <td style={{ padding: 'var(--space-3) var(--space-4)' }}>
                           <Badge variant={variantEstadoPeriodo(p.status as PeriodStatus)}>
