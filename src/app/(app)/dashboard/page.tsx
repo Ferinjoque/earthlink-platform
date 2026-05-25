@@ -88,7 +88,7 @@ export default async function PanelPage({ searchParams }: PageProps) {
     ),
   ];
 
-  const allSupplierIds: string[] = [...memberSupplierIds];
+  const allSupplierIds: string[] = [];
   const supplierNameMap = new Map<string, string>();
 
   if (orgIds.length) {
@@ -96,6 +96,22 @@ export default async function PanelPage({ searchParams }: PageProps) {
       .from('suppliers')
       .select('id, name')
       .in('organization_id', orgIds)
+      .is('archived_at', null);
+    if (data) {
+      for (const s of data as Array<{ id: string; name: string }>) {
+        supplierNameMap.set(s.id, s.name);
+        if (!allSupplierIds.includes(s.id)) allSupplierIds.push(s.id);
+      }
+    }
+  }
+
+  // Resolver proveedores de membresía directa (rol supplier) no cubiertos por la org
+  const unresolvedMemberIds = memberSupplierIds.filter((id) => !supplierNameMap.has(id));
+  if (unresolvedMemberIds.length) {
+    const { data } = await supabase
+      .from('suppliers')
+      .select('id, name')
+      .in('id', unresolvedMemberIds)
       .is('archived_at', null);
     if (data) {
       for (const s of data as Array<{ id: string; name: string }>) {
