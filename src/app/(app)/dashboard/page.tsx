@@ -251,7 +251,7 @@ export default async function PanelPage({ searchParams }: PageProps) {
   const leaderboard = [...supplierCo2eMap.entries()]
     .map(([id, { s1, s2 }]) => ({
       id,
-      name: supplierNameMap.get(id) ?? id,
+      name: supplierNameMap.get(id) ?? '(Sin nombre)',
       s1,
       s2,
       total: s1 + s2,
@@ -944,7 +944,7 @@ export default async function PanelPage({ searchParams }: PageProps) {
                   <tbody>
                     {pipelineSupplierIds.map((supplierId, i) => {
                       const periods = pipelineMatrix.get(supplierId);
-                      const name = supplierNameMap.get(supplierId) ?? supplierId;
+                      const name = supplierNameMap.get(supplierId) ?? '(Sin nombre)';
                       return (
                         <tr
                           key={supplierId}

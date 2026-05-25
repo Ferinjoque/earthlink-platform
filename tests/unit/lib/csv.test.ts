@@ -67,11 +67,18 @@ describe('parseCsvText', () => {
     expect(rows[0]!.errors.length).toBeGreaterThan(0);
   });
 
-  it('records errors for non-positive quantity', () => {
+  it('records errors for negative quantity', () => {
     const csv = `${VALID_UUID},${VALID_YM},stationary_combustion,diesel,-5,L,`;
     const rows = parseCsvText(csv);
     expect(rows[0]!.data).toBeNull();
-    expect(rows[0]!.errors.some((e) => /positiv/i.test(e))).toBe(true);
+    expect(rows[0]!.errors.length).toBeGreaterThan(0);
+  });
+
+  it('accepts zero quantity (nonnegative — useful for ESG periods with no consumption)', () => {
+    const csv = `${VALID_UUID},${VALID_YM},stationary_combustion,diesel,0,L,`;
+    const rows = parseCsvText(csv);
+    expect(rows[0]!.errors).toHaveLength(0);
+    expect(rows[0]!.data?.raw_quantity).toBe(0);
   });
 
   it('parses purchased_steam with empty secondary', () => {

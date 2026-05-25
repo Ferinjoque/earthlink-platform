@@ -950,14 +950,22 @@ export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuil
 
   function handleListo() {
     startUploadTransition(async () => {
-      // Subir todos los archivos en paralelo
-      const uploads = Array.from(pendingEvidences.entries()).map(([eid, file]) => {
-        const fd = new FormData();
-        fd.append('evidence', file);
-        return uploadEvidence(eid, null, fd);
-      });
-      const resultados = await Promise.all(uploads);
-      const errores = resultados.filter((r) => r?.error).map((r) => r!.error!);
+      // Promise.allSettled — un fallo no aborta los demás uploads
+      const settled = await Promise.allSettled(
+        Array.from(pendingEvidences.entries()).map(([eid, file]) => {
+          const fd = new FormData();
+          fd.append('evidence', file);
+          return uploadEvidence(eid, null, fd);
+        }),
+      );
+      const errores = settled
+        .filter((s): s is PromiseFulfilledResult<{ error?: string }> => s.status === 'fulfilled' && Boolean(s.value?.error))
+        .map((s) => s.value.error!)
+        .concat(
+          settled
+            .filter((s): s is PromiseRejectedResult => s.status === 'rejected')
+            .map(() => 'Error de red al subir archivo'),
+        );
       if (errores.length > 0) {
         toast(`Error al subir ${errores.length} archivo${errores.length !== 1 ? 's' : ''}`, 'error');
       } else if (pendingEvidences.size > 0) {
