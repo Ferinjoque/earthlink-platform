@@ -1109,3 +1109,91 @@ describe('createActivityEntry — findOrCreatePeriod 23505 retry', () => {
 function makeMaybySingleChain(data: unknown) {
   return makeMaybeSingleChain(data);
 }
+
+// ── importActivityCsv — límite de filas ───────────────────────────────────────
+
+describe('importActivityCsv — límite de filas', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  function mockAuthOnly() {
+    const mockSupabase = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+      from: vi.fn(),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
+  }
+
+  it('rechaza CSV con más de 500 filas válidas', async () => {
+    mockAuthOnly();
+    const header = 'supplier_id,year_month,source_type,secondary,raw_quantity,raw_unit,data_quality,notes';
+    const row = `${VALID_UUID},2026-01,stationary_combustion,natural_gas,100,m3_ng,measured,nota`;
+    const csvText = [header, ...Array(501).fill(row)].join('\n');
+    const fd = makeFormData({ csv_text: csvText });
+    const result: CsvImportState = await importActivityCsv(null, fd);
+    expect(result.error).toMatch(/500/);
+  });
+
+  it('acepta CSV con exactamente 500 filas válidas (no rechaza por límite)', async () => {
+    // Verifica que el check de 500 filas no se dispara para exactamente 500 filas.
+    // El resultado puede fallar por otro motivo (acceso proveedor), pero NO por límite de filas.
+    const mockSupabase = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null }),
+        in: vi.fn().mockReturnThis(),
+        then: vi.fn().mockResolvedValue({ data: null }),
+      }),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
+    const header = 'supplier_id,year_month,source_type,secondary,raw_quantity,raw_unit,data_quality,notes';
+    const row = `${VALID_UUID},2026-01,stationary_combustion,natural_gas,100,m3_ng,measured,nota`;
+    const csvText = [header, ...Array(500).fill(row)].join('\n');
+    const fd = makeFormData({ csv_text: csvText });
+    const result: CsvImportState = await importActivityCsv(null, fd);
+    expect(result.error).not.toMatch(/500 filas/);
+  });
+});
+
+// ── voidActivityEntry — estado under_review ───────────────────────────────────
+
+describe('voidActivityEntry — estado under_review', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('bloquea a consultores cuando el periodo está bajo revisión', async () => {
+    mockVoidClient({ memberRole: 'consultant', periodStatus: 'under_review' });
+    const result = await voidActivityEntry(
+      null,
+      makeFormData({ entry_id: ENTRY_ID, void_reason: 'corrección' }),
+    );
+    expect(result.error).toMatch(/revisión/i);
+  });
+
+  it('permite a administradores anular en periodo bajo revisión', async () => {
+    mockVoidClient({ memberRole: 'admin', periodStatus: 'under_review' });
+    const result = await voidActivityEntry(
+      null,
+      makeFormData({ entry_id: ENTRY_ID, void_reason: 'corrección' }),
+    );
+    expect(result.success).toBe(true);
+  });
+});
+
+// ── voidActivityEntry — revalidatePath ────────────────────────────────────────
+
+describe('voidActivityEntry — revalidatePath', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('invalida /dashboard y /suppliers al anular con éxito', async () => {
+    const { revalidatePath } = await import('next/cache');
+    mockVoidClient({ memberRole: 'admin', periodStatus: 'open' });
+    const result = await voidActivityEntry(
+      null,
+      makeFormData({ entry_id: ENTRY_ID, void_reason: 'Dato incorrecto' }),
+    );
+    expect(result.success).toBe(true);
+    expect(revalidatePath).toHaveBeenCalledWith('/dashboard');
+    expect(revalidatePath).toHaveBeenCalledWith('/suppliers');
+  });
+});

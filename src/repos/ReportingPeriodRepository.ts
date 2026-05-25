@@ -21,7 +21,7 @@ export class ReportingPeriodRepository extends SupabaseRepository<ReportingPerio
       .from(this.tableName)
       .update({ status })
       .eq('id', id)
-      .select()
+      .select('id, supplier_id, label, start_date, end_date, status, created_at')
       .single();
     if (error ?? !data)
       throw new Error(`Failed to update period status: ${error?.message ?? 'no data'}`);
