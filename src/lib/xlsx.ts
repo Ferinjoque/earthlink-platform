@@ -254,7 +254,6 @@ export async function parseXlsxBuffer(buffer: ArrayBuffer): Promise<ParsedCsvRow
   if (!ws) return [];
 
   const rows: ParsedCsvRow[] = [];
-  let rowIndex = 0;
 
   ws.eachRow((row, rowNum) => {
     if (rowNum === 1) return;
@@ -289,15 +288,14 @@ export async function parseXlsxBuffer(buffer: ArrayBuffer): Promise<ParsedCsvRow
     if (!supplierId && !yearMonth && !sourceType && !quantityRaw) return;
     if (supplierId.startsWith('←') || supplierId.startsWith('Borrar')) return;
 
-    rowIndex++;
     const escape = (v: string) => v.includes(',') ? `"${v.replace(/"/g, '""')}"` : v;
     const csvLine = [supplierId, yearMonth, sourceType, secondary, quantityRaw, unit, dataQuality, escape(notes)].join(',');
     const [parsed] = parseCsvText(csvLine);
 
     if (parsed) {
-      rows.push({ ...parsed, rowIndex });
+      rows.push({ ...parsed, rowIndex: rowNum });
     } else {
-      rows.push({ rowIndex, data: null, errors: ['Fila vacía o inválida'] });
+      rows.push({ rowIndex: rowNum, data: null, errors: ['Fila vacía o inválida'] });
     }
   });
 
