@@ -86,6 +86,7 @@ export default async function ConsumoPage() {
       .from('activity_entries')
       .select('source_type, raw_quantity, raw_unit, activity_kind, reporting_period_id')
       .in('reporting_period_id', periodIds)
+      .is('voided_at', null)
       .limit(5000);
     if (data) entriesData.push(...(data as EntryFetch[]));
   }
