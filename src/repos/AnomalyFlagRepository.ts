@@ -38,7 +38,7 @@ export class AnomalyFlagRepository extends SupabaseRepository<AnomalyFlag> {
       .select('id, activity_entry_id, detector, severity, z_score, threshold_used, message, is_resolved, resolved_by, resolved_at, flagged_at')
       .single();
     if (error ?? !data)
-      throw new Error(`Failed to resolve anomaly flag: ${error?.message ?? 'no data'}`);
+      throw new Error(`Error al resolver anomalía: ${error?.message ?? 'sin datos'}`);
     return this.toEntity(data as Record<string, unknown>);
   }
 

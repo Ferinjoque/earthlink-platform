@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 import { createServerClient } from '@/services/supabase/server';
 
 export async function signIn(
@@ -44,5 +45,6 @@ export async function signIn(
 export async function signOut(): Promise<void> {
   const supabase = await createServerClient();
   await supabase.auth.signOut();
+  revalidatePath('/', 'layout');
   redirect('/login');
 }

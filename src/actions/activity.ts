@@ -393,6 +393,7 @@ export async function createActivityEntry(
   revalidatePath('/activity');
   revalidatePath('/audit');
   revalidatePath('/dashboard');
+  revalidatePath('/suppliers', 'layout');
   return { success: true, submittedAt: Date.now() };
 }
 

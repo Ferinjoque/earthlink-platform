@@ -14,6 +14,9 @@ vi.mock('../../../src/services/supabase/server', () => ({
 vi.mock('next/navigation', () => ({
   redirect: vi.fn(),
 }));
+vi.mock('next/cache', () => ({
+  revalidatePath: vi.fn(),
+}));
 
 import { createServerClient } from '../../../src/services/supabase/server';
 import { redirect } from 'next/navigation';

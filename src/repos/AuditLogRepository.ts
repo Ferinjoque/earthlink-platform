@@ -18,14 +18,14 @@ export class AuditLogRepository {
       old_values: meta?.oldValues ?? null,
       new_values: meta?.newValues ?? null,
     });
-    if (error) throw new Error(`Failed to write audit log: ${error.message}`);
+    if (error) throw new Error(`Error al escribir en el log de auditoría: ${error.message}`);
   }
 
   update(): never {
-    throw new Error('AuditLogRepository is append-only — update is forbidden');
+    throw new Error('AuditLogRepository es solo escritura — update no permitido');
   }
 
   delete(): never {
-    throw new Error('AuditLogRepository is append-only — delete is forbidden');
+    throw new Error('AuditLogRepository es solo escritura — delete no permitido');
   }
 }

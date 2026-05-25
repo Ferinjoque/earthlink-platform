@@ -24,7 +24,7 @@ export class ReportingPeriodRepository extends SupabaseRepository<ReportingPerio
       .select('id, supplier_id, label, start_date, end_date, status, created_at')
       .single();
     if (error ?? !data)
-      throw new Error(`Failed to update period status: ${error?.message ?? 'no data'}`);
+      throw new Error(`Error al actualizar estado del periodo: ${error?.message ?? 'sin datos'}`);
     return this.toEntity(data as Record<string, unknown>);
   }
 

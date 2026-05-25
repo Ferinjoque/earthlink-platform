@@ -136,7 +136,10 @@ export async function uploadEvidence(
     return { error: 'Error al subir el archivo. Intenta nuevamente.' };
   }
 
-  const originalName = file.name.replace(/[\x00-\x1f\x7f]/g, '').slice(0, 255);
+  // Eliminar control ASCII y Unicode bidi/invisibles que podrían disfrazar el nombre del archivo
+  const originalName = file.name
+    .replace(/[\x00-\x1f\x7f​-‏‪-‮⁦-⁩﻿]/g, '')
+    .slice(0, 255);
 
   // Registrar en BD
   const { data: inserted, error: insertError } = await supabase
