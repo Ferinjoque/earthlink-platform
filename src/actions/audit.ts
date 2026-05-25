@@ -55,6 +55,7 @@ export async function calculatePeriod(
     .from('suppliers')
     .select('organization_id')
     .eq('id', period.supplierId)
+    .is('archived_at', null)
     .maybeSingle();
   const supplierOrg = supplierRaw as SupplierOrg | null;
   if (!supplierOrg) return { error: 'Proveedor del periodo no encontrado' };
@@ -201,6 +202,7 @@ export async function lockPeriod(
     .from('suppliers')
     .select('organization_id')
     .eq('id', period.supplierId)
+    .is('archived_at', null)
     .maybeSingle();
   const supplierOrg = supplierRaw as SupplierOrg | null;
   if (!supplierOrg) return { error: 'Proveedor del periodo no encontrado' };
@@ -272,6 +274,7 @@ export async function recalculatePeriod(
     .from('suppliers')
     .select('organization_id')
     .eq('id', period.supplierId)
+    .is('archived_at', null)
     .maybeSingle();
   const supplierOrg = supplierRaw as SupplierOrg | null;
   if (!supplierOrg) return { error: 'Proveedor del periodo no encontrado' };
@@ -743,6 +746,7 @@ export async function unlockPeriod(
     .from('suppliers')
     .select('organization_id')
     .eq('id', period.supplierId)
+    .is('archived_at', null)
     .maybeSingle();
   const supplierOrg = supplierRaw as SupplierOrg | null;
   if (!supplierOrg) return { error: 'Proveedor del periodo no encontrado' };
