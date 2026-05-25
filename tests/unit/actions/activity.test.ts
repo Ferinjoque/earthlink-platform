@@ -349,6 +349,29 @@ describe('createActivityEntry', () => {
     expect(result.error).toMatch(/calculado/i);
   });
 
+  it('returns error when concurrent insert retry finds calculating period', async () => {
+    const mockSupabase = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+      from: vi.fn()
+        .mockReturnValueOnce(makeMaybeSingleChain({ organization_id: 'org-001' }))
+        .mockReturnValueOnce(makeMaybeSingleChain({ role: 'admin' }))
+        .mockReturnValueOnce(makeMaybeSingleChain(null))
+        .mockReturnValueOnce(makeInsertChain(null, { code: '23505' }))
+        .mockReturnValueOnce(makeMaybeSingleChain({ id: PERIOD_ID, status: 'calculating' })),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
+    const fd = makeFormData({
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
+      source_type: 'stationary_combustion',
+      secondary: 'diesel',
+      raw_quantity: '100',
+      raw_unit: 'L',
+    });
+    const result = await createActivityEntry(null, fd);
+    expect(result.error).toMatch(/calculado/i);
+  });
+
   it('returns error when supplier not found in DB', async () => {
     const mockSupabase = {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
@@ -371,8 +394,8 @@ describe('createActivityEntry', () => {
     const mockSupabase = {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
       from: vi.fn()
-        .mockReturnValueOnce(makeMaybySingleChain({ organization_id: 'org-001' }))
-        .mockReturnValueOnce(makeMaybySingleChain(null)),
+        .mockReturnValueOnce(makeMaybeSingleChain({ organization_id: 'org-001' }))
+        .mockReturnValueOnce(makeMaybeSingleChain(null)),
     };
     vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
     const fd = makeFormData({
