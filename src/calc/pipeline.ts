@@ -251,7 +251,9 @@ export function score(totals: EvaluationTotals, history: readonly EvaluationTota
 
   if (history.length > 0) {
     const prior = history[history.length - 1]!;
-    if (prior.totalCo2eKg > 0) {
+    if (prior.totalCo2eKg === 0 && totals.totalCo2eKg > 0) {
+      trend = 'up';
+    } else if (prior.totalCo2eKg > 0) {
       const changePct = (totals.totalCo2eKg - prior.totalCo2eKg) / prior.totalCo2eKg;
       if (changePct > 0.05) trend = 'up';
       else if (changePct < -0.05) trend = 'down';

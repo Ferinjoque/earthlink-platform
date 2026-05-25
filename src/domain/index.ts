@@ -11,4 +11,6 @@ export {
   PurchasedElectricitySource,
   PurchasedSteamSource,
   FugitiveEmissionSource,
+  WaterUseSource,
+  WasteSource,
 } from './EmissionSource';

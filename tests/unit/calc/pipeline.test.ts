@@ -376,8 +376,14 @@ describe('score', () => {
     expect(s.level).toBe('low');
   });
 
-  it('stable trend when prior totalCo2eKg is 0 (avoid division by zero)', () => {
+  it('up trend when prior totalCo2eKg is 0 and current is positive (inicio de emisiones)', () => {
     const current = makeTotals(5000);
+    const history = [makeTotals(0)];
+    expect(score(current, history).trend).toBe('up');
+  });
+
+  it('stable trend when both prior and current are 0', () => {
+    const current = makeTotals(0);
     const history = [makeTotals(0)];
     expect(score(current, history).trend).toBe('stable');
   });
