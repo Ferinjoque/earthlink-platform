@@ -310,7 +310,8 @@ export async function recalculatePeriod(
   } catch {
     // Los resultados ya fueron eliminados — restablecer a under_review para que
     // el periodo no quede bloqueado sin resultados y pueda recalcularse.
-    const { error: recoveryError } = await adminClient
+    // Usar supabase (server client con RLS) — no se necesita admin para actualizar estado.
+    const { error: recoveryError } = await supabase
       .from('reporting_periods')
       .update({ status: 'under_review' })
       .eq('id', periodId);

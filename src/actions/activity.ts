@@ -440,7 +440,7 @@ export async function importActivityCsv(
   const uniqueSupplierIds = [...new Set(validRows.map((r) => r.data!.supplier_id))];
   for (const supplierId of uniqueSupplierIds) {
     const check = await verifySupplierAccess(supabase, supplierId, user.id);
-    if ('error' in check) return { error: check.error, submittedAt: Date.now() };
+    if ('error' in check) return { error: check.error, skipped, submittedAt: Date.now() };
   }
 
   const now = new Date();
@@ -663,15 +663,20 @@ export async function deleteActivityEntry(
   // Obtener estado del periodo y org mediante join
   type EntryPeriod = {
     reporting_period_id: string;
+    voided_at: string | null;
     reporting_periods: { status: string; suppliers: { organization_id: string } };
   };
   const { data: entryRaw } = await supabase
     .from('activity_entries')
-    .select('reporting_period_id, reporting_periods(status, suppliers(organization_id))')
+    .select('reporting_period_id, voided_at, reporting_periods(status, suppliers(organization_id))')
     .eq('id', entryId)
     .maybeSingle();
   const entryData = entryRaw as EntryPeriod | null;
   if (!entryData) return { error: 'Registro no encontrado' };
+
+  if (entryData.voided_at !== null) {
+    return { error: 'El registro ya fue anulado y no puede eliminarse. Usa la anulación para mantener la trazabilidad.' };
+  }
 
   const periodStatus = entryData.reporting_periods?.status;
   const orgId = entryData.reporting_periods?.suppliers?.organization_id;

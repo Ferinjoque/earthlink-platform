@@ -595,6 +595,10 @@ describe('createPeriod (audit.ts)', () => {
 
 // ── recalculatePeriod ─────────────────────────────────────────────────────────
 
+function makeUpdateEqChain(error: { message: string } | null = null) {
+  return { update: () => ({ eq: () => Promise.resolve({ error }) }) };
+}
+
 function mockRecalculateClient({
   hasSupplier = true,
   isAdmin = true,
@@ -604,7 +608,9 @@ function mockRecalculateClient({
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: VALID_UUID } } }) },
     from: vi.fn()
       .mockReturnValueOnce(makeSelectChain(hasSupplier ? { organization_id: VALID_ORG_ID } : null))
-      .mockReturnValueOnce(makeSelectChain(isAdmin ? { role: 'admin' } : null)),
+      .mockReturnValueOnce(makeSelectChain(isAdmin ? { role: 'admin' } : null))
+      // Recovery path: supabase (server client) restablece estado del periodo si evaluate() lanza
+      .mockReturnValue(makeUpdateEqChain()),
   };
   vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
   // Reset antes de encolar para no acumular valores de tests anteriores que retornan antes del RPC
@@ -666,14 +672,14 @@ describe('recalculatePeriod', () => {
 
   it('resets period to under_review on evaluate failure to avoid locked period with no results', async () => {
     mocks.findById.mockResolvedValueOnce(makePeriod('locked'));
-    mockRecalculateClient();
+    const client = mockRecalculateClient();
     mocks.evaluate.mockRejectedValueOnce(new Error('eval failure'));
-    mocks.adminFrom.mockClear();
 
     const result = await recalculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
 
     expect(result.error).toBeDefined();
-    expect(mocks.adminFrom).toHaveBeenCalledWith('reporting_periods');
+    // El recovery usa supabase (server client con RLS), no adminClient — verificar llamada al client
+    expect(client.from).toHaveBeenCalledWith('reporting_periods');
   });
 
   it('returns success with updated totals', async () => {

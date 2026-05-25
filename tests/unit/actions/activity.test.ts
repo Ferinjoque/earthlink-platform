@@ -900,9 +900,11 @@ function mockDeleteClient({
   memberRole = 'admin' as string | null,
   deleteError = null as { message: string } | null,
   periodStatus = 'open' as string,
+  voidedAt = null as string | null,
 } = {}) {
   const entryData = {
     reporting_period_id: PERIOD_ID,
+    voided_at: voidedAt,
     reporting_periods: { status: periodStatus, suppliers: { organization_id: 'org-001' } },
   };
   // Simula el filtro .in('role', ['admin', 'consultant']) de la DB:
@@ -964,6 +966,19 @@ describe('deleteActivityEntry — control de roles', () => {
     mockDeleteClient({ periodStatus: 'calculating' });
     const result = await deleteActivityEntry(null, makeFormData({ entry_id: ENTRY_ID }));
     expect(result.error).toMatch(/calculad/i);
+  });
+
+  it('returns error when entry is voided (voided_at not null)', async () => {
+    mockDeleteClient({ voidedAt: '2026-05-01T00:00:00.000Z' });
+    const result = await deleteActivityEntry(null, makeFormData({ entry_id: ENTRY_ID }));
+    expect(result.error).toMatch(/anulado/i);
+    expect(result.success).toBeUndefined();
+  });
+
+  it('allows deletion when entry is not voided (voided_at null)', async () => {
+    mockDeleteClient({ voidedAt: null, memberRole: 'admin' });
+    const result = await deleteActivityEntry(null, makeFormData({ entry_id: ENTRY_ID }));
+    expect(result.success).toBe(true);
   });
 });
 

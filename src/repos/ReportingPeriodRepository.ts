@@ -6,6 +6,11 @@ export class ReportingPeriodRepository extends SupabaseRepository<ReportingPerio
   protected override readonly selectColumns =
     'id, supplier_id, label, start_date, end_date, status, created_at';
 
+  /** Prohibido en repos tenant-scoped — usar findBySupplierId() con filtro explícito. */
+  override findAll(): never {
+    throw new Error('ReportingPeriodRepository.findAll() no permitido — usar findBySupplierId()');
+  }
+
   async findBySupplierId(supplierId: string): Promise<readonly ReportingPeriod[]> {
     const { data, error } = await this.client
       .from(this.tableName)

@@ -6,6 +6,11 @@ export class SupplierRepository extends SupabaseRepository<Supplier> {
   protected override readonly selectColumns =
     'id, organization_id, name, category, contact_email, created_at';
 
+  /** Prohibido en repos tenant-scoped — usar findByOrgId() con filtro explícito. */
+  override findAll(): never {
+    throw new Error('SupplierRepository.findAll() no permitido — usar findByOrgId()');
+  }
+
   protected toEntity(row: Record<string, unknown>): Supplier {
     return new Supplier({
       id: row['id'] as string,
