@@ -108,7 +108,7 @@ export default async function DetallePeriodoPage({
     'id' | 'action' | 'performed_at' | 'performed_by' | 'new_values'
   >;
 
-  const [resultsRaw, auditLogRaw] = await Promise.all([
+  const [resultsRaw, auditLogRaw, voidedEntriesRaw] = await Promise.all([
     supabase
       .from('emission_results')
       .select(
@@ -122,9 +122,19 @@ export default async function DetallePeriodoPage({
       .select('id, action, performed_at, performed_by, new_values')
       .eq('record_id', periodId)
       .order('performed_at', { ascending: true }),
+    supabase
+      .from('activity_entries')
+      .select('id')
+      .eq('reporting_period_id', periodId)
+      .not('voided_at', 'is', null),
   ]);
 
-  const results = (resultsRaw.data ?? []) as FilaResultado[];
+  const voidedEntryIds = new Set<string>(
+    ((voidedEntriesRaw.data ?? []) as Array<{ id: string }>).map((e) => e.id),
+  );
+  const results = ((resultsRaw.data ?? []) as FilaResultado[]).filter(
+    (r) => !voidedEntryIds.has(r.activity_entry_id),
+  );
   const auditLog = (auditLogRaw.data ?? []) as FilaAuditLog[];
 
   type FilaEntrada = Pick<ActivityEntryRow, 'id' | 'source_type' | 'raw_quantity' | 'raw_unit'>;
