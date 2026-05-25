@@ -1,5 +1,7 @@
 import { calculate, aggregate, _internals } from '../calc/pipeline';
-import type { EmissionFactor, EmissionResult, EvaluationTotals } from '../calc/types';
+import type { EmissionFactor, EmissionResult, EvaluationTotals, FactorTable, ConversionTable } from '../calc/types';
+import type { ReportingPeriod } from '../domain/ReportingPeriod';
+import type { ActivityEntry } from '../domain/ActivityEntry';
 
 // Categorías sin factor GHG — CO2e = 0, no se persisten en emission_results
 const NO_GHG_KINDS: ReadonlySet<string> = new Set(['water_use', 'waste']);
@@ -38,10 +40,29 @@ export class EvaluationService {
       this.unitConversionRepo.buildConversionTable(),
     ]);
 
-    const successes: Array<{ result: EmissionResult; periodId: string; factor: EmissionFactor }> =
-      [];
-    const errors: EvaluationError[] = [];
+    return this._compute(period, entries, factors, conversions, periodId);
+  }
 
+  async evaluateWithCache(
+    periodId: string,
+    factors: FactorTable,
+    conversions: ConversionTable,
+  ): Promise<EvaluationOutcome> {
+    const period = await this.reportingPeriodRepo.findById(periodId);
+    if (!period) throw new Error(`Periodo de reporte "${periodId}" no encontrado`);
+    const entries = await this.activityEntryRepo.findByPeriodId(periodId);
+    return this._compute(period, entries, factors, conversions, periodId);
+  }
+
+  private async _compute(
+    period: ReportingPeriod,
+    entries: readonly ActivityEntry[],
+    factors: FactorTable,
+    conversions: ConversionTable,
+    periodId: string,
+  ): Promise<EvaluationOutcome> {
+    const successes: Array<{ result: EmissionResult; periodId: string; factor: EmissionFactor }> = [];
+    const errors: EvaluationError[] = [];
     const noGhgResults: EmissionResult[] = [];
 
     for (const entry of entries) {

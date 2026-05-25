@@ -65,6 +65,7 @@ vi.mock('../../../src/services/AuditService', () => ({
 vi.mock('../../../src/services/EvaluationService', () => ({
   EvaluationService: class {
     evaluate = mocks.evaluate;
+    evaluateWithCache = mocks.evaluate;
   },
 }));
 

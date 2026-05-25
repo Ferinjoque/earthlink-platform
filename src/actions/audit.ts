@@ -446,23 +446,29 @@ export async function calculateYear(
   const auditLogRepo = new AuditLogRepository(supabase);
   const auditSvc = new AuditService(periodRepo, auditLogRepo);
   const activityEntryRepoYear = new ActivityEntryRepository(supabase);
+  const emissionFactorRepoYear = new EmissionFactorRepository(supabase);
+  const unitConversionRepoYear = new UnitConversionRepository(supabase);
   const evalSvc = new EvaluationService(
     activityEntryRepoYear,
-    new EmissionFactorRepository(supabase),
-    new UnitConversionRepository(supabase),
+    emissionFactorRepoYear,
+    unitConversionRepoYear,
     new EmissionResultRepository(supabase),
     periodRepo,
   );
 
-  // Cargar entradas históricas del año anterior una sola vez para todo el lote
+  // Pre-cargar tablas de referencia una sola vez para todo el lote (K periodos → 1 fetch cada una)
   const priorYear = year - 1;
-  const { data: priorPeriodsYearRaw } = await supabase
-    .from('reporting_periods')
-    .select('id')
-    .eq('supplier_id', supplier_id)
-    .gte('start_date', `${priorYear}-01-01`)
-    .lte('start_date', `${priorYear}-12-31`);
-  const priorPeriodIdsYear = (priorPeriodsYearRaw ?? []).map((p: { id: string }) => p.id);
+  const [factorTable, conversionTable, priorPeriodsYearRaw] = await Promise.all([
+    emissionFactorRepoYear.buildFactorTable(),
+    unitConversionRepoYear.buildConversionTable(),
+    supabase
+      .from('reporting_periods')
+      .select('id')
+      .eq('supplier_id', supplier_id)
+      .gte('start_date', `${priorYear}-01-01`)
+      .lte('start_date', `${priorYear}-12-31`),
+  ]);
+  const priorPeriodIdsYear = ((priorPeriodsYearRaw as { data: Array<{ id: string }> | null }).data ?? []).map((p) => p.id);
   const historicalEntriesYear = await activityEntryRepoYear.findByPeriodIds(priorPeriodIdsYear);
 
   const adminClientYear = createAdminClient();
@@ -479,7 +485,7 @@ export async function calculateYear(
     }
 
     try {
-      await evalSvc.evaluate(p.id);
+      await evalSvc.evaluateWithCache(p.id, factorTable, conversionTable);
 
       // Detección de anomalías contra línea base del año anterior (no crítica)
       try {

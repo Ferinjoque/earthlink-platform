@@ -406,3 +406,45 @@ describe('EvaluationService.evaluate()', () => {
     expect(emissionResultRepo.insertMany).not.toHaveBeenCalled();
   });
 });
+
+describe('EvaluationService.evaluateWithCache()', () => {
+  it('throws when period not found', async () => {
+    const { service } = makeService({ period: null });
+    await expect(
+      service.evaluateWithCache('period-001', makeFactorTable(), makeConversions()),
+    ).rejects.toThrow('no encontrado');
+  });
+
+  it('never calls buildFactorTable ni buildConversionTable', async () => {
+    const { service, emissionFactorRepo, unitConversionRepo } = makeService();
+    await service.evaluateWithCache('period-001', makeFactorTable(), makeConversions());
+    expect(emissionFactorRepo.buildFactorTable).not.toHaveBeenCalled();
+    expect(unitConversionRepo.buildConversionTable).not.toHaveBeenCalled();
+  });
+
+  it('produces same CO2e result as evaluate() given identical tables', async () => {
+    const { service } = makeService();
+    const [withCache, withFetch] = await Promise.all([
+      service.evaluateWithCache('period-001', makeFactorTable(), makeConversions()),
+      service.evaluate('period-001'),
+    ]);
+    expect(withCache.totals.totalCo2eKg).toBeCloseTo(withFetch.totals.totalCo2eKg, 6);
+    expect(withCache.errors).toHaveLength(withFetch.errors.length);
+  });
+
+  it('returns error when passed empty factor table (factor missing)', async () => {
+    const { service } = makeService();
+    const { errors, totals } = await service.evaluateWithCache('period-001', new Map(), makeConversions());
+    expect(errors).toHaveLength(1);
+    expect(totals.totalCo2eKg).toBe(0);
+  });
+
+  it('uses the passed tables — different factor value yields different result', async () => {
+    const lowFactor: EmissionFactor = { ...dieselFactor, factorKgCo2ePerUnit: 1.0 };
+    const altTable: FactorTable = new Map([['stationary_combustion.diesel', lowFactor]]);
+    const { service } = makeService();
+    const { totals } = await service.evaluateWithCache('period-001', altTable, makeConversions());
+    // 100L × 1.0 = 100 kg
+    expect(totals.totalCo2eKg).toBeCloseTo(100, 2);
+  });
+});
