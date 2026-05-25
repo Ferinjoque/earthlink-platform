@@ -38,6 +38,7 @@ export type Database = {
           activity_kind: Json;
           corrects_entry_id: string | null;
           created_at: string;
+          data_quality: string | null;
           fuel_type_id: string | null;
           grid_region_id: string | null;
           id: string;
@@ -59,6 +60,7 @@ export type Database = {
           activity_kind: Json;
           corrects_entry_id?: string | null;
           created_at?: string;
+          data_quality?: string | null;
           fuel_type_id?: string | null;
           grid_region_id?: string | null;
           id?: string;
@@ -80,6 +82,7 @@ export type Database = {
           activity_kind?: Json;
           corrects_entry_id?: string | null;
           created_at?: string;
+          data_quality?: string | null;
           fuel_type_id?: string | null;
           grid_region_id?: string | null;
           id?: string;

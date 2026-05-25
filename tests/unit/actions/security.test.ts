@@ -712,7 +712,9 @@ describe('importActivityXlsx — flujo de importación', () => {
           maybeSingle: vi.fn().mockResolvedValue({ data: { id: VALID_UUID, status: 'open' } }),
         };
       }
+      // call 4+: activity_entries batch insert
       return {
+        insert: vi.fn().mockResolvedValue({ error: null }),
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValue({ data: null }),
