@@ -51,7 +51,8 @@ export default async function ConsumoPage() {
     const { data } = await supabase
       .from('suppliers')
       .select('id')
-      .in('organization_id', adminOrgIds);
+      .in('organization_id', adminOrgIds)
+      .is('archived_at', null);
     if (data) adminSupplierIds.push(...(data as Pick<SupplierRow, 'id'>[]).map((s) => s.id));
   }
 
@@ -59,7 +60,11 @@ export default async function ConsumoPage() {
 
   const suppliersData: Pick<SupplierRow, 'id' | 'name'>[] = [];
   if (supplierIds.length) {
-    const { data } = await supabase.from('suppliers').select('id, name').in('id', supplierIds);
+    const { data } = await supabase
+      .from('suppliers')
+      .select('id, name')
+      .in('id', supplierIds)
+      .is('archived_at', null);
     if (data) suppliersData.push(...data);
   }
   const supplierMap = new Map(suppliersData.map((s) => [s.id, s.name]));
