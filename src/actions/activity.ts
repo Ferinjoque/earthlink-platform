@@ -638,6 +638,17 @@ export async function voidActivityEntry(
     .eq('id', entryId);
   if (updateError) return { error: 'Error al anular el registro. Intenta nuevamente.' };
 
+  // Resolver anomalías activas de la entrada anulada — ya no son relevantes para cálculos
+  try {
+    await supabase
+      .from('anomaly_flags')
+      .update({ is_resolved: true, resolved_by: user.id, resolved_at: new Date().toISOString() })
+      .eq('activity_entry_id', entryId)
+      .eq('is_resolved', false);
+  } catch {
+    // No-crítico — la anulación ya fue aplicada en DB
+  }
+
   revalidatePath('/activity');
   revalidatePath('/audit');
   revalidatePath('/dashboard');
