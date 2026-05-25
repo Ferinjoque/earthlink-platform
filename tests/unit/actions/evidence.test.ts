@@ -30,7 +30,7 @@ vi.mock('../../../src/services/supabase/server', () => {
 });
 
 import { createServerClient } from '../../../src/services/supabase/server';
-import { getEvidenceFiles, getEvidenceFilesBatch, deleteEvidence } from '../../../src/actions/evidence';
+import { getEvidenceFiles, getEvidenceFilesBatch, deleteEvidence, uploadEvidence } from '../../../src/actions/evidence';
 
 type MockClient = Awaited<ReturnType<typeof createServerClient>>;
 
@@ -435,6 +435,73 @@ function buildDeleteFromMock(opts: {
   });
 }
 
+// ── uploadEvidence — guards de periodo y entrada ──────────────────────────────
+
+describe('uploadEvidence — guards de periodo y entrada', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  function buildUploadClient(entryData: {
+    voided_at?: string | null;
+    periodo_status?: string;
+  } | null) {
+    const entryCheckRow = entryData === null ? null : {
+      id: ENTRY_ID,
+      voided_at: entryData?.voided_at ?? null,
+      reporting_period_id: 'period-001',
+      reporting_periods: {
+        status: entryData?.periodo_status ?? 'open',
+        supplier_id: 'supplier-1',
+        suppliers: { organization_id: ORG_ID },
+      },
+    };
+    const fromMock = vi.fn().mockImplementation((table: string) => {
+      if (table === 'activity_entries') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({ data: entryCheckRow, error: null }),
+        };
+      }
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+      };
+    });
+    vi.mocked(createServerClient).mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'u1' } } }) },
+      from: fromMock,
+    } as unknown as MockClient);
+  }
+
+  it('rechaza ID de entrada inválido', async () => {
+    const fd = new FormData();
+    const result = await uploadEvidence('not-a-uuid', null, fd);
+    expect(result.error).toMatch(/inválido/i);
+  });
+
+  it('rechaza cuando la entrada está anulada', async () => {
+    buildUploadClient({ voided_at: '2025-01-01T00:00:00Z' });
+    const fd = new FormData();
+    // Simular archivo para pasar la validación de archivo vacío
+    const blob = new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0, 0, 0, 0])], { type: 'image/jpeg' });
+    fd.append('evidence', new File([blob], 'foto.jpg', { type: 'image/jpeg' }));
+    const result = await uploadEvidence(ENTRY_ID, null, fd);
+    expect(result.error).toMatch(/anulada/i);
+  });
+
+  it('rechaza cuando el periodo está bloqueado', async () => {
+    buildUploadClient({ periodo_status: 'locked' });
+    const fd = new FormData();
+    const blob = new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0, 0, 0, 0])], { type: 'image/jpeg' });
+    fd.append('evidence', new File([blob], 'foto.jpg', { type: 'image/jpeg' }));
+    const result = await uploadEvidence(ENTRY_ID, null, fd);
+    expect(result.error).toMatch(/bloqueado/i);
+  });
+});
+
+// ── deleteEvidence — autorización ─────────────────────────────────────────────
+
 describe('deleteEvidence — autorización', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -497,5 +564,21 @@ describe('deleteEvidence — autorización', () => {
     const fd = new FormData();
     const result = await deleteEvidence(FILE_ID, null, fd);
     expect(result.error).toMatch(/encontrado/i);
+  });
+
+  it('rechaza cuando el periodo está bloqueado', async () => {
+    const lockedEntryOrg = {
+      reporting_periods: {
+        status: 'locked',
+        suppliers: { organization_id: ORG_ID },
+      },
+    };
+    vi.mocked(createServerClient).mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: USER_ID } } }) },
+      from: buildDeleteFromMock({ file: MOCK_FILE, entryOrg: lockedEntryOrg as typeof MOCK_ENTRY_ORG, membershipRole: 'admin' }),
+    } as unknown as MockClient);
+    const fd = new FormData();
+    const result = await deleteEvidence(FILE_ID, null, fd);
+    expect(result.error).toMatch(/bloqueado/i);
   });
 });
