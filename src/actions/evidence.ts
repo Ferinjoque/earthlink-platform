@@ -78,18 +78,21 @@ export async function uploadEvidence(
   const { data: entryCheck } = await supabase
     .from('activity_entries')
     .select(
-      'id, reporting_period_id, reporting_periods(supplier_id, suppliers(organization_id))',
+      'id, voided_at, reporting_period_id, reporting_periods(status, supplier_id, suppliers(organization_id))',
     )
     .eq('id', entryId)
     .maybeSingle();
 
   if (!entryCheck) return { error: 'Entrada no encontrada o sin acceso' };
+  if (entryCheck.voided_at) return { error: 'No se puede adjuntar evidencia a una entrada anulada' };
 
   type PeriodoConSupplier = {
+    status: string;
     supplier_id: string;
     suppliers: { organization_id: string } | null;
   };
   const periodo = entryCheck.reporting_periods as PeriodoConSupplier | null;
+  if (periodo?.status === 'locked') return { error: 'No se puede modificar un periodo bloqueado' };
   const orgId = periodo?.suppliers?.organization_id;
   if (!orgId) return { error: 'No se pudo determinar la organización' };
 
@@ -355,16 +358,21 @@ export async function deleteEvidence(
   // porque su membresía puede haber sido revocada o degradada desde que subió el archivo.
   type EntryJoin = {
     reporting_periods: {
+      status: string;
       suppliers: { organization_id: string } | null;
     } | null;
   };
   const { data: entryData } = await supabase
     .from('activity_entries')
-    .select('reporting_periods(suppliers(organization_id))')
+    .select('reporting_periods(status, suppliers(organization_id))')
     .eq('id', file.activity_entry_id)
     .maybeSingle();
 
-  const orgId = (entryData as EntryJoin | null)?.reporting_periods?.suppliers?.organization_id;
+  const typedEntry = entryData as EntryJoin | null;
+  if (typedEntry?.reporting_periods?.status === 'locked') {
+    return { error: 'No se puede modificar un periodo bloqueado' };
+  }
+  const orgId = typedEntry?.reporting_periods?.suppliers?.organization_id;
   if (!orgId) return { error: 'Sin permisos' };
 
   const { data: mem } = await supabase
