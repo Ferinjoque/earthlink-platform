@@ -13,12 +13,14 @@ const instrument = Instrument_Serif({
   weight: '400',
   style: ['normal', 'italic'],
   display: 'swap',
+  preload: false,
   variable: '--font-instrument',
 });
 
 const mono = JetBrains_Mono({
   subsets: ['latin'],
   display: 'swap',
+  preload: false,
   variable: '--font-mono-stack',
 });
 
