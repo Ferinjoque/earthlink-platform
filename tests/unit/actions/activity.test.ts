@@ -166,6 +166,26 @@ describe('createActivityEntry', () => {
     expect(result.fieldErrors).toBeDefined();
   });
 
+  it('returns error when supplier is archived', async () => {
+    const mockSupabase = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+      from: vi.fn().mockReturnValueOnce(
+        makeMaybeSingleChain({ organization_id: 'org-001', archived_at: '2026-01-01T00:00:00Z' }),
+      ),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
+    const fd = makeFormData({
+      supplier_id: VALID_UUID,
+      year_month: VALID_YM,
+      source_type: 'stationary_combustion',
+      secondary: 'natural_gas',
+      raw_quantity: '100',
+      raw_unit: 'm3_ng',
+    });
+    const result = await createActivityEntry(null, fd);
+    expect(result.error).toMatch(/archivado/i);
+  });
+
   it('returns fieldErrors when quantity is negative', async () => {
     mockAuthenticatedClient();
     const fd = makeFormData({

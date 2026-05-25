@@ -254,7 +254,7 @@ async function buildBatchEntries(
 }
 
 
-type SupplierOrg = { organization_id: string };
+type SupplierOrg = { organization_id: string; archived_at: string | null };
 type MembershipCheck = { role: string; supplier_id: string | null };
 
 async function verifySupplierAccess(
@@ -264,11 +264,12 @@ async function verifySupplierAccess(
 ): Promise<{ ok: true } | { error: string }> {
   const { data: supplierRaw } = await supabase
     .from('suppliers')
-    .select('organization_id')
+    .select('organization_id, archived_at')
     .eq('id', supplierId)
     .maybeSingle();
   const supplier = supplierRaw as SupplierOrg | null;
   if (!supplier) return { error: 'Proveedor no encontrado' };
+  if (supplier.archived_at) return { error: 'No se puede registrar actividad en un proveedor archivado' };
 
   const { data: memRaw } = await supabase
     .from('memberships')
