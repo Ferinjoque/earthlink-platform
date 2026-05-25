@@ -424,7 +424,11 @@ function EntradaFila({
                 </button>
               )
             )}
-            {!isVoided && <VoidEntryButton entryId={entry.id} />}
+            {!isVoided &&
+              entry.period_status !== 'locked' &&
+              entry.period_status !== 'calculating' && (
+                <VoidEntryButton entryId={entry.id} />
+              )}
           </div>
         </td>
       </tr>
