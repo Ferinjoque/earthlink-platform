@@ -124,9 +124,9 @@ export default async function PanelPage({ searchParams }: PageProps) {
   // Derivar años disponibles de los periodos
   const yearSet = new Set<number>();
   for (const p of allPeriodsData) {
-    yearSet.add(new Date(p.start_date).getFullYear());
+    yearSet.add(new Date(p.start_date).getUTCFullYear());
   }
-  const nowYear = new Date().getFullYear();
+  const nowYear = new Date().getUTCFullYear();
   yearSet.add(nowYear);
   const availableYears = [...yearSet].sort((a, b) => b - a);
 
@@ -137,7 +137,7 @@ export default async function PanelPage({ searchParams }: PageProps) {
 
   // Filtrar periodos al año seleccionado
   const periodsData = allPeriodsData.filter(
-    (p) => new Date(p.start_date).getFullYear() === selectedYear,
+    (p) => new Date(p.start_date).getUTCFullYear() === selectedYear,
   );
 
   const periodIds = periodsData.map((p) => p.id);

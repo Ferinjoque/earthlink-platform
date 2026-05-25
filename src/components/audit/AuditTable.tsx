@@ -109,7 +109,7 @@ interface GrupoAnual {
 function agruparPorAnio(periodos: PeriodoFila[]): GrupoAnual[] {
   const mapa = new Map<string, GrupoAnual>();
   for (const p of periodos) {
-    const year = new Date(p.start_date).getFullYear();
+    const year = new Date(p.start_date).getUTCFullYear();
     const key = `${p.supplier_id}__${year}`;
     const existing = mapa.get(key);
     if (existing) {

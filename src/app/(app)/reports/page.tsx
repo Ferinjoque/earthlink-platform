@@ -98,7 +98,7 @@ export default async function ReportesPage() {
 
   const periodos: PeriodoExportable[] = periodsData.map((p) => {
     const resumen = mapaResumen.get(p.id);
-    const year = new Date(p.start_date).getFullYear();
+    const year = new Date(p.start_date).getUTCFullYear();
     return {
       id: p.id,
       label: p.label,
