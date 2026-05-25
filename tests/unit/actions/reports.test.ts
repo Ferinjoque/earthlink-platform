@@ -55,6 +55,7 @@ function mockClient({
     insert: vi.fn().mockResolvedValue({ error: null }),
     eq: vi.fn().mockReturnThis(),
     in: vi.fn().mockReturnThis(),
+    is: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
     then: vi.fn().mockResolvedValue({ data: returnData }),
     // Hacer la cadena thenable para que await funcione
@@ -80,11 +81,13 @@ function mockClient({
         insert: vi.fn().mockResolvedValue({ error: null }),
         eq: vi.fn().mockReturnThis(),
         in: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: dataMap[table] ?? [] }),
       };
       // Hacer que select().eq().then() funcione
       chain.select.mockReturnValue({
         ...chain,
+        is: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: dataMap[table] ?? [] }),
       });
       return chain;
@@ -190,6 +193,7 @@ describe('exportCsv', () => {
         select: () => c,
         eq: () => c,
         in: () => c,
+        is: () => c,
         insert: vi.fn().mockResolvedValue({ error: null }),
         order: () => resolved,
         then: resolved.then.bind(resolved),
@@ -232,6 +236,7 @@ describe('exportCsv', () => {
         select: () => c,
         eq: () => c,
         in: () => c,
+        is: () => c,
         insert: vi.fn().mockResolvedValue({ error: null }),
         order: () => resolved,
         then: resolved.then.bind(resolved),
@@ -267,6 +272,7 @@ describe('exportCsv', () => {
         select: () => c,
         eq: () => c,
         in: () => c,
+        is: () => c,
         insert: vi.fn().mockResolvedValue({ error: null }),
         order: () => resolved,
         then: resolved.then.bind(resolved),
@@ -314,7 +320,7 @@ describe('exportCsv', () => {
     function chain(table: string) {
       const resolved = Promise.resolve({ data: dataMap[table] ?? [] });
       const c: Record<string, unknown> = {
-        select: () => c, eq: () => c, in: () => c,
+        select: () => c, eq: () => c, in: () => c, is: () => c,
         insert: vi.fn().mockResolvedValue({ error: null }),
         order: () => resolved,
         then: resolved.then.bind(resolved),
@@ -362,7 +368,7 @@ describe('exportCsv', () => {
     function chain(table: string) {
       const resolved = Promise.resolve({ data: dataMap[table] ?? [] });
       const c: Record<string, unknown> = {
-        select: () => c, eq: () => c, in: () => c,
+        select: () => c, eq: () => c, in: () => c, is: () => c,
         insert: vi.fn().mockResolvedValue({ error: null }),
         order: () => resolved,
         then: resolved.then.bind(resolved),
@@ -411,7 +417,7 @@ describe('exportCsv', () => {
     function chain(table: string) {
       const resolved = Promise.resolve({ data: dataMap[table] ?? [] });
       const c: Record<string, unknown> = {
-        select: () => c, eq: () => c, in: () => c,
+        select: () => c, eq: () => c, in: () => c, is: () => c,
         insert: vi.fn().mockResolvedValue({ error: null }),
         order: () => resolved,
         then: resolved.then.bind(resolved),
@@ -435,6 +441,58 @@ describe('exportCsv', () => {
     expect(lines[0]).toContain('periodo');
   });
 
+  it('excluye de CSV los emission_results de entradas anuladas (voided_at filter)', async () => {
+    const ACTIVE_ENTRY_ID = 'a0000000-0000-4000-8000-000000000001';
+    const resultsData = [
+      {
+        id: RESULT_ID, activity_entry_id: ENTRY_ID, reporting_period_id: PERIOD_ID,
+        scope: 1, co2e_kg: 99.9, factor_used: 1, factor_unit: 'kg CO2/unit',
+        calc_hash: 'stale', calc_version: '1.0.0', calculated_at: '2026-01-15T10:00:00Z',
+      },
+      {
+        id: 'r2', activity_entry_id: ACTIVE_ENTRY_ID, reporting_period_id: PERIOD_ID,
+        scope: 1, co2e_kg: 10, factor_used: 1, factor_unit: 'kg CO2/unit',
+        calc_hash: 'fresh', calc_version: '1.0.0', calculated_at: '2026-01-15T10:00:00Z',
+      },
+    ];
+    const dataMap: Record<string, unknown[]> = {
+      memberships: [{ organization_id: ORG_ID, role: 'admin' }],
+      reporting_periods: [{ id: PERIOD_ID, label: 'Q1-2026', supplier_id: SUPPLIER_ID }],
+      suppliers: [{ id: SUPPLIER_ID, name: 'Test Corp', organization_id: ORG_ID }],
+      emission_results: resultsData,
+      // Solo la entrada activa — la anulada (ENTRY_ID) fue filtrada por .is('voided_at', null)
+      activity_entries: [{ id: ACTIVE_ENTRY_ID, source_type: 'purchased_electricity', raw_quantity: 10, raw_unit: 'kWh' }],
+      report_exports: [],
+    };
+
+    function chain(table: string) {
+      const resolved = Promise.resolve({ data: dataMap[table] ?? [] });
+      const c: Record<string, unknown> = {
+        select: () => c, eq: () => c, in: () => c, is: () => c,
+        insert: vi.fn().mockResolvedValue({ error: null }),
+        order: () => resolved,
+        then: resolved.then.bind(resolved),
+        catch: resolved.catch.bind(resolved),
+      };
+      return c;
+    }
+
+    const client = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: USER_ID } } }) },
+      from: vi.fn().mockImplementation((table: string) => chain(table)),
+    };
+    vi.mocked(createServerClient).mockResolvedValue(client as unknown as MockClient);
+
+    const fd = makeFormData({ period_ids: PERIOD_ID });
+    const result = await exportCsv(null, fd);
+    expect(result.success).toBe(true);
+    const lines = result.csvContent?.split('\n') ?? [];
+    // Solo 1 fila de datos (la activa), la anulada fue excluida
+    expect(lines).toHaveLength(2);
+    expect(lines[1]).toContain('purchased_electricity');
+    expect(lines[1]).not.toContain('99.9'); // el co2e de la entrada anulada no aparece
+  });
+
   it('handles null reporting_periods response from Supabase (defensive ?? [])', async () => {
     const baseData: Record<string, unknown> = {
       memberships: [{ organization_id: ORG_ID, role: 'admin' }],
@@ -449,7 +507,7 @@ describe('exportCsv', () => {
       const data = table in baseData ? baseData[table] : [];
       const resolved = Promise.resolve({ data });
       const c: Record<string, unknown> = {
-        select: () => c, eq: () => c, in: () => c,
+        select: () => c, eq: () => c, in: () => c, is: () => c,
         insert: vi.fn().mockResolvedValue({ error: null }),
         order: () => resolved,
         then: resolved.then.bind(resolved),
@@ -484,7 +542,7 @@ describe('exportCsv', () => {
       const data = table in baseData ? baseData[table] : [];
       const resolved = Promise.resolve({ data });
       const c: Record<string, unknown> = {
-        select: () => c, eq: () => c, in: () => c,
+        select: () => c, eq: () => c, in: () => c, is: () => c,
         insert: vi.fn().mockResolvedValue({ error: null }),
         order: () => resolved,
         then: resolved.then.bind(resolved),
@@ -518,7 +576,7 @@ describe('exportCsv', () => {
       const data = table in baseData ? baseData[table] : [];
       const resolved = Promise.resolve({ data });
       const c: Record<string, unknown> = {
-        select: () => c, eq: () => c, in: () => c,
+        select: () => c, eq: () => c, in: () => c, is: () => c,
         insert: vi.fn().mockResolvedValue({ error: null }),
         order: () => resolved,
         then: resolved.then.bind(resolved),
@@ -557,7 +615,7 @@ describe('exportCsv', () => {
       const data = table in baseData ? baseData[table] : [];
       const resolved = Promise.resolve({ data });
       const c: Record<string, unknown> = {
-        select: () => c, eq: () => c, in: () => c,
+        select: () => c, eq: () => c, in: () => c, is: () => c,
         insert: vi.fn().mockResolvedValue({ error: null }),
         order: () => resolved,
         then: resolved.then.bind(resolved),
@@ -595,7 +653,7 @@ describe('exportCsv', () => {
       const data = table in baseData ? baseData[table] : [];
       const resolved = Promise.resolve({ data });
       const c: Record<string, unknown> = {
-        select: () => c, eq: () => c, in: () => c,
+        select: () => c, eq: () => c, in: () => c, is: () => c,
         insert: vi.fn().mockResolvedValue({ error: null }),
         order: () => resolved,
         then: resolved.then.bind(resolved),
@@ -643,7 +701,7 @@ describe('exportCsv', () => {
     function chain(table: string) {
       const resolved = Promise.resolve({ data: dataMap[table] ?? [] });
       const c: Record<string, unknown> = {
-        select: () => c, eq: () => c, in: () => c,
+        select: () => c, eq: () => c, in: () => c, is: () => c,
         insert: vi.fn().mockResolvedValue({ error: null }),
         order: () => resolved,
         then: resolved.then.bind(resolved),
@@ -712,7 +770,7 @@ describe('exportCsv', () => {
     function chain(table: string) {
       const resolved = Promise.resolve({ data: dataMap[table] ?? [] });
       const c: Record<string, unknown> = {
-        select: () => c, eq: () => c, in: () => c,
+        select: () => c, eq: () => c, in: () => c, is: () => c,
         insert: table === 'report_exports' ? insertSpy : vi.fn().mockResolvedValue({ error: null }),
         order: () => resolved,
         then: resolved.then.bind(resolved),

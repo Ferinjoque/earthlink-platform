@@ -65,11 +65,17 @@ export default async function ActividadPage({ searchParams }: PageProps) {
 
   const supplierIds = [...new Set([...supplierRoleIds, ...adminSupplierIds])];
 
-  const suppliersData: Pick<SupplierRow, 'id' | 'name'>[] = [];
+  type SupplierItem = Pick<SupplierRow, 'id' | 'name' | 'archived_at'>;
+  const suppliersData: SupplierItem[] = [];
   if (supplierIds.length) {
-    const { data } = await supabase.from('suppliers').select('id, name').in('id', supplierIds);
-    if (data) suppliersData.push(...data);
+    const { data } = await supabase
+      .from('suppliers')
+      .select('id, name, archived_at')
+      .in('id', supplierIds);
+    if (data) suppliersData.push(...(data as SupplierItem[]));
   }
+  // Solo proveedores activos para el panel de importación
+  const activeSuppliersForImport = suppliersData.filter((s) => s.archived_at === null);
   const periodsData: Pick<ReportingPeriodRow, 'id' | 'label' | 'supplier_id' | 'status' | 'start_date'>[] = [];
   if (supplierIds.length) {
     const { data } = await supabase
@@ -280,7 +286,7 @@ export default async function ActividadPage({ searchParams }: PageProps) {
               maxWidth: '960px',
             }}
           >
-            <BulkImportPanel suppliers={suppliersData} defaultSupplierId={suppliersData[0]?.id} />
+            <BulkImportPanel suppliers={activeSuppliersForImport} defaultSupplierId={activeSuppliersForImport[0]?.id} />
           </div>
         </section>
 
