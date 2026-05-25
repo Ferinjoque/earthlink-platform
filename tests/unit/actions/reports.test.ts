@@ -33,7 +33,7 @@ function makeFormData(fields: Record<string, string>): FormData {
 
 function mockClient({
   user = { id: USER_ID } as { id: string } | null,
-  memberships = [{ organization_id: ORG_ID }],
+  memberships = [{ organization_id: ORG_ID, role: 'admin' }],
   periods = [{ id: PERIOD_ID, label: 'Q1-2026', supplier_id: SUPPLIER_ID }],
   suppliers = [{ id: SUPPLIER_ID, name: 'Test Corp', organization_id: ORG_ID }],
   results = [] as Array<{
@@ -145,7 +145,14 @@ describe('exportCsv', () => {
     mockClient({ memberships: [] });
     const fd = makeFormData({ period_ids: PERIOD_ID });
     const result = await exportCsv(null, fd);
-    expect(result.error).toMatch(/organizaci/i);
+    expect(result.error).toMatch(/permisos/i);
+  });
+
+  it('returns error when user has supplier role (no export permission)', async () => {
+    mockClient({ memberships: [{ organization_id: ORG_ID, role: 'supplier' }] });
+    const fd = makeFormData({ period_ids: PERIOD_ID });
+    const result = await exportCsv(null, fd);
+    expect(result.error).toMatch(/permisos/i);
   });
 
   it('returns success with sha256 and CSV content for valid export', async () => {
@@ -168,7 +175,7 @@ describe('exportCsv', () => {
     ];
 
     const dataMap: Record<string, unknown[]> = {
-      memberships: [{ organization_id: ORG_ID }],
+      memberships: [{ organization_id: ORG_ID, role: 'admin' }],
       reporting_periods: [{ id: PERIOD_ID, label: 'Q1-2026', supplier_id: SUPPLIER_ID }],
       suppliers: [{ id: SUPPLIER_ID, name: 'Test Corp', organization_id: ORG_ID }],
       emission_results: resultsData,
@@ -211,7 +218,7 @@ describe('exportCsv', () => {
   it('returns error when periods do not belong to authorized suppliers', async () => {
     // Los periodos existen pero supplier_id no pertenece a los proveedores de la org
     const dataMap: Record<string, unknown[]> = {
-      memberships: [{ organization_id: ORG_ID }],
+      memberships: [{ organization_id: ORG_ID, role: 'admin' }],
       reporting_periods: [{ id: PERIOD_ID, label: 'Q1-2026', supplier_id: 'other-supplier-id' }],
       suppliers: [{ id: SUPPLIER_ID, name: 'Test Corp', organization_id: ORG_ID }],
       emission_results: [],
@@ -246,7 +253,7 @@ describe('exportCsv', () => {
 
   it('returns error when periods have no calculated results', async () => {
     const dataMap: Record<string, unknown[]> = {
-      memberships: [{ organization_id: ORG_ID }],
+      memberships: [{ organization_id: ORG_ID, role: 'admin' }],
       reporting_periods: [{ id: PERIOD_ID, label: 'Q1-2026', supplier_id: SUPPLIER_ID }],
       suppliers: [{ id: SUPPLIER_ID, name: 'Test Corp', organization_id: ORG_ID }],
       emission_results: [],
@@ -295,7 +302,7 @@ describe('exportCsv', () => {
       },
     ];
     const dataMap: Record<string, unknown[]> = {
-      memberships: [{ organization_id: ORG_ID }],
+      memberships: [{ organization_id: ORG_ID, role: 'admin' }],
       reporting_periods: [{ id: PERIOD_ID, label: 'Q1-2026', supplier_id: SUPPLIER_ID }],
       // Nombre de proveedor con coma → activa el escape CSV
       suppliers: [{ id: SUPPLIER_ID, name: 'Test, Corp "Inc"', organization_id: ORG_ID }],
@@ -344,7 +351,7 @@ describe('exportCsv', () => {
       },
     ];
     const dataMap: Record<string, unknown[]> = {
-      memberships: [{ organization_id: ORG_ID }],
+      memberships: [{ organization_id: ORG_ID, role: 'admin' }],
       reporting_periods: [{ id: PERIOD_ID, label: 'Q1-2026', supplier_id: SUPPLIER_ID }],
       suppliers: [{ id: SUPPLIER_ID, name: 'Test Corp', organization_id: ORG_ID }],
       emission_results: resultsData,
@@ -393,7 +400,7 @@ describe('exportCsv', () => {
       },
     ];
     const dataMap: Record<string, unknown[]> = {
-      memberships: [{ organization_id: ORG_ID }],
+      memberships: [{ organization_id: ORG_ID, role: 'admin' }],
       reporting_periods: [{ id: PERIOD_ID, label: 'Q1-2026', supplier_id: SUPPLIER_ID }],
       suppliers: [{ id: SUPPLIER_ID, name: 'Test Corp', organization_id: ORG_ID }],
       emission_results: resultsData,
@@ -430,7 +437,7 @@ describe('exportCsv', () => {
 
   it('handles null reporting_periods response from Supabase (defensive ?? [])', async () => {
     const baseData: Record<string, unknown> = {
-      memberships: [{ organization_id: ORG_ID }],
+      memberships: [{ organization_id: ORG_ID, role: 'admin' }],
       reporting_periods: null,
       suppliers: [{ id: SUPPLIER_ID, name: 'Test Corp', organization_id: ORG_ID }],
       emission_results: [],
@@ -465,7 +472,7 @@ describe('exportCsv', () => {
 
   it('handles null suppliers response from Supabase (defensive ?? [])', async () => {
     const baseData: Record<string, unknown> = {
-      memberships: [{ organization_id: ORG_ID }],
+      memberships: [{ organization_id: ORG_ID, role: 'admin' }],
       reporting_periods: [{ id: PERIOD_ID, label: 'Q1-2026', supplier_id: SUPPLIER_ID }],
       suppliers: null,
       emission_results: [],
@@ -499,7 +506,7 @@ describe('exportCsv', () => {
 
   it('handles null emission_results response from Supabase (defensive ?? [])', async () => {
     const baseData: Record<string, unknown> = {
-      memberships: [{ organization_id: ORG_ID }],
+      memberships: [{ organization_id: ORG_ID, role: 'admin' }],
       reporting_periods: [{ id: PERIOD_ID, label: 'Q1-2026', supplier_id: SUPPLIER_ID }],
       suppliers: [{ id: SUPPLIER_ID, name: 'Test Corp', organization_id: ORG_ID }],
       emission_results: null,
@@ -538,7 +545,7 @@ describe('exportCsv', () => {
       calc_hash: 'abc123', calc_version: '1.0.0', calculated_at: '2026-01-15T10:00:00Z',
     }];
     const baseData: Record<string, unknown> = {
-      memberships: [{ organization_id: ORG_ID }],
+      memberships: [{ organization_id: ORG_ID, role: 'admin' }],
       reporting_periods: [{ id: PERIOD_ID, label: 'Q1-2026', supplier_id: SUPPLIER_ID }],
       suppliers: [{ id: SUPPLIER_ID, name: 'Test Corp', organization_id: ORG_ID }],
       emission_results: resultsData,
@@ -576,7 +583,7 @@ describe('exportCsv', () => {
   it('rechaza periodos en estado open (solo under_review y locked exportables)', async () => {
     // El mock devuelve lista vacía para reporting_periods porque el filtro de status lo excluye
     const baseData: Record<string, unknown> = {
-      memberships: [{ organization_id: ORG_ID }],
+      memberships: [{ organization_id: ORG_ID, role: 'admin' }],
       reporting_periods: [], // open periods filtrados por status
       suppliers: [{ id: SUPPLIER_ID, name: 'Test Corp', organization_id: ORG_ID }],
       emission_results: [],
@@ -624,7 +631,7 @@ describe('exportCsv', () => {
       },
     ];
     const dataMap: Record<string, unknown[]> = {
-      memberships: [{ organization_id: ORG_ID }],
+      memberships: [{ organization_id: ORG_ID, role: 'admin' }],
       reporting_periods: [{ id: PERIOD_ID, label: 'Q1-2026', supplier_id: SUPPLIER_ID }],
       // Nombre de proveedor con prefijo de fórmula potencialmente malicioso
       suppliers: [{ id: SUPPLIER_ID, name: '=SUM(A1:A100)', organization_id: ORG_ID }],
@@ -683,7 +690,7 @@ describe('exportCsv', () => {
     ];
 
     const dataMap: Record<string, unknown[]> = {
-      memberships: [{ organization_id: ORG_ID }, { organization_id: ORG2 }],
+      memberships: [{ organization_id: ORG_ID, role: 'admin' }, { organization_id: ORG2, role: 'admin' }],
       reporting_periods: [
         { id: PERIOD_ID, label: 'Q1-2026', supplier_id: SUPPLIER_ID },
         { id: PERIOD2, label: 'Q1-2026', supplier_id: SUPPLIER2 },

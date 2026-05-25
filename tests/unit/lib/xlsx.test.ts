@@ -98,12 +98,17 @@ describe('parseXlsxBuffer — roundtrip with generateXlsxTemplate', () => {
     expect(sourceTypes.size).toBe(7);
   });
 
-  it('row indices are sequential starting from 1', async () => {
+  it('row indices reflect actual Excel row numbers (>= 2, strictly increasing)', async () => {
     const buf = await generateXlsxTemplate([TEST_SUPPLIER]);
     const rows = await parseXlsxBuffer(buf.buffer as ArrayBuffer);
     expect(rows.length).toBeGreaterThan(0);
-    for (let i = 0; i < rows.length; i++) {
-      expect(rows[i]!.rowIndex).toBe(i + 1);
+    // La fila 1 siempre es encabezado; los datos empiezan en la fila 2
+    for (const row of rows) {
+      expect(row.rowIndex).toBeGreaterThanOrEqual(2);
+    }
+    // Los índices deben ser estrictamente crecientes (mismo orden que en el archivo)
+    for (let i = 1; i < rows.length; i++) {
+      expect(rows[i]!.rowIndex).toBeGreaterThan(rows[i - 1]!.rowIndex);
     }
   });
 

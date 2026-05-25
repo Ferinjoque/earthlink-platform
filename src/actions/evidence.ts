@@ -293,12 +293,13 @@ export async function getEvidenceFilesBatch(
 
   const admin = createAdminClient();
   // Limitar rutas al máximo permitido para prevenir DoS en la API de Storage
-  const paths = rows.map((r) => r.storage_path).slice(0, MAX_STORAGE_PATHS);
+  const limitedRows = rows.slice(0, MAX_STORAGE_PATHS);
+  const paths = limitedRows.map((r) => r.storage_path);
   const { data: signedList } = await admin.storage.from('evidence').createSignedUrls(paths, 3600);
   const signedMap = new Map((signedList ?? []).map((s) => [s.path, s.signedUrl]));
 
   const result = new Map<string, EvidenceFileView[]>();
-  for (const row of rows) {
+  for (const row of limitedRows) {
     const view: EvidenceFileView = {
       id: row.id,
       original_name: row.original_name,
