@@ -95,6 +95,13 @@ function makeArrayChain(data: unknown) {
   return c;
 }
 
+/** Chain for: .insert([...]) — awaited directly (batch insert) */
+function makeBatchInsertChain(error: unknown = null) {
+  const c: Record<string, unknown> = {};
+  c['insert'] = () => Promise.resolve({ error });
+  return c;
+}
+
 function makeFormData(fields: Record<string, string>): FormData {
   const fd = new FormData();
   for (const [k, v] of Object.entries(fields)) fd.append(k, v);
@@ -372,7 +379,8 @@ describe('importActivityCsv', () => {
         .mockReturnValueOnce(makeMaybySingleChain({ role: 'admin' }))              // verifyAccess: membership
         .mockReturnValueOnce(makeMaybySingleChain(null))                            // findOrCreate row1: no existing
         .mockReturnValueOnce(makeInsertChain({ id: PERIOD_ID }))                   // findOrCreate row1: insert
-        .mockReturnValueOnce(makeMaybySingleChain({ id: PERIOD_ID, status: 'open' })), // findOrCreate row2: found
+        .mockReturnValueOnce(makeMaybySingleChain({ id: PERIOD_ID, status: 'open' })) // findOrCreate row2: found
+      .mockReturnValueOnce(makeBatchInsertChain()),                                   // activity_entries batch insert
     };
     vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
     const csv = [
@@ -387,8 +395,17 @@ describe('importActivityCsv', () => {
   });
 
   it('counts invalid rows as skipped', async () => {
-    // 1 valid, 1 invalid (bad UUID) → only 1 from() call set for the valid row's access+period
-    mockAuthenticatedClient();
+    // 1 valid, 1 invalid (bad UUID) → 1 unique period resolved, then batch insert
+    const mockSupabase = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+      from: vi.fn()
+        .mockReturnValueOnce(makeMaybySingleChain({ organization_id: 'org-001' })) // verifyAccess: supplier
+        .mockReturnValueOnce(makeMaybySingleChain({ role: 'admin' }))              // verifyAccess: membership
+        .mockReturnValueOnce(makeMaybySingleChain(null))                            // findOrCreate: no existing period
+        .mockReturnValueOnce(makeInsertChain({ id: PERIOD_ID }))                   // findOrCreate: insert new period
+        .mockReturnValueOnce(makeBatchInsertChain()),                               // activity_entries batch insert
+    };
+    vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
     const csv = [
       `${VALID_UUID},${VALID_YM},stationary_combustion,diesel,100,L,`,
       `bad-uuid,${VALID_YM},stationary_combustion,diesel,100,L,`,
@@ -427,7 +444,8 @@ describe('importActivityCsv', () => {
         .mockReturnValueOnce(makeMaybySingleChain(null))                            // findOrCreate row1
         .mockReturnValueOnce(makeInsertChain({ id: PERIOD_ID }))                   // findOrCreate row1 insert
         .mockReturnValueOnce(makeMaybySingleChain(null))                            // findOrCreate row2
-        .mockReturnValueOnce(makeInsertChain({ id: '00000000-0000-4000-8000-000000000003' })), // row2 insert
+        .mockReturnValueOnce(makeInsertChain({ id: '00000000-0000-4000-8000-000000000003' })) // row2 insert
+        .mockReturnValueOnce(makeBatchInsertChain()),                                          // activity_entries batch insert (1 entry — hydrogen row skipped)
     };
     vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
     const csv = [
@@ -650,15 +668,21 @@ describe('importActivityCsv — ownership check', () => {
     expect(result.error).toMatch(/permisos/i);
   });
 
-  it('counts row as skipped when entryRepo.save throws', async () => {
-    mocks.save.mockRejectedValueOnce(new Error('DB constraint'));
-    mockAuthenticatedClient();
+  it('returns error when batch insert fails', async () => {
+    const mockSupabase = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
+      from: vi.fn()
+        .mockReturnValueOnce(makeMaybySingleChain({ organization_id: 'org-001' })) // verifyAccess: supplier
+        .mockReturnValueOnce(makeMaybySingleChain({ role: 'admin' }))              // verifyAccess: membership
+        .mockReturnValueOnce(makeMaybySingleChain(null))                            // findOrCreate: no existing period
+        .mockReturnValueOnce(makeInsertChain({ id: PERIOD_ID }))                   // findOrCreate: insert new period
+        .mockReturnValueOnce(makeBatchInsertChain({ message: 'DB constraint' })), // batch insert fails
+    };
+    vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
     const csv = `${VALID_UUID},${VALID_YM},stationary_combustion,diesel,100,L,`;
     const fd = makeFormData({ csv_text: csv });
     const result = await importActivityCsv(null, fd);
-    expect(result.success).toBe(true);
-    expect(result.imported).toBe(0);
-    expect(result.skipped).toBe(1);
+    expect(result.error).toMatch(/guardar/i);
   });
 
   it('handles period creation failure gracefully (row skipped)', async () => {
@@ -685,9 +709,10 @@ function mockBulkImportClient() {
   const mockSupabase = {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-abc' } } }) },
     from: vi.fn()
-      .mockReturnValueOnce(makeMaybeSingleChain({ organization_id: 'org-001' }))   // verifySupplierAccess → suppliers
-      .mockReturnValueOnce(makeMaybeSingleChain({ role: 'admin', supplier_id: null })) // verifySupplierAccess → memberships
-      .mockReturnValueOnce(makeMaybeSingleChain({ id: PERIOD_ID, status: 'open' })),  // findOrCreatePeriod → existing period
+      .mockReturnValueOnce(makeMaybeSingleChain({ organization_id: 'org-001' }))        // verifySupplierAccess → suppliers
+      .mockReturnValueOnce(makeMaybeSingleChain({ role: 'admin', supplier_id: null }))  // verifySupplierAccess → memberships
+      .mockReturnValueOnce(makeMaybeSingleChain({ id: PERIOD_ID, status: 'open' }))     // findOrCreatePeriod → existing period
+      .mockReturnValueOnce(makeBatchInsertChain()),                                      // activity_entries batch insert
   };
   vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
   return mockSupabase;

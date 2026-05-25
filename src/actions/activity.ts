@@ -11,6 +11,9 @@ import { AnomalyFlagRepository } from '@/repos/AnomalyFlagRepository';
 import { parseCsvText } from '@/lib/csv';
 import { parseXlsxBuffer } from '@/lib/xlsx';
 import type { ActivityKind, Unit, WaterSubtype, WasteSubtype } from '@/calc/types';
+import type { Database } from '@/types/database';
+
+type ActivityEntryInsert = Database['public']['Tables']['activity_entries']['Insert'];
 
 
 const SOURCE_TYPES_ENUM = [
@@ -187,6 +190,67 @@ async function findOrCreatePeriod(
   revalidatePath('/audit');
 
   return { periodId: (newPeriod as NewPeriodRow).id };
+}
+
+
+interface ImportRowData {
+  supplier_id: string;
+  year_month: string;
+  source_type: string;
+  secondary: string;
+  raw_quantity: number;
+  raw_unit: string;
+  data_quality: string;
+  notes?: string;
+}
+
+/**
+ * Resuelve periodos en batch (deduplica pares supplier+mes) y construye las filas de BD
+ * listas para un INSERT masivo. Reduce N consultas a K (K = periodos únicos).
+ */
+async function buildBatchEntries(
+  supabase: SupabaseClient,
+  rows: ImportRowData[],
+  userId: string,
+  now: Date,
+): Promise<{ entryRows: ActivityEntryInsert[]; skipped: number }> {
+  const uniqueKeys = [...new Set(rows.map((r) => `${r.supplier_id}|${r.year_month}`))];
+  const periodMap = new Map<string, string>();
+
+  for (const key of uniqueKeys) {
+    const pipeIdx = key.indexOf('|');
+    const supplierId = key.slice(0, pipeIdx);
+    const yearMonth = key.slice(pipeIdx + 1);
+    const result = await findOrCreatePeriod(supabase, supplierId, yearMonth);
+    if (!('error' in result)) periodMap.set(key, result.periodId);
+  }
+
+  let skipped = 0;
+  const entryRows: ActivityEntryInsert[] = [];
+
+  for (const row of rows) {
+    const key = `${row.supplier_id}|${row.year_month}`;
+    const periodId = periodMap.get(key);
+    if (!periodId) { skipped = skipped + 1; continue; }
+    const activityKind = buildActivityKind(row.source_type, row.secondary);
+    if (!activityKind) { skipped = skipped + 1; continue; }
+    entryRows.push({
+      id: crypto.randomUUID(),
+      reporting_period_id: periodId,
+      source_type: row.source_type,
+      activity_kind: activityKind as ActivityEntryInsert['activity_kind'],
+      raw_quantity: row.raw_quantity,
+      raw_unit: row.raw_unit,
+      status: 'submitted',
+      submitted_at: now.toISOString(),
+      submitted_by: userId,
+      created_at: now.toISOString(),
+      data_quality: row.data_quality,
+      notes: row.notes ?? null,
+    });
+  }
+
+  return { entryRows, skipped };
 }
 
 
@@ -378,51 +442,35 @@ export async function importActivityCsv(
     if ('error' in check) return { error: check.error, submittedAt: Date.now() };
   }
 
-  const entryRepo = new ActivityEntryRepository(supabase);
-  let imported = 0;
   const now = new Date();
-
-  for (const row of validRows) {
-    if (!row.data) continue;
-
-    const periodResult = await findOrCreatePeriod(supabase, row.data.supplier_id, row.data.year_month);
-    if ('error' in periodResult) {
-      skipped = skipped + 1;
-      continue;
-    }
-
-    const activityKind = buildActivityKind(row.data.source_type, row.data.secondary);
-    if (!activityKind) {
-      skipped = skipped + 1;
-      continue;
-    }
-
-    const entry = new ActivityEntry({
-      id: crypto.randomUUID(),
-      reportingPeriodId: periodResult.periodId,
-      sourceType: row.data.source_type,
-      activityKind,
-      rawQuantity: row.data.raw_quantity,
-      rawUnit: row.data.raw_unit as Unit,
-      status: 'submitted',
-      submittedAt: now,
-      submittedBy: user.id,
-      createdAt: now,
-      dataQuality: row.data.data_quality,
-      notes: row.data.notes ?? null,
+  const rowData: ImportRowData[] = validRows
+    .filter((r) => r.data !== null)
+    .map((r) => {
+      const d = r.data!;
+      const base: ImportRowData = {
+        supplier_id: d.supplier_id,
+        year_month: d.year_month,
+        source_type: d.source_type,
+        secondary: d.secondary,
+        raw_quantity: d.raw_quantity,
+        raw_unit: d.raw_unit,
+        data_quality: d.data_quality,
+      };
+      if (d.notes !== undefined) base.notes = d.notes;
+      return base;
     });
 
-    try {
-      await entryRepo.save(entry);
-      imported = imported + 1;
-    } catch {
-      skipped = skipped + 1;
-    }
+  const { entryRows, skipped: periodSkipped } = await buildBatchEntries(supabase, rowData, user.id, now);
+  skipped = skipped + periodSkipped;
+
+  if (entryRows.length > 0) {
+    const { error: insertError } = await supabase.from('activity_entries').insert(entryRows);
+    if (insertError) return { error: 'Error al guardar registros. Intenta nuevamente.', skipped, submittedAt: Date.now() };
   }
 
   revalidatePath('/activity');
   revalidatePath('/audit');
-  return { success: true, imported, skipped, submittedAt: Date.now() };
+  return { success: true, imported: entryRows.length, skipped, submittedAt: Date.now() };
 }
 
 
@@ -476,47 +524,37 @@ export async function importActivityBulk(
     if ('error' in check) return { error: check.error, submittedAt: Date.now() };
   }
 
-  const entryRepo = new ActivityEntryRepository(supabase);
-  let importedCount = 0;
-  let skippedCount = 0;
   const now = new Date();
-  const createdIds: string[] = [];
+  const rowData: ImportRowData[] = bulkRows.map((row) => {
+    const base: ImportRowData = {
+      supplier_id: row.supplier_id,
+      year_month: row.year_month,
+      source_type: row.source_type,
+      secondary: row.secondary,
+      raw_quantity: row.raw_quantity,
+      raw_unit: row.raw_unit,
+      data_quality: row.data_quality,
+    };
+    if (row.notes !== undefined) base.notes = row.notes;
+    return base;
+  });
 
-  for (const row of bulkRows) {
-    const periodResult = await findOrCreatePeriod(supabase, row.supplier_id, row.year_month);
-    if ('error' in periodResult) { skippedCount = skippedCount + 1; continue; }
+  const { entryRows, skipped } = await buildBatchEntries(supabase, rowData, user.id, now);
 
-    const activityKind = buildActivityKind(row.source_type, row.secondary);
-    if (!activityKind) { skippedCount = skippedCount + 1; continue; }
-
-    const entryId = crypto.randomUUID();
-    const entry = new ActivityEntry({
-      id: entryId,
-      reportingPeriodId: periodResult.periodId,
-      sourceType: row.source_type,
-      activityKind,
-      rawQuantity: row.raw_quantity,
-      rawUnit: row.raw_unit as Unit,
-      status: 'submitted',
-      submittedAt: now,
-      submittedBy: user.id,
-      createdAt: now,
-      dataQuality: row.data_quality,
-      notes: row.notes ?? null,
-    });
-
-    try {
-      await entryRepo.save(entry);
-      importedCount = importedCount + 1;
-      createdIds.push(entryId);
-    } catch {
-      skippedCount = skippedCount + 1;
-    }
+  if (entryRows.length > 0) {
+    const { error: insertError } = await supabase.from('activity_entries').insert(entryRows);
+    if (insertError) return { error: 'Error al guardar registros. Intenta nuevamente.', skipped, submittedAt: Date.now() };
   }
 
   revalidatePath('/activity');
   revalidatePath('/audit');
-  return { success: true, imported: importedCount, skipped: skippedCount, entryIds: createdIds, submittedAt: Date.now() };
+  return {
+    success: true,
+    imported: entryRows.length,
+    skipped,
+    entryIds: entryRows.map((r) => r.id as string),
+    submittedAt: Date.now(),
+  };
 }
 
 
@@ -713,43 +751,33 @@ export async function importActivityXlsx(
     if ('error' in check) return { error: check.error, skipped, submittedAt: Date.now() };
   }
 
-  const entryRepo = new ActivityEntryRepository(supabase);
-  let importedCount = 0;
   const now = new Date();
-
-  for (const row of validRows) {
-    if (!row.data) continue;
-
-    const periodResult = await findOrCreatePeriod(supabase, row.data.supplier_id, row.data.year_month);
-    if ('error' in periodResult) { skipped = skipped + 1; continue; }
-
-    const activityKind = buildActivityKind(row.data.source_type, row.data.secondary);
-    if (!activityKind) { skipped = skipped + 1; continue; }
-
-    const entry = new ActivityEntry({
-      id: crypto.randomUUID(),
-      reportingPeriodId: periodResult.periodId,
-      sourceType: row.data.source_type,
-      activityKind,
-      rawQuantity: row.data.raw_quantity,
-      rawUnit: row.data.raw_unit as Unit,
-      status: 'submitted',
-      submittedAt: now,
-      submittedBy: user.id,
-      createdAt: now,
-      dataQuality: row.data.data_quality,
-      notes: row.data.notes ?? null,
+  const rowData: ImportRowData[] = validRows
+    .filter((r) => r.data !== null)
+    .map((r) => {
+      const d = r.data!;
+      const base: ImportRowData = {
+        supplier_id: d.supplier_id,
+        year_month: d.year_month,
+        source_type: d.source_type,
+        secondary: d.secondary,
+        raw_quantity: d.raw_quantity,
+        raw_unit: d.raw_unit,
+        data_quality: d.data_quality,
+      };
+      if (d.notes !== undefined) base.notes = d.notes;
+      return base;
     });
 
-    try {
-      await entryRepo.save(entry);
-      importedCount = importedCount + 1;
-    } catch {
-      skipped = skipped + 1;
-    }
+  const { entryRows, skipped: periodSkipped } = await buildBatchEntries(supabase, rowData, user.id, now);
+  skipped = skipped + periodSkipped;
+
+  if (entryRows.length > 0) {
+    const { error: insertError } = await supabase.from('activity_entries').insert(entryRows);
+    if (insertError) return { error: 'Error al guardar registros. Intenta nuevamente.', skipped, submittedAt: Date.now() };
   }
 
   revalidatePath('/activity');
   revalidatePath('/audit');
-  return { success: true, imported: importedCount, skipped, submittedAt: Date.now() };
+  return { success: true, imported: entryRows.length, skipped, submittedAt: Date.now() };
 }
