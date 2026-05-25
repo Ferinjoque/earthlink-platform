@@ -71,7 +71,23 @@ export default async function AuditoriaPage({ searchParams }: PageProps) {
   }
   const supplierMap = new Map(suppliersData.map((s) => [s.id, s.name]));
 
-  const allSupplierIds = [...new Set([...memberSupplierIds, ...suppliersData.map((s) => s.id)])];
+  // Resolver IDs de proveedor directos (rol supplier) que no cubra la consulta por org
+  const unresolvedMemberIds = memberSupplierIds.filter((id) => !supplierMap.has(id));
+  if (unresolvedMemberIds.length) {
+    const { data } = await supabase
+      .from('suppliers')
+      .select('id, name')
+      .in('id', unresolvedMemberIds)
+      .is('archived_at', null);
+    if (data) {
+      for (const s of data as Pick<SupplierRow, 'id' | 'name'>[]) {
+        supplierMap.set(s.id, s.name);
+        suppliersData.push(s);
+      }
+    }
+  }
+
+  const allSupplierIds = suppliersData.map((s) => s.id);
 
   type FilaPeriodo = Pick<
     ReportingPeriodRow,
