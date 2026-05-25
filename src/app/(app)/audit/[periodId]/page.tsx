@@ -151,6 +151,7 @@ export default async function DetallePeriodoPage({
     .from('activity_entries')
     .select('id, source_type, raw_quantity, raw_unit')
     .eq('reporting_period_id', periodId)
+    .is('voided_at', null)
     .order('created_at', { ascending: true });
 
   const allEntries = (allEntriesRaw ?? []) as FilaEntrada[];

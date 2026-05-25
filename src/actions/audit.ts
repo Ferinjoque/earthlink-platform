@@ -428,6 +428,7 @@ export async function calculateYear(
     .from('suppliers')
     .select('organization_id')
     .eq('id', supplier_id)
+    .is('archived_at', null)
     .maybeSingle();
   const supplierOrg = supplierRaw as SupplierOrg | null;
   if (!supplierOrg) return { error: 'Proveedor no encontrado' };
@@ -571,6 +572,7 @@ export async function closeYear(
     .from('suppliers')
     .select('organization_id')
     .eq('id', supplier_id)
+    .is('archived_at', null)
     .maybeSingle();
   const supplierOrg = supplierRaw as SupplierOrg | null;
   if (!supplierOrg) return { error: 'Proveedor no encontrado' };
