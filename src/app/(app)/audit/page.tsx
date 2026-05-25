@@ -65,6 +65,7 @@ export default async function AuditoriaPage({ searchParams }: PageProps) {
       .from('suppliers')
       .select('id, name')
       .in('organization_id', orgIds)
+      .is('archived_at', null)
       .order('name', { ascending: true });
     if (data) suppliersData.push(...(data as Pick<SupplierRow, 'id' | 'name'>[]));
   }
