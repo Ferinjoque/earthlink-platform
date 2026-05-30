@@ -1,13 +1,11 @@
 /**
- * Core types for the FP calculation engine.
- * All types are readonly — mutation is never allowed inside calc/.
+ * Tipos base del motor de cálculo FP.
+ * Todos los tipos son readonly — la mutación nunca está permitida dentro de calc/.
  */
 
-// ── Grid regions (must match grid_regions.code in DB) ────────────────────────
 
 export type GridRegion = 'SEIN_PERU' | 'LATAM_AVG' | 'US_AVERAGE' | 'EU_AVERAGE';
 
-// ── Water use subtypes ────────────────────────────────────────────────────────
 
 export type WaterSubtype =
   | 'all_sources'    // Total de todas las fuentes
@@ -17,14 +15,12 @@ export type WaterSubtype =
   | 'well_outdoor'   // Pozo — exterior
   | 'other_mixed';   // Otra fuente mixta
 
-// ── Waste subtypes ────────────────────────────────────────────────────────────
 
 export type WasteSubtype =
   | 'disposed_trash' // Basura dispuesta (vertedero)
   | 'recycled'       // Materiales reciclados
   | 'composted';     // Materiales compostados
 
-// ── Activity kinds (discriminated union, exhaustive) ─────────────────────────
 
 export type ActivityKind =
   | {
@@ -38,13 +34,12 @@ export type ActivityKind =
   | { readonly kind: 'water_use'; readonly subtype: WaterSubtype }
   | { readonly kind: 'waste'; readonly subtype: WasteSubtype };
 
-// Scope 'none' = consumption tracked but no direct GHG (water, waste recycled/composted)
+// Alcance 'none' = consumo rastreado pero sin emisión GHG directa (agua, residuos reciclados/compostados)
 export type GhgScope = 'scope1' | 'scope2' | 'none';
 
-// ── Units (accepted input + canonical normalized units) ───────────────────────
 
 export type Unit =
-  // Energy — standard for gas & electricity
+  // Energía — estándar para gas y electricidad
   | 'kWh'
   | 'MWh'
   | 'GJ'
@@ -55,22 +50,22 @@ export type Unit =
   | 'MBtu'
   | 'BTU'
   | 'kBtu'       // Mil BTU — gas natural / combustibles en EE.UU. (GRESB)
-  // Natural gas volume
+  // Volumen de gas natural
   | 'm3_ng'
   | 'ft3_ng'
-  // Liquid fuels — standard for diesel, LPG, gasoline, fuel oil
+  // Combustibles líquidos — estándar para diesel, GLP, gasolina, fuel oil
   | 'L'
   | 'gallon'
   | 'imp_gallon'
-  // Mass — standard for refrigerants
+  // Masa — estándar para refrigerantes
   | 'kg'
   | 'tonne'
   | 'lb'
-  // Water
+  // Agua
   | 'kgal_us'    // Mil galones US (estándar GRESB agua)
   | 'megaliter'  // Megalitros (estándar GRESB internacional)
   | 'm3'         // Metros cúbicos (agua)
-  // Waste
+  // Residuos
   | 'ton_us';    // Tonelada corta US (estándar GRESB residuos)
 
 export const STANDARD_UNITS: Record<ActivityKind['kind'], Unit> = {
@@ -83,7 +78,6 @@ export const STANDARD_UNITS: Record<ActivityKind['kind'], Unit> = {
   waste: 'ton_us',
 };
 
-// ── Input / output types ──────────────────────────────────────────────────────
 
 export type ActivityRecord = Readonly<{
   id: string;
@@ -130,13 +124,12 @@ export type EvaluationTotals = Readonly<{
 }>;
 
 export type RiskScore = Readonly<{
-  score: number; // 0–100
+  score: number; // 0–100 (puntaje normalizado de riesgo)
   level: 'low' | 'medium' | 'high' | 'critical';
   anomalyCount: number;
   trend: 'up' | 'down' | 'stable';
 }>;
 
-// ── Error types ───────────────────────────────────────────────────────────────
 
 export type CalcError =
   | { readonly type: 'UNKNOWN_UNIT'; readonly unit: string }

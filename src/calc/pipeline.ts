@@ -1,11 +1,11 @@
 /**
- * Pure FP calculation pipeline — no I/O, no side effects, no mutation.
- * All inputs injected; outputs are deterministic given the same inputs.
+ * Pipeline de cálculo FP puro — sin I/O, sin efectos secundarios, sin mutación.
+ * Todas las entradas son inyectadas; las salidas son deterministas para las mismas entradas.
  *
- * Pipeline: validateActivity → normalizeUnit → resolveFactor → applyFactor → stampProvenance
+ * Pasos: validateActivity → normalizeUnit → resolveFactor → applyFactor → stampProvenance
  *
- * Special handling:
- *   - water_use / waste → 'none' scope, zero CO2e (consumption tracked, no GHG factor required)
+ * Caso especial: water_use y waste → scope 'none', CO2e = 0 (se registra consumo
+ * pero el Protocolo GHG no exige factor de emisión para estas categorías).
  */
 import { createHash } from 'node:crypto';
 import Big from 'big.js';
@@ -25,7 +25,6 @@ import type {
   Unit,
 } from './types';
 
-// ── Internal helpers ──────────────────────────────────────────────────────────
 
 function ok<T>(value: T): CalcResult<T> {
   return { ok: true, value };
@@ -35,23 +34,21 @@ function err<T>(error: CalcError): CalcResult<T> {
   return { ok: false, error };
 }
 
-// Kinds that have no direct GHG emissions — CO2e = 0, scope = 'none'
+// Categorías sin emisiones GHG directas — CO2e = 0, scope = 'none'
 const NO_GHG_KINDS: ReadonlySet<ActivityKind['kind']> = new Set(['water_use', 'waste']);
 
-// ── Step 1: Validate ──────────────────────────────────────────────────────────
 
 function validateActivity(record: ActivityRecord): CalcResult<ActivityRecord> {
   if (!isFinite(record.rawValue) || record.rawValue < 0) {
     return err({
       type: 'INVALID_VALUE',
       value: record.rawValue,
-      reason: 'rawValue must be a finite non-negative number',
+      reason: 'rawValue debe ser un número finito no negativo',
     });
   }
   return ok(record);
 }
 
-// ── Step 2: Normalize unit ────────────────────────────────────────────────────
 
 function normalizeUnit(
   rawValue: number,
@@ -73,7 +70,6 @@ function normalizeUnit(
   return ok(Big(rawValue).times(Big(factor)).toNumber());
 }
 
-// ── Step 3: Resolve factor ────────────────────────────────────────────────────
 
 function resolveFactorKey(activity: ActivityKind): string {
   switch (activity.kind) {
@@ -120,13 +116,11 @@ function resolveFactor(activity: ActivityKind, factors: FactorTable): CalcResult
   return ok(factor);
 }
 
-// ── Step 4: Apply factor ──────────────────────────────────────────────────────
 
 function applyFactor(normalizedValue: number, factorKgCo2ePerUnit: number): number {
   return Big(normalizedValue).times(Big(factorKgCo2ePerUnit)).toNumber();
 }
 
-// ── Step 5: Stamp provenance ──────────────────────────────────────────────────
 
 function stampProvenance(
   record: ActivityRecord,
@@ -148,7 +142,7 @@ function stampProvenance(
   return createHash('sha256').update(canonical, 'utf8').digest('hex');
 }
 
-// Provenance hash for zero-CO2e records (water, waste) — no factor involved
+// Hash de proveniencia para registros con CO2e = 0 (agua, residuos) — sin factor de emisión
 function stampProvenanceZero(record: ActivityRecord): string {
   const canonical = JSON.stringify({
     id: record.id,
@@ -162,7 +156,6 @@ function stampProvenanceZero(record: ActivityRecord): string {
   return createHash('sha256').update(canonical, 'utf8').digest('hex');
 }
 
-// ── Public: calculate ─────────────────────────────────────────────────────────
 
 export function calculate(
   record: ActivityRecord,
@@ -172,7 +165,7 @@ export function calculate(
   const validatedResult = validateActivity(record);
   if (!validatedResult.ok) return validatedResult;
 
-  // Water and waste: track consumption, skip GHG factor lookup
+  // Agua y residuos: se registra el consumo pero no se busca factor GHG
   if (NO_GHG_KINDS.has(record.activity.kind)) {
     return ok({
       activityRecordId: record.id,
@@ -219,7 +212,6 @@ export function calculate(
   });
 }
 
-// ── Public: aggregate ─────────────────────────────────────────────────────────
 
 export function aggregate(results: readonly EmissionResult[]): EvaluationTotals {
   let totalBig = Big(0);
@@ -253,26 +245,26 @@ export function aggregate(results: readonly EmissionResult[]): EvaluationTotals 
   };
 }
 
-// ── Public: score ─────────────────────────────────────────────────────────────
 
 export function score(totals: EvaluationTotals, history: readonly EvaluationTotals[]): RiskScore {
   let trend: 'up' | 'down' | 'stable' = 'stable';
 
   if (history.length > 0) {
     const prior = history[history.length - 1]!;
-    if (prior.totalCo2eKg > 0) {
+    if (prior.totalCo2eKg === 0 && totals.totalCo2eKg > 0) {
+      trend = 'up';
+    } else if (prior.totalCo2eKg > 0) {
       const changePct = (totals.totalCo2eKg - prior.totalCo2eKg) / prior.totalCo2eKg;
       if (changePct > 0.05) trend = 'up';
       else if (changePct < -0.05) trend = 'down';
     }
   }
 
-  // Normalized score: 0 tCO2e → 0, ≥1083 tCO2e → 65 (cap before trend adj)
-  // With 'up' trend +10 → max 75 → 'critical'. Cap at 65 so critical is reachable.
+  // Score normalizado: 0 tCO2e → 0, ≥1083 tCO2e → 65 (tope antes del ajuste por tendencia)
+  // Con tendencia 'up' +10 → máx 75 → nivel 'critical'. Se topa en 65 para que 'critical' sea alcanzable.
   const tCo2e = totals.totalCo2eKg / 1000;
-  let rawScore = Math.round(Math.min(65, tCo2e * 0.6));
+  let rawScore = Math.round(Math.min(65, tCo2e * 0.06));
 
-  // Trend adjustment
   if (trend === 'up') rawScore = Math.min(100, rawScore + 10);
   if (trend === 'down') rawScore = Math.max(0, rawScore - 5);
 
@@ -282,7 +274,6 @@ export function score(totals: EvaluationTotals, history: readonly EvaluationTota
   return { score: rawScore, level, anomalyCount: 0, trend };
 }
 
-// ── Exported internals for testing ───────────────────────────────────────────
 
 export const _internals = {
   validateActivity,

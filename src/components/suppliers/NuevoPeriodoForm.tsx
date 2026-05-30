@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useActionState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Plus, X, Check } from 'lucide-react';
 import { createPeriod, type PeriodActionState } from '@/actions/periods';
 import { useToast } from '@/components/ui/Toast';
@@ -39,6 +40,7 @@ export function NuevoPeriodoForm({ supplierId }: Props) {
     null,
   );
   const { toast } = useToast();
+  const router = useRouter();
 
   useEffect(() => {
     if (state?.success) {
@@ -47,8 +49,9 @@ export function NuevoPeriodoForm({ supplierId }: Props) {
       setFechaFin('');
       setLabel('');
       toast('Periodo creado correctamente', 'success');
+      router.refresh();
     }
-  }, [state?.success, toast]);
+  }, [state?.success, toast, router]);
 
   function handleFechaInicio(val: string) {
     setFechaInicio(val);

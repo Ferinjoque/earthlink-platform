@@ -1,6 +1,6 @@
 /**
- * In-memory repository — used in unit tests.
- * Drop-in replacement for SupabaseRepository with zero call-site changes.
+ * Repositorio en memoria — usado en tests unitarios.
+ * Reemplazo directo de SupabaseRepository sin cambios en los sitios de llamada.
  */
 import type { Entity } from '../domain/Entity';
 import { Repository } from './Repository';
@@ -28,7 +28,7 @@ export class InMemoryRepository<
     this.store.delete(id);
   }
 
-  /** Test helper — pre-seed the store */
+  /** Precarga el almacén — usado en tests unitarios */
   seed(entities: readonly TEntity[]): this {
     for (const entity of entities) {
       this.store.set(entity.id, entity);

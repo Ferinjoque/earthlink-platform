@@ -1,11 +1,11 @@
 -- =============================================================================
--- Seed Data
--- Reference data: DEFRA 2024 + IPCC AR6 + MINEM 2023
--- Demo data: 3 suppliers, 2 reporting periods each, 1 planted anomaly
+-- Datos de seed
+-- Datos de referencia: DEFRA 2024 + IPCC AR6 + MINEM 2023
+-- Datos demo: 3 proveedores, 2 periodos de reporte cada uno, 1 anomalía plantada
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
--- Fuel Types
+-- Tipos de combustible
 -- ---------------------------------------------------------------------------
 INSERT INTO public.fuel_types (id, code, label, scope, activity_kind) VALUES
   ('11111111-0001-0001-0001-000000000001', 'natural_gas', 'Natural Gas',  1, 'stationary_combustion'),
@@ -16,12 +16,12 @@ INSERT INTO public.fuel_types (id, code, label, scope, activity_kind) VALUES
   ('11111111-0001-0001-0001-000000000006', 'lpg',         'LPG (Mobile)', 1, 'mobile_combustion')
 ON CONFLICT (id) DO NOTHING;
 
--- NOTE: 'diesel' code used for both stationary and mobile. The FK from activity_entries
--- uses source_type to disambiguate which fuel_type row applies.
--- In production, unique constraint is on (code, activity_kind) — handled by FK logic.
+-- NOTA: código 'diesel' usado tanto para estacionario como móvil. La FK desde activity_entries
+-- usa source_type para distinguir cuál fila de fuel_type aplica.
+-- En producción, la restricción única es sobre (code, activity_kind) — gestionado por lógica FK.
 
 -- ---------------------------------------------------------------------------
--- Refrigerants — IPCC AR6 GWP-100 values
+-- Refrigerantes — valores GWP-100 IPCC AR6
 -- ---------------------------------------------------------------------------
 INSERT INTO public.refrigerants (id, code, label, gwp_ar6) VALUES
   ('22222222-0002-0002-0002-000000000001', 'R410A', 'R-410A (HFC blend)', 2088.00),
@@ -30,7 +30,7 @@ INSERT INTO public.refrigerants (id, code, label, gwp_ar6) VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
--- Grid Regions
+-- Regiones de red eléctrica
 -- ---------------------------------------------------------------------------
 INSERT INTO public.grid_regions (id, code, label, country) VALUES
   ('33333333-0003-0003-0003-000000000001', 'SEIN_PERU',   'SEIN – Sistema Eléctrico Interconectado Nacional (Peru)', 'PE'),
@@ -40,71 +40,71 @@ INSERT INTO public.grid_regions (id, code, label, country) VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
--- Emission Factors
--- Sources: DEFRA 2024 (UK BEIS), MINEM 2023 (Peru), IPCC AR6
--- Unit: kg CO2e per normalized unit
+-- Factores de emisión
+-- Fuentes: DEFRA 2024 (UK BEIS), MINEM 2023 (Perú), IPCC AR6
+-- Unidad: kg CO2e por unidad normalizada
 -- ---------------------------------------------------------------------------
 
--- Stationary combustion (Scope 1) — DEFRA 2024
+-- Combustión estacionaria (Alcance 1) — DEFRA 2024
 INSERT INTO public.emission_factors
   (id, source_type, fuel_type_id, co2e_per_unit, unit, scope, source_db, valid_from, valid_to)
 VALUES
-  -- Natural gas: 0.18316 kg CO2e / kWh (gross CV, includes CH4 + N2O)
+  -- Gas natural: 0.18316 kg CO2e / kWh (poder calorífico bruto, incluye CH4 + N2O)
   ('44444444-0001-0001-0001-000000000001',
    'stationary_combustion', '11111111-0001-0001-0001-000000000001',
    0.18316000, 'kWh', 1, 'DEFRA_2024', '2024-01-01', NULL),
-  -- Diesel (stationary): 2.51390000 kg CO2e / L
+  -- Diésel (estacionario): 2.51390000 kg CO2e / L
   ('44444444-0001-0001-0001-000000000002',
    'stationary_combustion', '11111111-0001-0001-0001-000000000002',
    2.51390000, 'L', 1, 'DEFRA_2024', '2024-01-01', NULL),
-  -- LPG (stationary): 1.55540000 kg CO2e / L
+  -- GLP (estacionario): 1.55540000 kg CO2e / L
   ('44444444-0001-0001-0001-000000000003',
    'stationary_combustion', '11111111-0001-0001-0001-000000000003',
    1.55540000, 'L', 1, 'DEFRA_2024', '2024-01-01', NULL)
 ON CONFLICT (id) DO NOTHING;
 
--- Mobile combustion (Scope 1) — DEFRA 2024
+-- Combustión móvil (Alcance 1) — DEFRA 2024
 INSERT INTO public.emission_factors
   (id, source_type, fuel_type_id, co2e_per_unit, unit, scope, source_db, valid_from, valid_to)
 VALUES
-  -- Diesel (mobile): 2.51390000 kg CO2e / L
+  -- Diésel (móvil): 2.51390000 kg CO2e / L
   ('44444444-0001-0002-0001-000000000001',
    'mobile_combustion', '11111111-0001-0001-0001-000000000004',
    2.51390000, 'L', 1, 'DEFRA_2024', '2024-01-01', NULL),
-  -- Gasoline: 2.16850000 kg CO2e / L
+  -- Gasolina: 2.16850000 kg CO2e / L
   ('44444444-0001-0002-0001-000000000002',
    'mobile_combustion', '11111111-0001-0001-0001-000000000005',
    2.16850000, 'L', 1, 'DEFRA_2024', '2024-01-01', NULL),
-  -- LPG (mobile): 1.55540000 kg CO2e / L
+  -- GLP (móvil): 1.55540000 kg CO2e / L
   ('44444444-0001-0002-0001-000000000003',
    'mobile_combustion', '11111111-0001-0001-0001-000000000006',
    1.55540000, 'L', 1, 'DEFRA_2024', '2024-01-01', NULL)
 ON CONFLICT (id) DO NOTHING;
 
--- Purchased electricity (Scope 2)
+-- Electricidad comprada (Alcance 2)
 INSERT INTO public.emission_factors
   (id, source_type, grid_region_id, co2e_per_unit, unit, scope, source_db, valid_from, valid_to)
 VALUES
-  -- Peru SEIN: 0.4517 kg CO2e / kWh — MINEM 2023
+  -- Perú SEIN: 0.4517 kg CO2e / kWh — MINEM 2023
   ('44444444-0002-0001-0001-000000000001',
    'purchased_electricity', '33333333-0003-0003-0003-000000000001',
    0.45170000, 'kWh', 2, 'MINEM_2023', '2023-01-01', NULL),
-  -- LATAM average: 0.2830 kg CO2e / kWh
+  -- Promedio LATAM: 0.2830 kg CO2e / kWh
   ('44444444-0002-0001-0001-000000000002',
    'purchased_electricity', '33333333-0003-0003-0003-000000000002',
    0.28300000, 'kWh', 2, 'DEFRA_2024', '2024-01-01', NULL),
-  -- US average: 0.3861 kg CO2e / kWh — EPA eGRID 2023
+  -- Promedio EE.UU.: 0.3861 kg CO2e / kWh — EPA eGRID 2023
   ('44444444-0002-0001-0001-000000000003',
    'purchased_electricity', '33333333-0003-0003-0003-000000000003',
    0.38610000, 'kWh', 2, 'DEFRA_2024', '2024-01-01', NULL),
-  -- EU-27 average: 0.2330 kg CO2e / kWh — IEA 2023
+  -- Promedio UE-27: 0.2330 kg CO2e / kWh — IEA 2023
   ('44444444-0002-0001-0001-000000000004',
    'purchased_electricity', '33333333-0003-0003-0003-000000000004',
    0.23300000, 'kWh', 2, 'DEFRA_2024', '2024-01-01', NULL)
 ON CONFLICT (id) DO NOTHING;
 
--- Fugitive emissions (Scope 1) — IPCC AR6 GWP-100
--- Factor = GWP-100 value; 1 kg refrigerant leaked = GWP kg CO2e
+-- Emisiones fugitivas (Alcance 1) — IPCC AR6 GWP-100
+-- Factor = valor GWP-100; 1 kg de refrigerante fugado = GWP kg CO2e
 INSERT INTO public.emission_factors
   (id, source_type, refrigerant_id, co2e_per_unit, unit, scope, source_db, valid_from, valid_to)
 VALUES
@@ -119,7 +119,7 @@ VALUES
     675.00000000, 'kg', 1, 'IPCC_AR6', '2023-01-01', NULL)
 ON CONFLICT (id) DO NOTHING;
 
--- Purchased steam (Scope 2) — DEFRA 2024 district heating average
+-- Vapor comprado (Alcance 2) — promedio calefacción distrital DEFRA 2024
 INSERT INTO public.emission_factors
   (id, source_type, co2e_per_unit, unit, scope, source_db, valid_from, valid_to)
 VALUES
@@ -129,40 +129,40 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
--- Unit Conversions
+-- Conversiones de unidades
 -- ---------------------------------------------------------------------------
 INSERT INTO public.unit_conversions (from_unit, to_unit, factor, notes) VALUES
-  -- Volume
-  ('gallon',      'L',    3.78541200, 'US liquid gallon to litre'),
-  ('gal',         'L',    3.78541200, 'US liquid gallon (abbrev) to litre'),
-  ('imp_gallon',  'L',    4.54609000, 'Imperial gallon to litre'),
-  -- Energy
-  ('therms',      'kWh', 29.30710000, 'US natural gas therm to kWh (1 therm = 100,000 BTU)'),
-  ('therm',       'kWh', 29.30710000, 'Singular form'),
-  ('MMBtu',       'kWh', 293.07100000,'Million BTU to kWh'),
-  ('MBtu',        'kWh',   0.29307100,'Thousand BTU to kWh'),
-  ('BTU',         'kWh',   0.00029307,'BTU to kWh'),
-  ('MWh',         'kWh', 1000.0000000,'Megawatt-hour to kilowatt-hour'),
-  ('GJ',          'kWh',  277.7778000,'Gigajoule to kWh'),
-  ('MJ',          'kWh',    0.2777780,'Megajoule to kWh'),
-  ('kJ',          'kWh',    0.0002778,'Kilojoule to kWh'),
-  -- Natural gas volume → energy
-  ('m3_ng',       'kWh',  10.5500000, 'Cubic metre natural gas to kWh (gross CV, DEFRA 2024)'),
-  ('ft3_ng',      'kWh',   0.2988000, 'Cubic foot natural gas to kWh'),
-  -- Mass
-  ('tonne',       'kg',  1000.0000000,'Metric tonne to kilogram'),
-  ('lb',          'kg',     0.4535924,'Pound to kilogram'),
-  ('oz',          'kg',     0.0283495,'Ounce to kilogram'),
-  -- LPG mass ↔ volume (propane density ~0.509 kg/L at 15°C)
-  ('kg_lpg',      'L',      1.9646000,'Kilogram of LPG (propane) to litre'),
-  -- Identity (no-op conversions, useful for unit validation)
-  ('kWh',         'kWh',    1.0000000,'Identity'),
-  ('L',           'L',      1.0000000,'Identity'),
-  ('kg',          'kg',     1.0000000,'Identity')
+  -- Volumen
+  ('gallon',      'L',    3.78541200, 'Galón líquido EE.UU. a litro'),
+  ('gal',         'L',    3.78541200, 'Galón líquido EE.UU. (abrev.) a litro'),
+  ('imp_gallon',  'L',    4.54609000, 'Galón imperial a litro'),
+  -- Energía
+  ('therms',      'kWh', 29.30710000, 'Therm de gas natural EE.UU. a kWh (1 therm = 100,000 BTU)'),
+  ('therm',       'kWh', 29.30710000, 'Forma singular'),
+  ('MMBtu',       'kWh', 293.07100000,'Millón de BTU a kWh'),
+  ('MBtu',        'kWh',   0.29307100,'Mil BTU a kWh'),
+  ('BTU',         'kWh',   0.00029307,'BTU a kWh'),
+  ('MWh',         'kWh', 1000.0000000,'Megavatio-hora a kilovatio-hora'),
+  ('GJ',          'kWh',  277.7778000,'Gigajulio a kWh'),
+  ('MJ',          'kWh',    0.2777780,'Megajulio a kWh'),
+  ('kJ',          'kWh',    0.0002778,'Kilojulio a kWh'),
+  -- Volumen gas natural → energía
+  ('m3_ng',       'kWh',  10.5500000, 'Metro cúbico de gas natural a kWh (poder calorífico bruto, DEFRA 2024)'),
+  ('ft3_ng',      'kWh',   0.2988000, 'Pie cúbico de gas natural a kWh'),
+  -- Masa
+  ('tonne',       'kg',  1000.0000000,'Tonelada métrica a kilogramo'),
+  ('lb',          'kg',     0.4535924,'Libra a kilogramo'),
+  ('oz',          'kg',     0.0283495,'Onza a kilogramo'),
+  -- Masa ↔ volumen GLP (densidad propano ~0.509 kg/L a 15°C)
+  ('kg_lpg',      'L',      1.9646000,'Kilogramo de GLP (propano) a litro'),
+  -- Identidad (conversiones nulas, útiles para validación de unidades)
+  ('kWh',         'kWh',    1.0000000,'Identidad'),
+  ('L',           'L',      1.0000000,'Identidad'),
+  ('kg',          'kg',     1.0000000,'Identidad')
 ON CONFLICT (from_unit, to_unit) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
--- Demo Organizations
+-- Organizaciones demo
 -- ---------------------------------------------------------------------------
 INSERT INTO public.organizations (id, name, industry, ruc, country) VALUES
   ('aaaaaaaa-aaaa-aaaa-aaaa-000000000001',
@@ -178,10 +178,10 @@ INSERT INTO public.organizations (id, name, industry, ruc, country) VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
--- Demo Suppliers (3 per org = 6 total; fits the academic 15-table showcase)
+-- Proveedores demo (3 por org = 6 total)
 -- ---------------------------------------------------------------------------
 INSERT INTO public.suppliers (id, organization_id, name, category, contact_email) VALUES
-  -- EcoGroup SAC suppliers
+  -- Proveedores EcoGroup SAC
   ('bbbbbbbb-bbbb-bbbb-bbbb-000000000001',
    'aaaaaaaa-aaaa-aaaa-aaaa-000000000001',
    'Lima Printing & Packaging SAC',
@@ -197,7 +197,7 @@ INSERT INTO public.suppliers (id, organization_id, name, category, contact_email
    'Aromas del Pacífico SAC',
    'Food & Beverage',
    'esg@aromas.pe'),
-  -- Andean Mining Corp suppliers
+  -- Proveedores Andean Mining Corp
   ('bbbbbbbb-bbbb-bbbb-bbbb-000000000004',
    'aaaaaaaa-aaaa-aaaa-aaaa-000000000002',
    'Equipos Mineros del Sur',
@@ -216,8 +216,8 @@ INSERT INTO public.suppliers (id, organization_id, name, category, contact_email
 ON CONFLICT (id) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
--- Reporting Periods (2 per supplier = 12 total)
--- Q4-2025 (baseline) and Q1-2026 (current)
+-- Periodos de reporte (2 por proveedor = 12 total)
+-- Q4-2025 (línea base) y Q1-2026 (actual)
 -- ---------------------------------------------------------------------------
 INSERT INTO public.reporting_periods (id, supplier_id, label, start_date, end_date, status) VALUES
   -- Lima Printing & Packaging
@@ -241,13 +241,13 @@ INSERT INTO public.reporting_periods (id, supplier_id, label, start_date, end_da
 ON CONFLICT (id) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
--- Activity Entries — Q4-2025 baseline (locked periods)
+-- Entradas de actividad — Q4-2025 línea base (periodos bloqueados)
 -- ---------------------------------------------------------------------------
 INSERT INTO public.activity_entries
   (id, reporting_period_id, source_type, activity_kind, raw_quantity, raw_unit,
    fuel_type_id, grid_region_id, status, submitted_at)
 VALUES
-  -- Lima Printing Q4-2025: diesel boiler (stationary) + electricity
+  -- Lima Printing Q4-2025: caldera diésel (estacionario) + electricidad
   ('dddddddd-dddd-dddd-dddd-000000000001',
    'cccccccc-cccc-cccc-cccc-000000000001',
    'stationary_combustion',
@@ -264,7 +264,7 @@ VALUES
    NULL, '33333333-0003-0003-0003-000000000001',
    'validated', '2026-01-15 09:00:00+00'),
 
-  -- TransAndes Q4-2025: diesel trucks (mobile)
+  -- TransAndes Q4-2025: camiones diésel (móvil)
   ('dddddddd-dddd-dddd-dddd-000000000003',
    'cccccccc-cccc-cccc-cccc-000000000003',
    'mobile_combustion',
@@ -273,7 +273,7 @@ VALUES
    '11111111-0001-0001-0001-000000000004', NULL,
    'validated', '2026-01-14 10:00:00+00'),
 
-  -- TransAndes Q4-2025: gasoline fleet
+  -- TransAndes Q4-2025: flota gasolina
   ('dddddddd-dddd-dddd-dddd-000000000004',
    'cccccccc-cccc-cccc-cccc-000000000003',
    'mobile_combustion',
@@ -282,7 +282,7 @@ VALUES
    '11111111-0001-0001-0001-000000000005', NULL,
    'validated', '2026-01-14 10:00:00+00'),
 
-  -- Aromas Q4-2025: LPG ovens + electricity
+  -- Aromas Q4-2025: hornos GLP + electricidad
   ('dddddddd-dddd-dddd-dddd-000000000005',
    'cccccccc-cccc-cccc-cccc-000000000005',
    'stationary_combustion',
@@ -301,23 +301,23 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
--- Activity Entries — Q1-2026 (current periods — some submitted, one anomalous)
+-- Entradas de actividad — Q1-2026 (periodos actuales — algunos enviados, uno anómalo)
 -- ---------------------------------------------------------------------------
 INSERT INTO public.activity_entries
   (id, reporting_period_id, source_type, activity_kind, raw_quantity, raw_unit,
    fuel_type_id, grid_region_id, status, submitted_at, notes)
 VALUES
-  -- Lima Printing Q1-2026: diesel (NORMAL baseline ~850 L/quarter)
+  -- Lima Printing Q1-2026: diésel (línea base NORMAL ~850 L/trimestre)
   ('dddddddd-dddd-dddd-dddd-000000000007',
    'cccccccc-cccc-cccc-cccc-000000000002',
    'stationary_combustion',
    '{"kind":"stationary_combustion","fuel":"diesel"}'::jsonb,
-   4750.0, 'L',           -- *** ANOMALY: 5.6x the Q4-2025 baseline of 850 L ***
+   4750.0, 'L',           -- *** ANOMALÍA: 5.6x la línea base Q4-2025 de 850 L ***
    '11111111-0001-0001-0001-000000000002', NULL,
    'submitted', '2026-04-05 14:30:00+00',
-   'Reported by new procurement team. Unverified.'),
+   'Reportado por nuevo equipo de compras. Sin verificar.'),
 
-  -- Lima Printing Q1-2026: electricity (normal)
+  -- Lima Printing Q1-2026: electricidad (normal)
   ('dddddddd-dddd-dddd-dddd-000000000008',
    'cccccccc-cccc-cccc-cccc-000000000002',
    'purchased_electricity',
@@ -326,7 +326,7 @@ VALUES
    NULL, '33333333-0003-0003-0003-000000000001',
    'submitted', '2026-04-05 14:30:00+00', NULL),
 
-  -- TransAndes Q1-2026: diesel trucks (normal)
+  -- TransAndes Q1-2026: camiones diésel (normal)
   ('dddddddd-dddd-dddd-dddd-000000000009',
    'cccccccc-cccc-cccc-cccc-000000000004',
    'mobile_combustion',
@@ -335,7 +335,7 @@ VALUES
    '11111111-0001-0001-0001-000000000004', NULL,
    'submitted', '2026-04-03 08:00:00+00', NULL),
 
-  -- Aromas Q1-2026: LPG (normal)
+  -- Aromas Q1-2026: GLP (normal)
   ('dddddddd-dddd-dddd-dddd-000000000010',
    'cccccccc-cccc-cccc-cccc-000000000006',
    'stationary_combustion',
@@ -346,16 +346,16 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
--- Emission Results — Q4-2025 baseline (pre-computed for locked periods)
--- co2e_kg = raw_quantity × emission_factor.co2e_per_unit (after unit normalization)
--- calc_hash = placeholder sha256 stubs (FP engine generates real hashes in Phase 2)
+-- Resultados de emisión — Q4-2025 línea base (pre-calculados para periodos bloqueados)
+-- co2e_kg = raw_quantity × emission_factor.co2e_per_unit (tras normalización de unidad)
+-- calc_hash = stubs sha256 de referencia (el motor FP genera hashes reales en producción)
 -- ---------------------------------------------------------------------------
 INSERT INTO public.emission_results
   (id, activity_entry_id, reporting_period_id, scope, co2e_kg,
    factor_used, factor_unit, normalized_quantity, normalized_unit,
    calc_hash, calc_version, emission_factor_id, calculated_at)
 VALUES
-  -- Lima Printing Q4-2025 diesel: 850 L × 2.5139 = 2136.82 kg CO2e
+  -- Lima Printing Q4-2025 diésel: 850 L × 2.5139 = 2136.82 kg CO2e
   ('eeeeeeee-eeee-eeee-eeee-000000000001',
    'dddddddd-dddd-dddd-dddd-000000000001',
    'cccccccc-cccc-cccc-cccc-000000000001',
@@ -367,7 +367,7 @@ VALUES
    '44444444-0001-0001-0001-000000000002',
    '2026-01-20 00:00:00+00'),
 
-  -- Lima Printing Q4-2025 electricity: 42500 kWh × 0.4517 = 19197.25 kg CO2e
+  -- Lima Printing Q4-2025 electricidad: 42500 kWh × 0.4517 = 19197.25 kg CO2e
   ('eeeeeeee-eeee-eeee-eeee-000000000002',
    'dddddddd-dddd-dddd-dddd-000000000002',
    'cccccccc-cccc-cccc-cccc-000000000001',
@@ -379,7 +379,7 @@ VALUES
    '44444444-0002-0001-0001-000000000001',
    '2026-01-20 00:00:00+00'),
 
-  -- TransAndes Q4-2025 diesel: 12400 L × 2.5139 = 31172.36 kg CO2e
+  -- TransAndes Q4-2025 diésel: 12400 L × 2.5139 = 31172.36 kg CO2e
   ('eeeeeeee-eeee-eeee-eeee-000000000003',
    'dddddddd-dddd-dddd-dddd-000000000003',
    'cccccccc-cccc-cccc-cccc-000000000003',
@@ -391,7 +391,7 @@ VALUES
    '44444444-0001-0002-0001-000000000001',
    '2026-01-20 00:00:00+00'),
 
-  -- TransAndes Q4-2025 gasoline: 3200 L × 2.1685 = 6939.20 kg CO2e
+  -- TransAndes Q4-2025 gasolina: 3200 L × 2.1685 = 6939.20 kg CO2e
   ('eeeeeeee-eeee-eeee-eeee-000000000004',
    'dddddddd-dddd-dddd-dddd-000000000004',
    'cccccccc-cccc-cccc-cccc-000000000003',
@@ -403,7 +403,7 @@ VALUES
    '44444444-0001-0002-0001-000000000002',
    '2026-01-20 00:00:00+00'),
 
-  -- Aromas Q4-2025 LPG: 920 L × 1.5554 = 1430.97 kg CO2e
+  -- Aromas Q4-2025 GLP: 920 L × 1.5554 = 1430.97 kg CO2e
   ('eeeeeeee-eeee-eeee-eeee-000000000005',
    'dddddddd-dddd-dddd-dddd-000000000005',
    'cccccccc-cccc-cccc-cccc-000000000005',
@@ -415,7 +415,7 @@ VALUES
    '44444444-0001-0001-0001-000000000003',
    '2026-01-20 00:00:00+00'),
 
-  -- Aromas Q4-2025 electricity: 28700 kWh × 0.4517 = 12963.79 kg CO2e
+  -- Aromas Q4-2025 electricidad: 28700 kWh × 0.4517 = 12963.79 kg CO2e
   ('eeeeeeee-eeee-eeee-eeee-000000000006',
    'dddddddd-dddd-dddd-dddd-000000000006',
    'cccccccc-cccc-cccc-cccc-000000000005',
@@ -429,10 +429,10 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
--- Planted Anomaly Flag
--- Lima Printing Q1-2026: diesel 4750 L vs Q4-2025 baseline 850 L
--- z-score = (4750 - 850) / (850 * 0.1) = 3900 / 85 ≈ 45.9 (extreme outlier)
--- Simplified: z-score against cross-supplier mean signals obvious spike
+-- Anomalía plantada
+-- Lima Printing Q1-2026: diésel 4750 L vs línea base Q4-2025 de 850 L
+-- z-score = (4750 - 850) / (850 * 0.1) = 3900 / 85 ≈ 45.9 (valor extremo atípico)
+-- Simplificado: el z-score contra la media entre proveedores señala pico evidente
 -- ---------------------------------------------------------------------------
 INSERT INTO public.anomaly_flags
   (id, activity_entry_id, detector, severity, z_score, threshold_used,
@@ -444,14 +444,14 @@ VALUES
    'high',
    45.88,
    3.00,
-   'Diesel consumption of 4,750 L in Q1-2026 is 45.9σ above the Q4-2025 baseline of 850 L. '
-   'Verify invoices — possible data entry error (gallons entered as litres) or undisclosed equipment change.',
+   'Consumo de diésel de 4,750 L en Q1-2026 es 45.9σ sobre la línea base Q4-2025 de 850 L. '
+   'Verificar facturas — posible error de ingreso (galones introducidos como litros) o cambio de equipo no declarado.',
    false,
    '2026-04-05 14:31:00+00')
 ON CONFLICT (id) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
--- Audit Log — seed events for locked periods
+-- Registro de auditoría — eventos seed para periodos bloqueados
 -- ---------------------------------------------------------------------------
 INSERT INTO public.audit_log (id, action, table_name, record_id, new_values, performed_at)
 VALUES

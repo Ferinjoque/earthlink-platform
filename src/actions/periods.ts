@@ -8,8 +8,20 @@ const createPeriodSchema = z
   .object({
     supplier_id: z.string().uuid('ID de proveedor inválido'),
     label: z.string().min(1, 'El label es obligatorio').max(50),
-    fecha_inicio: z.string().min(1, 'La fecha de inicio es obligatoria'),
-    fecha_fin: z.string().min(1, 'La fecha de fin es obligatoria'),
+    fecha_inicio: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha de inicio inválida (YYYY-MM-DD)'),
+    fecha_fin: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha de fin inválida (YYYY-MM-DD)'),
+  })
+  .refine((d) => {
+    const calendarValid = (s: string) => {
+      const parts = s.split('-').map(Number);
+      const y = parts[0] ?? NaN, m = parts[1] ?? NaN, day = parts[2] ?? NaN;
+      const dt = new Date(y, m - 1, day);
+      return dt.getFullYear() === y && dt.getMonth() + 1 === m && dt.getDate() === day;
+    };
+    return calendarValid(d.fecha_inicio) && calendarValid(d.fecha_fin);
+  }, {
+    message: 'Las fechas deben ser fechas del calendario válidas',
+    path: ['fecha_inicio'],
   })
   .refine((d) => new Date(d.fecha_fin) > new Date(d.fecha_inicio), {
     message: 'La fecha de fin debe ser posterior a la fecha de inicio',
@@ -23,7 +35,7 @@ export interface PeriodActionState {
 
 export type CreatePeriodState = PeriodActionState;
 
-type SupplierData = { organization_id: string };
+type SupplierData = { organization_id: string; archived_at: string | null };
 type MembershipData = { role: string };
 
 export async function createPeriod(
@@ -50,11 +62,12 @@ export async function createPeriod(
 
   const { data: rawSupplier } = await supabase
     .from('suppliers')
-    .select('organization_id')
+    .select('organization_id, archived_at')
     .eq('id', supplier_id)
     .maybeSingle();
   const supplier = rawSupplier as SupplierData | null;
   if (!supplier) return { error: 'Proveedor no encontrado' };
+  if (supplier.archived_at) return { error: 'No se puede crear periodos en un proveedor archivado' };
 
   const { data: rawMembership } = await supabase
     .from('memberships')
@@ -76,7 +89,7 @@ export async function createPeriod(
     status: 'open' as const,
   });
 
-  if (error) return { error: error.message };
+  if (error) return { error: 'Error al crear el periodo. Intenta nuevamente.' };
 
   revalidatePath(`/suppliers/${supplier_id}`);
   revalidatePath('/suppliers');

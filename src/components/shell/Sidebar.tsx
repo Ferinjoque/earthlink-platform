@@ -8,7 +8,6 @@ import {
   ClipboardList,
   ShieldCheck,
   FileText,
-  Leaf,
   BarChart2,
   Settings,
   LogOut,
@@ -65,7 +64,7 @@ export function Sidebar({ anomaliaCount = 0 }: SidebarProps) {
         zIndex: 'var(--z-sticky)',
       }}
     >
-      {/* Wordmark */}
+      {/* Logotipo */}
       <div
         style={{
           padding: 'var(--space-5) var(--space-5)',
@@ -75,21 +74,6 @@ export function Sidebar({ anomaliaCount = 0 }: SidebarProps) {
           gap: 'var(--space-3)',
         }}
       >
-        <span
-          style={{
-            width: '30px',
-            height: '30px',
-            borderRadius: 'var(--radius-md)',
-            background:
-              'linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-2) 100%)',
-            display: 'grid',
-            placeItems: 'center',
-            flexShrink: 0,
-            boxShadow: '0 0 0 1px oklch(77% 0.16 155 / 20%), 0 4px 12px oklch(58% 0.16 155 / 30%)',
-          }}
-        >
-          <Leaf size={15} color="white" />
-        </span>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
           <span
             style={{
@@ -117,7 +101,7 @@ export function Sidebar({ anomaliaCount = 0 }: SidebarProps) {
         </div>
       </div>
 
-      {/* Nav */}
+      {/* Navegación */}
       <nav
         aria-label="Navegación principal"
         style={{
@@ -197,7 +181,7 @@ export function Sidebar({ anomaliaCount = 0 }: SidebarProps) {
         })}
       </nav>
 
-      {/* Sign out */}
+      {/* Cerrar sesión */}
       <div style={{ padding: 'var(--space-3)', borderTop: '1px solid var(--color-border)' }}>
         <form action={signOut}>
           <button

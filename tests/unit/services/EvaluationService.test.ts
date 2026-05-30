@@ -4,7 +4,7 @@ import { ActivityEntry } from '../../../src/domain/ActivityEntry';
 import { ReportingPeriod } from '../../../src/domain/ReportingPeriod';
 import type { EmissionFactor, FactorTable, ConversionTable } from '../../../src/calc/types';
 
-// ── Fixtures ──────────────────────────────────────────────────────────────────
+// ── Datos de prueba ───────────────────────────────────────────────────────────
 
 const NOW = new Date('2026-01-15T00:00:00Z');
 
@@ -58,7 +58,7 @@ function makeConversions(): ConversionTable {
   return new Map([['gallon->L', 3.78541]]);
 }
 
-// ── Mock factories ────────────────────────────────────────────────────────────
+// ── Fábricas de mocks ─────────────────────────────────────────────────────────
 
 function makeRepos(
   overrides: {
@@ -110,12 +110,12 @@ function makeService(overrides = {}) {
   return { service, ...repos };
 }
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
+// ── Pruebas ───────────────────────────────────────────────────────────────────
 
 describe('EvaluationService.evaluate()', () => {
   it('throws when period not found', async () => {
     const { service } = makeService({ period: null });
-    await expect(service.evaluate('period-001')).rejects.toThrow('not found');
+    await expect(service.evaluate('period-001')).rejects.toThrow('no encontrado');
   });
 
   it('returns zero totals for empty period', async () => {
@@ -237,7 +237,7 @@ describe('EvaluationService.evaluate()', () => {
     // GHG: 100 × 2.5139 = 251.39; water: 0
     expect(totals.totalCo2eKg).toBeCloseTo(251.39, 2);
     expect(totals.recordCount).toBe(2);
-    // Only GHG entry should be persisted
+    // Solo la entrada GHG debe persistirse
     expect(emissionResultRepo.insertMany).toHaveBeenCalledOnce();
     const [rows] = emissionResultRepo.insertMany.mock.calls[0]!;
     expect(rows).toHaveLength(1);
@@ -342,7 +342,7 @@ describe('EvaluationService.evaluate()', () => {
     expect(totals.byScope['scope2']).toBeCloseTo(451.7, 1);
     expect(totals.totalCo2eKg).toBeCloseTo(703.09, 0);
     expect(totals.recordCount).toBe(2);
-    // both results persisted
+    // ambos resultados deben persistirse
     const [rows] = emissionResultRepo.insertMany.mock.calls[0]!;
     expect(rows).toHaveLength(2);
     const scopes = rows.map((r: { result: { scope: string } }) => r.result.scope).sort();
@@ -382,9 +382,69 @@ describe('EvaluationService.evaluate()', () => {
     const e2 = makeEntry({ id: 'e2', rawQuantity: 200 }); // scope1: 502.78
     const { service } = makeService({ entries: [e1, e2] });
     const { totals } = await service.evaluate('period-001');
-    // both diesel → scope1 only; scope2 must be exactly 0
+    // ambos diesel → solo scope1; scope2 debe ser exactamente 0
     expect(totals.byScope['scope1']).toBeCloseTo(totals.totalCo2eKg, 4);
     expect(totals.byScope['scope2']).toBe(0);
     expect(totals.byScope['scope1'] + totals.byScope['scope2']).toBeCloseTo(totals.totalCo2eKg, 4);
+  });
+
+  it('water_use entry with invalid rawValue propagates error (not silently dropped)', async () => {
+    const badWater = makeEntry({
+      id: 'bad-water',
+      sourceType: 'water_use',
+      activityKind: { kind: 'water_use', subtype: 'potable_mixed' },
+      rawQuantity: -1,
+      rawUnit: 'kgal_us',
+    });
+    const { service, emissionResultRepo } = makeService({ entries: [badWater], factors: new Map() });
+    const { totals, errors } = await service.evaluate('period-001');
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]!.entryId).toBe('bad-water');
+    expect(errors[0]!.message).toMatch(/INVALID_VALUE/);
+    expect(totals.recordCount).toBe(0);
+    expect(emissionResultRepo.insertMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('EvaluationService.evaluateWithCache()', () => {
+  it('throws when period not found', async () => {
+    const { service } = makeService({ period: null });
+    await expect(
+      service.evaluateWithCache('period-001', makeFactorTable(), makeConversions()),
+    ).rejects.toThrow('no encontrado');
+  });
+
+  it('never calls buildFactorTable ni buildConversionTable', async () => {
+    const { service, emissionFactorRepo, unitConversionRepo } = makeService();
+    await service.evaluateWithCache('period-001', makeFactorTable(), makeConversions());
+    expect(emissionFactorRepo.buildFactorTable).not.toHaveBeenCalled();
+    expect(unitConversionRepo.buildConversionTable).not.toHaveBeenCalled();
+  });
+
+  it('produces same CO2e result as evaluate() given identical tables', async () => {
+    const { service } = makeService();
+    const [withCache, withFetch] = await Promise.all([
+      service.evaluateWithCache('period-001', makeFactorTable(), makeConversions()),
+      service.evaluate('period-001'),
+    ]);
+    expect(withCache.totals.totalCo2eKg).toBeCloseTo(withFetch.totals.totalCo2eKg, 6);
+    expect(withCache.errors).toHaveLength(withFetch.errors.length);
+  });
+
+  it('returns error when passed empty factor table (factor missing)', async () => {
+    const { service } = makeService();
+    const { errors, totals } = await service.evaluateWithCache('period-001', new Map(), makeConversions());
+    expect(errors).toHaveLength(1);
+    expect(totals.totalCo2eKg).toBe(0);
+  });
+
+  it('uses the passed tables — different factor value yields different result', async () => {
+    const lowFactor: EmissionFactor = { ...dieselFactor, factorKgCo2ePerUnit: 1.0 };
+    const altTable: FactorTable = new Map([['stationary_combustion.diesel', lowFactor]]);
+    const { service } = makeService();
+    const { totals } = await service.evaluateWithCache('period-001', altTable, makeConversions());
+    // 100L × 1.0 = 100 kg
+    expect(totals.totalCo2eKg).toBeCloseTo(100, 2);
   });
 });

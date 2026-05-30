@@ -11,7 +11,7 @@ import type {
   ConversionTable,
 } from '../../../src/calc/types';
 
-// ── Test fixtures ─────────────────────────────────────────────────────────────
+// ── Datos de prueba ───────────────────────────────────────────────────────────
 
 function makeRecord(overrides: Partial<ActivityRecord> = {}): ActivityRecord {
   return {
@@ -376,8 +376,14 @@ describe('score', () => {
     expect(s.level).toBe('low');
   });
 
-  it('stable trend when prior totalCo2eKg is 0 (avoid division by zero)', () => {
+  it('up trend when prior totalCo2eKg is 0 and current is positive (inicio de emisiones)', () => {
     const current = makeTotals(5000);
+    const history = [makeTotals(0)];
+    expect(score(current, history).trend).toBe('up');
+  });
+
+  it('stable trend when both prior and current are 0', () => {
+    const current = makeTotals(0);
     const history = [makeTotals(0)];
     expect(score(current, history).trend).toBe('stable');
   });
@@ -389,7 +395,7 @@ describe('score', () => {
   });
 
   it('level is critical for very large emissions with upward trend', () => {
-    // Base 65 + 10 (up trend) = 75 → critical
+    // Base 65 + 10 (tendencia ascendente) = 75 → critical
     const prior = makeTotals(100_000);
     const current = makeTotals(2_000_000);
     const s = score(current, [prior]);
@@ -397,9 +403,29 @@ describe('score', () => {
     expect(s.score).toBe(75);
     expect(s.level).toBe('critical');
   });
+
+  it('score alcanza 65 exactamente en ≥1083 tCO2e (factor 0.06)', () => {
+    // 1_083_000 kg = 1083 tCO2e → 1083 * 0.06 = 64.98 → rounds to 65
+    const s = score(makeTotals(1_083_000), []);
+    expect(s.score).toBe(65);
+  });
+
+  it('score es proporcional a las emisiones por debajo del tope', () => {
+    // 541_500 kg = 541.5 tCO2e → 541.5 * 0.06 = 32.49 → rounds to 32
+    const s = score(makeTotals(541_500), []);
+    expect(s.score).toBe(32);
+    expect(s.level).toBe('medium');
+  });
+
+  it('score bajo para emisiones pequeñas (100 tCO2e)', () => {
+    // 100_000 kg = 100 tCO2e → 100 * 0.06 = 6 → rounds to 6 → low
+    const s = score(makeTotals(100_000), []);
+    expect(s.score).toBe(6);
+    expect(s.level).toBe('low');
+  });
 });
 
-// ── GRESB: water_use / waste zero-CO2e path ──────────────────────────────────
+// ── GRESB: ruta CO2e cero para water_use / waste ─────────────────────────────
 
 describe('calculate — water_use zero-CO2e path', () => {
   it('returns ok with co2eKg = 0 for potable_mixed water', () => {
@@ -501,7 +527,7 @@ describe('calculate — waste zero-CO2e path', () => {
   });
 });
 
-// ── GRESB: fuel_oil_no2 / propane factor keys ─────────────────────────────────
+// ── GRESB: claves de factor para fuel_oil_no2 / propane ──────────────────────
 
 describe('_internals.resolveFactorKey — new fuels', () => {
   it('fuel_oil_no2 produces correct key', () => {
@@ -550,7 +576,7 @@ describe('_internals.resolveScope — none for water/waste', () => {
   });
 });
 
-// ── GRESB: kBtu unit conversion ───────────────────────────────────────────────
+// ── GRESB: conversión de unidad kBtu ─────────────────────────────────────────
 
 describe('_internals.normalizeUnit — GRESB units', () => {
   it('converts kBtu → kWh', () => {
@@ -699,8 +725,8 @@ describe('calculate — new GRESB fuels', () => {
       factorKgCo2ePerUnit: 2.68344,
       standardUnit: 'L',
     });
-    // 1 kBtu ≈ 0.1054 L for fuel oil (energy density conversion, approximate)
-    // For this test we just verify the conversion path works
+    // 1 kBtu ≈ 0.1054 L para fuel oil (conversión de densidad energética, aprox.)
+    // En este test solo verificamos que la ruta de conversión funciona
     const conversions = makeConversions([['kBtu->L', 0.1054]]);
     const result = calculate(record, makeFactorTable(factor), conversions);
 
@@ -710,7 +736,7 @@ describe('calculate — new GRESB fuels', () => {
   });
 });
 
-// ── Property-based tests ──────────────────────────────────────────────────────
+// ── Pruebas basadas en propiedades ────────────────────────────────────────────
 
 describe('property tests (fast-check)', () => {
   it('co2eKg = normalizedValue × factorKgCo2ePerUnit for same-unit inputs', () => {
@@ -828,7 +854,7 @@ describe('property tests (fast-check)', () => {
         fc.double({ min: 0.001, max: 1e4, noNaN: true, noDefaultInfinity: true }),
         (rawValue) => {
           // gallon → L → kWh doesn't exist as a real path, but we test that
-          // the identity conversion (kWh → kWh) always equals the value itself
+          // la conversión identidad (kWh → kWh) siempre es igual al valor
           const result = _internals.normalizeUnit(rawValue, 'kWh', 'kWh', new Map());
           return result.ok && Math.abs(result.value - rawValue) < 1e-10;
         },

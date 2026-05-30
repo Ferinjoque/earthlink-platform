@@ -1,8 +1,8 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  // Permite instanciar createClient con las opciones correctas automáticamente
+  // en lugar de createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: '14.4';
   };
@@ -38,6 +38,7 @@ export type Database = {
           activity_kind: Json;
           corrects_entry_id: string | null;
           created_at: string;
+          data_quality: string | null;
           fuel_type_id: string | null;
           grid_region_id: string | null;
           id: string;
@@ -59,6 +60,7 @@ export type Database = {
           activity_kind: Json;
           corrects_entry_id?: string | null;
           created_at?: string;
+          data_quality?: string | null;
           fuel_type_id?: string | null;
           grid_region_id?: string | null;
           id?: string;
@@ -80,6 +82,7 @@ export type Database = {
           activity_kind?: Json;
           corrects_entry_id?: string | null;
           created_at?: string;
+          data_quality?: string | null;
           fuel_type_id?: string | null;
           grid_region_id?: string | null;
           id?: string;
@@ -738,6 +741,7 @@ export type Database = {
     Functions: {
       fn_is_org_member: { Args: { p_org_id: string }; Returns: boolean };
       fn_user_role_in_org: { Args: { p_org_id: string }; Returns: string };
+      fn_admin_delete_period_results: { Args: { p_period_id: string }; Returns: number };
     };
     Enums: {
       [_ in never]: never;
@@ -1328,7 +1332,7 @@ export const Constants = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// Convenience row type aliases (codebase-level)
+// Alias de tipos de fila para uso en la base de código
 // ---------------------------------------------------------------------------
 export type Json2 = Json; // re-export alias
 
@@ -1349,7 +1353,7 @@ export type GridRegionRow = Database['public']['Tables']['grid_regions']['Row'];
 export type UnitConversionRow = Database['public']['Tables']['unit_conversions']['Row'];
 
 // ---------------------------------------------------------------------------
-// Application-level string literal unions
+// Uniones de literales de cadena a nivel de aplicación
 // ---------------------------------------------------------------------------
 export type EmissionSourceType =
   | 'stationary_combustion'

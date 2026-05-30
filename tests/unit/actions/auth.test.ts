@@ -14,6 +14,9 @@ vi.mock('../../../src/services/supabase/server', () => ({
 vi.mock('next/navigation', () => ({
   redirect: vi.fn(),
 }));
+vi.mock('next/cache', () => ({
+  revalidatePath: vi.fn(),
+}));
 
 import { createServerClient } from '../../../src/services/supabase/server';
 import { redirect } from 'next/navigation';
@@ -115,6 +118,17 @@ describe('signIn', () => {
       email: 'admin@earthlink.test',
       password: 'correct',
       next: '//evil.com',
+    });
+    await signIn(undefined, fd).catch(() => {});
+    expect(mockRedirect).toHaveBeenCalledWith('/dashboard');
+  });
+
+  it('falls back to /dashboard when ?next has backslash open-redirect pattern', async () => {
+    mockClient();
+    const fd = makeFormData({
+      email: 'admin@earthlink.test',
+      password: 'correct',
+      next: '/\\evil.com',
     });
     await signIn(undefined, fd).catch(() => {});
     expect(mockRedirect).toHaveBeenCalledWith('/dashboard');

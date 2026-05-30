@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createServerClient } from '@/services/supabase/server';
+import { getEvidenceFilesBatch } from '@/actions/evidence';
 import { TopBar } from '@/components/shell/TopBar';
 import { ActivityList } from '@/components/activity/ActivityList';
 import { BulkImportPanel } from '@/components/activity/BulkImportPanel';
@@ -42,12 +43,12 @@ export default async function ActividadPage({ searchParams }: PageProps) {
     'organization_id' | 'supplier_id' | 'role'
   >[];
 
-  // supplier role → direct supplier access
+  // Rol 'supplier' → acceso directo a su proveedor
   const supplierRoleIds = memberships
     .map((m) => m.supplier_id)
     .filter((id): id is string => id !== null);
 
-  // admin/consultant → access to all suppliers in their orgs
+  // admin/consultant → acceso a todos los proveedores de sus orgs
   const adminOrgIds = memberships
     .filter((m) => m.role === 'admin' || m.role === 'consultant')
     .map((m) => m.organization_id);
@@ -57,24 +58,32 @@ export default async function ActividadPage({ searchParams }: PageProps) {
     const { data } = await supabase
       .from('suppliers')
       .select('id, name')
-      .in('organization_id', adminOrgIds);
+      .in('organization_id', adminOrgIds)
+      .is('archived_at', null);
     if (data)
       adminSupplierIds.push(...(data as Pick<SupplierRow, 'id' | 'name'>[]).map((s) => s.id));
   }
 
   const supplierIds = [...new Set([...supplierRoleIds, ...adminSupplierIds])];
 
-  const suppliersData: Pick<SupplierRow, 'id' | 'name'>[] = [];
+  type SupplierItem = Pick<SupplierRow, 'id' | 'name' | 'archived_at'>;
+  const suppliersData: SupplierItem[] = [];
   if (supplierIds.length) {
-    const { data } = await supabase.from('suppliers').select('id, name').in('id', supplierIds);
-    if (data) suppliersData.push(...data);
+    const { data } = await supabase
+      .from('suppliers')
+      .select('id, name, archived_at')
+      .in('id', supplierIds);
+    if (data) suppliersData.push(...(data as SupplierItem[]));
   }
+  // Solo proveedores activos para el panel de importación y la lista de actividad
+  const activeSuppliersForImport = suppliersData.filter((s) => s.archived_at === null);
+  const activeSupplierIds = activeSuppliersForImport.map((s) => s.id);
   const periodsData: Pick<ReportingPeriodRow, 'id' | 'label' | 'supplier_id' | 'status' | 'start_date'>[] = [];
-  if (supplierIds.length) {
+  if (activeSupplierIds.length) {
     const { data } = await supabase
       .from('reporting_periods')
       .select('id, label, supplier_id, status, start_date')
-      .in('supplier_id', supplierIds)
+      .in('supplier_id', activeSupplierIds)
       .order('start_date', { ascending: false });
     if (data) periodsData.push(...data);
   }
@@ -119,7 +128,7 @@ export default async function ActividadPage({ searchParams }: PageProps) {
 
   const entryIds = entriesData.map((e) => e.id);
 
-  // Build a map: period_id → label (for entries list)
+  // Mapa period_id → label para mostrar etiqueta en la lista
   const periodLabelMap = new Map(periodsData.map((p) => [p.id, p.label]));
   const periodStatusMap = new Map(periodsData.map((p) => [p.id, p.status]));
 
@@ -127,14 +136,22 @@ export default async function ActividadPage({ searchParams }: PageProps) {
     AnomalyFlagRow,
     'activity_entry_id' | 'severity' | 'z_score' | 'message'
   >[] = [];
+
+  // Carga anomalías y archivos de evidencia en paralelo
+  let evidenceBatchMap = new Map<string, import('@/actions/evidence').EvidenceFileView[]>();
+
   if (entryIds.length) {
-    const { data } = await supabase
-      .from('anomaly_flags')
-      .select('activity_entry_id, severity, z_score, message')
-      .in('activity_entry_id', entryIds)
-      .eq('is_resolved', false)
-      .order('flagged_at', { ascending: false });
-    if (data) flagsData.push(...data);
+    const [flagsResult, evidenceMap] = await Promise.all([
+      supabase
+        .from('anomaly_flags')
+        .select('activity_entry_id, severity, z_score, message')
+        .in('activity_entry_id', entryIds)
+        .eq('is_resolved', false)
+        .order('flagged_at', { ascending: false }),
+      getEvidenceFilesBatch(entryIds),
+    ]);
+    if (flagsResult.data) flagsData.push(...flagsResult.data);
+    evidenceBatchMap = evidenceMap;
   }
 
   const flagMap = new Map<
@@ -151,25 +168,30 @@ export default async function ActividadPage({ searchParams }: PageProps) {
     }
   }
 
-  const entries: ActivityEntryView[] = entriesData.map((e) => ({
-    id: e.id,
-    period_id: e.reporting_period_id,
-    period_label: periodLabelMap.get(e.reporting_period_id) ?? '—',
-    period_status: periodStatusMap.get(e.reporting_period_id),
-    source_type: e.source_type,
-    raw_quantity: e.raw_quantity,
-    raw_unit: e.raw_unit,
-    status: e.status as ActivityEntryStatus,
-    submitted_at: e.submitted_at,
-    notes: e.notes,
-    voided_at: e.voided_at,
-    void_reason: e.void_reason,
-    anomaly: flagMap.get(e.id),
-  }));
+  const entries: ActivityEntryView[] = entriesData.map((e) => {
+    const evidenceFiles = evidenceBatchMap.get(e.id) ?? [];
+    return {
+      id: e.id,
+      period_id: e.reporting_period_id,
+      period_label: periodLabelMap.get(e.reporting_period_id) ?? '—',
+      period_status: periodStatusMap.get(e.reporting_period_id),
+      source_type: e.source_type,
+      raw_quantity: e.raw_quantity,
+      raw_unit: e.raw_unit,
+      status: e.status as ActivityEntryStatus,
+      submitted_at: e.submitted_at,
+      notes: e.notes,
+      voided_at: e.voided_at,
+      void_reason: e.void_reason,
+      evidence_count: evidenceFiles.length,
+      evidence_files: evidenceFiles,
+      anomaly: flagMap.get(e.id),
+    };
+  });
 
   const nEntradas = totalEntries;
 
-  // Empty state: no suppliers accessible
+  // Estado vacío: sin proveedores accesibles
   if (suppliersData.length === 0) {
     return (
       <>
@@ -266,7 +288,7 @@ export default async function ActividadPage({ searchParams }: PageProps) {
               maxWidth: '960px',
             }}
           >
-            <BulkImportPanel suppliers={suppliersData} defaultSupplierId={suppliersData[0]?.id} />
+            <BulkImportPanel suppliers={activeSuppliersForImport} defaultSupplierId={activeSuppliersForImport[0]?.id} />
           </div>
         </section>
 

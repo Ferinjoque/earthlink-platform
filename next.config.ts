@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  // Strict compilation — treat warnings as errors in CI
+  // Compilación estricta — errores de TypeScript bloquean el build
   typescript: {
     ignoreBuildErrors: false,
   },
@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
       `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
       "style-src 'self' 'unsafe-inline'",
       `connect-src 'self' ${supabaseUrl} wss://*.supabase.co`,
-      "img-src 'self' data: blob:",
+      `img-src 'self' data: blob: ${supabaseUrl}`,
       "font-src 'self'",
       "object-src 'none'",
       "base-uri 'self'",

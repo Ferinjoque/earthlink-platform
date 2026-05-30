@@ -4,7 +4,7 @@ import { useActionState, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Leaf, Shield, BarChart3, ArrowRight, CheckCircle } from 'lucide-react';
+import { Shield, BarChart3, ArrowRight, CheckCircle } from 'lucide-react';
 import { signIn } from './actions';
 
 const ParticleField = dynamic(() => import('./ParticleField'), { ssr: false, loading: () => null });
@@ -19,14 +19,14 @@ const PILARES = [
   { icono: <CheckCircle size={14} />, texto: 'Motor de cálculo verificado' },
 ];
 
-/* ─── Hidden next-redirect input (must be in Suspense for SSR) ──────── */
+/* ─── Input oculto para redirección post-login (Suspense necesario para SSR) ─ */
 function NextRedirectInput() {
   const searchParams = useSearchParams();
   const next = searchParams.get('next') ?? '';
   return next ? <input type="hidden" name="next" value={next} /> : null;
 }
 
-/* ─── Page ─────────────────────────────────────────────────────────── */
+/* ─── Página ───────────────────────────────────────────────────────── */
 export default function LoginPage() {
   const [state, action, isPending] = useActionState<State, FormData>(signIn, undefined);
 
@@ -147,21 +147,6 @@ export default function LoginPage() {
           >
             <span
               style={{
-                width: '33px',
-                height: '33px',
-                borderRadius: '8px',
-                background: 'oklch(55% 0.22 162)',
-                display: 'grid',
-                placeItems: 'center',
-                flexShrink: 0,
-                boxShadow:
-                  '0 0 0 1px oklch(68% 0.18 162 / 40%), 0 8px 24px oklch(48% 0.20 162 / 50%)',
-              }}
-            >
-              <Leaf size={16} color="oklch(12% 0.05 160)" />
-            </span>
-            <span
-              style={{
                 fontFamily: 'var(--font-serif)',
                 fontSize: 'var(--text-xl)',
                 fontWeight: 600,
@@ -267,20 +252,6 @@ export default function LoginPage() {
                 marginBottom: 'var(--space-10)',
               }}
             >
-              <span
-                style={{
-                  width: '30px',
-                  height: '30px',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'var(--color-accent)',
-                  display: 'grid',
-                  placeItems: 'center',
-                  flexShrink: 0,
-                  boxShadow: 'var(--shadow-glow)',
-                }}
-              >
-                <Leaf size={15} color="white" />
-              </span>
               <span
                 style={{
                   fontFamily: 'var(--font-serif)',

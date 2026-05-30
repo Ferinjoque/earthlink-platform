@@ -1,10 +1,10 @@
 -- =============================================================================
--- Migration 007: Real Role-Based RLS — replaces phase1_open policies
--- Roles: supplier (own supplier only) | consultant (read all in org) | admin (full org)
+-- Migración 007: RLS real basado en roles — reemplaza políticas phase1_open
+-- Roles: supplier (solo su proveedor) | consultant (lectura total en org) | admin (org completa)
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
--- Drop Phase 1 open policies
+-- Eliminar políticas abiertas de Fase 1
 -- ---------------------------------------------------------------------------
 DROP POLICY IF EXISTS "phase1_open" ON public.organizations;
 DROP POLICY IF EXISTS "phase1_open" ON public.suppliers;
@@ -16,8 +16,8 @@ DROP POLICY IF EXISTS "phase1_open" ON public.evidence_files;
 DROP POLICY IF EXISTS "phase1_open" ON public.anomaly_flags;
 
 -- ---------------------------------------------------------------------------
--- Helper: is the calling user a member of a given org?
--- SECURITY DEFINER so it can read memberships without RLS recursion.
+-- Helper: ¿es el usuario actual miembro de una org dada?
+-- SECURITY DEFINER para poder leer memberships sin recursión de RLS.
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_is_org_member(p_org_id uuid)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER AS $$
@@ -36,7 +36,7 @@ $$;
 
 -- ---------------------------------------------------------------------------
 -- organizations
--- Members read their org. Admins write. Service role unrestricted.
+-- Los miembros leen su org. Los admins escriben. Service role sin restricción.
 -- ---------------------------------------------------------------------------
 CREATE POLICY "org_select" ON public.organizations FOR SELECT
   USING (public.fn_is_org_member(id));
@@ -50,7 +50,7 @@ CREATE POLICY "org_update" ON public.organizations FOR UPDATE
 
 -- ---------------------------------------------------------------------------
 -- suppliers
--- Any org member reads. Admin/consultant write.
+-- Cualquier miembro de la org lee. Admin/consultant escriben.
 -- ---------------------------------------------------------------------------
 CREATE POLICY "supplier_select" ON public.suppliers FOR SELECT
   USING (public.fn_is_org_member(organization_id));
@@ -64,7 +64,7 @@ CREATE POLICY "supplier_update" ON public.suppliers FOR UPDATE
 
 -- ---------------------------------------------------------------------------
 -- memberships
--- Users see own row. Admins see all in org.
+-- Los usuarios ven su propia fila. Los admins ven todas en la org.
 -- ---------------------------------------------------------------------------
 CREATE POLICY "membership_own" ON public.memberships FOR SELECT
   USING (user_id = auth.uid());
@@ -77,12 +77,12 @@ CREATE POLICY "membership_org_admin" ON public.memberships FOR SELECT
 CREATE POLICY "membership_insert" ON public.memberships FOR INSERT
   WITH CHECK (
     public.fn_user_role_in_org(organization_id) = 'admin'
-    OR auth.uid() = user_id   -- self-registration via invite link
+    OR auth.uid() = user_id   -- auto-registro via enlace de invitación
   );
 
 -- ---------------------------------------------------------------------------
 -- reporting_periods
--- All org members read. Admin/consultant write and update (status transitions).
+-- Todos los miembros de la org leen. Admin/consultant escriben y actualizan (transiciones de estado).
 -- ---------------------------------------------------------------------------
 CREATE POLICY "period_select" ON public.reporting_periods FOR SELECT
   USING (
@@ -113,9 +113,9 @@ CREATE POLICY "period_update" ON public.reporting_periods FOR UPDATE
 
 -- ---------------------------------------------------------------------------
 -- activity_entries
--- All org members read.
--- Suppliers insert for their own reporting period.
--- Admin/consultant insert for any period in their org.
+-- Todos los miembros de la org leen.
+-- Los suppliers insertan para su propio periodo de reporte.
+-- Admin/consultant insertan para cualquier periodo en su org.
 -- ---------------------------------------------------------------------------
 CREATE POLICY "activity_select" ON public.activity_entries FOR SELECT
   USING (
@@ -163,8 +163,8 @@ CREATE POLICY "activity_update_staff" ON public.activity_entries FOR UPDATE
   );
 
 -- ---------------------------------------------------------------------------
--- emission_results  (append-only — no INSERT policy means only service_role writes)
--- All org members read their results.
+-- emission_results  (solo-append — sin política INSERT significa que solo service_role escribe)
+-- Todos los miembros de la org leen sus resultados.
 -- ---------------------------------------------------------------------------
 CREATE POLICY "emission_result_select" ON public.emission_results FOR SELECT
   USING (
@@ -179,7 +179,7 @@ CREATE POLICY "emission_result_select" ON public.emission_results FOR SELECT
 
 -- ---------------------------------------------------------------------------
 -- evidence_files
--- All org members read. Any authenticated member inserts; soft-deletes by owner or admin.
+-- Todos los miembros de la org leen. Cualquier miembro autenticado inserta; eliminación por dueño o admin.
 -- ---------------------------------------------------------------------------
 CREATE POLICY "evidence_select" ON public.evidence_files FOR SELECT
   USING (
@@ -206,7 +206,7 @@ CREATE POLICY "evidence_insert" ON public.evidence_files FOR INSERT
   );
 
 -- ---------------------------------------------------------------------------
--- anomaly_flags  (consultant/admin read; no client writes — service_role only)
+-- anomaly_flags  (lectura para consultant/admin; sin escritura desde cliente — solo service_role)
 -- ---------------------------------------------------------------------------
 CREATE POLICY "anomaly_select" ON public.anomaly_flags FOR SELECT
   USING (

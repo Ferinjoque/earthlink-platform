@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
-// Mock server-only modules before importing page
+// Mockear módulos server-only antes de importar la página
 vi.mock('server-only', () => ({}));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 vi.mock('next/headers', () => ({
@@ -42,10 +42,10 @@ describe('formatearCo2e', () => {
     expect(result.unidad).toBe('tCO₂e');
   });
 
-  it('converts to MtCO₂e for values >= 1_000_000', () => {
+  it('converts to ktCO₂e for values >= 1_000_000 (1 000 000 kg = 1 000 t = 1 kt)', () => {
     const result = formatearCo2e(1_000_000);
     expect(result.valor).toBe('1.00');
-    expect(result.unidad).toBe('MtCO₂e');
+    expect(result.unidad).toBe('ktCO₂e');
   });
 
   it('handles mid-range tCO₂e correctly', () => {
@@ -54,9 +54,9 @@ describe('formatearCo2e', () => {
     expect(result.unidad).toBe('tCO₂e');
   });
 
-  it('handles large MtCO₂e correctly', () => {
+  it('handles large ktCO₂e correctly', () => {
     const result = formatearCo2e(2_500_000);
     expect(result.valor).toBe('2.50');
-    expect(result.unidad).toBe('MtCO₂e');
+    expect(result.unidad).toBe('ktCO₂e');
   });
 });

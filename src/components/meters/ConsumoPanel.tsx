@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { BarChart2, Download } from 'lucide-react';
 import type { EntryWithPeriod, MeterYearSummary } from '@/lib/meters';
 import { getAvailableYears, aggregateByMonth, formatQuantity, MONTH_LABELS } from '@/lib/meters';
@@ -9,7 +10,6 @@ import { MonthlyTable } from './MonthlyTable';
 import type { EmissionSourceType } from '@/types/database';
 import { ETIQUETAS_FUENTE } from '@/lib/activity-options';
 
-// ── Category taxonomy ─────────────────────────────────────────────────────────
 
 type ConsumoCategory = 'energia' | 'agua' | 'residuos' | 'refrigerantes';
 
@@ -34,7 +34,6 @@ function categorize(source: EmissionSourceType): ConsumoCategory | null {
   return null;
 }
 
-// ── Color palette (8 distinct hues) ──────────────────────────────────────────
 
 const PALETTE = [
   'oklch(58% 0.16 155)',  // green
@@ -51,7 +50,6 @@ function meterColor(index: number): string {
   return PALETTE[index % PALETTE.length] ?? PALETTE[0]!;
 }
 
-// ── Canonical unit system ─────────────────────────────────────────────────────
 
 const CANONICAL_UNIT: Record<ConsumoCategory, string> = {
   energia: 'kWh',
@@ -60,8 +58,8 @@ const CANONICAL_UNIT: Record<ConsumoCategory, string> = {
   refrigerantes: 'kg',
 };
 
-// Fallback constants — used when the DB does not supply a conversion for the given unit.
-// Physical constants (MWh→kWh, etc.) are stable; fuel energy content values are approximations.
+// Constantes de respaldo — usadas cuando la BD no tiene conversión para la unidad.
+// Constantes físicas (MWh→kWh etc.) son exactas; el contenido energético de combustibles es aproximado.
 const FALLBACK_TO_KWH: Record<string, number> = {
   kWh: 1, MWh: 1000, GJ: 277.778, MJ: 0.27778,
   kBtu: 0.29307, MMBtu: 293.07, MBtu: 293.07, therms: 29.307,
@@ -105,7 +103,7 @@ function makeToCanonical(
 }
 
 function computeLegendH(nMeters: number): number {
-  // separator(6) + date line(18) + legend entries starting at 28 (13px each) + bottom pad(10)
+  // separador(6) + línea de fecha(18) + entradas de leyenda desde 28 (13px c/u) + margen inferior(10)
   return 28 + nMeters * 13 + 10;
 }
 
@@ -165,7 +163,6 @@ function aggregateStandardized(
   return [...meterMap.values()].sort((a, b) => b.total - a.total);
 }
 
-// ── Overview chart ────────────────────────────────────────────────────────────
 
 const SVG_W = 640;
 const CHART_H = 190;
@@ -203,11 +200,11 @@ function OverviewChart({ summaries, year, suppliers, filteredSupplierIds, svgRef
 
   const slotW = (SVG_W - LEFT_PAD) / 12;
 
-  // Determine if all summaries share one unit → show actual values
+  // Si todas las series comparten unidad → mostrar valores reales en el eje
   const units = [...new Set(summaries.map((s) => s.meter.unit))];
   const singleUnit = units.length === 1 ? units[0] : null;
 
-  // Global max (for shared Y axis when single unit, or per-series otherwise)
+  // Máximo global para eje Y compartido (unidad única) o por serie en caso contrario
   const globalMax = singleUnit
     ? Math.max(...summaries.flatMap((s) => Object.values(s.monthly)), 1)
     : null;
@@ -226,7 +223,7 @@ function OverviewChart({ summaries, year, suppliers, filteredSupplierIds, svgRef
 
   return (
     <>
-      {/* Y-axis label */}
+      {/* Etiqueta eje Y */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-1)' }}>
         <span style={{
           fontSize: '10px', color: 'var(--color-ink-3)', fontFamily: 'var(--font-mono)',
@@ -245,7 +242,7 @@ function OverviewChart({ summaries, year, suppliers, filteredSupplierIds, svgRef
         aria-label={`Tendencia mensual de consumo — ${year}`}
         style={{ maxHeight: '260px', display: 'block', overflow: 'visible' }}
       >
-        {/* Grid lines + Y axis labels */}
+        {/* Líneas de cuadrícula + etiquetas eje Y */}
         {gridFracs.map(([frac, label]) => {
           const y = TOP_PAD + CHART_H - (frac as number) * CHART_H;
           return (
@@ -268,7 +265,7 @@ function OverviewChart({ summaries, year, suppliers, filteredSupplierIds, svgRef
           );
         })}
 
-        {/* One line per meter */}
+        {/* Una línea por medidor */}
         {summaries.map((s, idx) => {
           const color = meterColor(idx);
           const maxVal = globalMax ?? Math.max(...Object.values(s.monthly), 1);
@@ -310,7 +307,7 @@ function OverviewChart({ summaries, year, suppliers, filteredSupplierIds, svgRef
           );
         })}
 
-        {/* Month labels */}
+        {/* Etiquetas de mes */}
         {MONTH_LABELS.map((lbl, i) => {
           const x = LEFT_PAD + i * slotW + slotW / 2;
           return (
@@ -322,7 +319,7 @@ function OverviewChart({ summaries, year, suppliers, filteredSupplierIds, svgRef
         })}
       </svg>
 
-      {/* Legend */}
+      {/* Leyenda */}
       <div style={{
         display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3) var(--space-5)',
         marginTop: 'var(--space-4)',
@@ -354,7 +351,6 @@ function OverviewChart({ summaries, year, suppliers, filteredSupplierIds, svgRef
   );
 }
 
-// ── Download helpers ──────────────────────────────────────────────────────────
 
 function buildLegendedSVG(
   svgEl: SVGSVGElement,
@@ -370,7 +366,7 @@ function buildLegendedSVG(
   const TITLE_H = 36;
   const LEGEND_H = computeLegendH(summaries.length);
   const newH = vb.height + TITLE_H + LEGEND_H;
-  // Shift viewBox up to make room for header title above chart
+  // Desplazar viewBox hacia arriba para dar espacio al título del gráfico
   clone.setAttribute('viewBox', `0 ${-TITLE_H} ${vb.width} ${newH}`);
   clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
 
@@ -380,7 +376,7 @@ function buildLegendedSVG(
   bg.setAttribute('fill', '#ffffff');
   clone.insertBefore(bg, clone.firstChild);
 
-  // Title above chart — centered
+  // Título centrado sobre el gráfico
   const cx = vb.width / 2;
   const titleMain = document.createElementNS('http://www.w3.org/2000/svg', 'text');
   titleMain.setAttribute('x', String(cx));
@@ -403,14 +399,14 @@ function buildLegendedSVG(
   titleSub.textContent = `${supplierLabel}${categoryLabel ? ` · ${categoryLabel}` : ''}${unitLabel ? ` · ${unitLabel}` : ''}`;
   clone.appendChild(titleSub);
 
-  // Separator before legend
+  // Separador antes de la leyenda
   const sep = document.createElementNS('http://www.w3.org/2000/svg', 'line');
   sep.setAttribute('x1', '8'); sep.setAttribute('y1', String(vb.height + 6));
   sep.setAttribute('x2', String(vb.width - 8)); sep.setAttribute('y2', String(vb.height + 6));
   sep.setAttribute('stroke', '#e0e0e0'); sep.setAttribute('stroke-width', '0.5');
   clone.appendChild(sep);
 
-  // Footer line
+  // Línea de pie
   const footerDate = document.createElementNS('http://www.w3.org/2000/svg', 'text');
   footerDate.setAttribute('x', '8');
   footerDate.setAttribute('y', String(vb.height + 18));
@@ -455,7 +451,6 @@ function triggerDownload(href: string, filename: string) {
   setTimeout(() => URL.revokeObjectURL(href), 15_000);
 }
 
-// ── Supplier filter chips ─────────────────────────────────────────────────────
 
 function SupplierFilter({
   suppliers,
@@ -512,7 +507,6 @@ function SupplierFilter({
   );
 }
 
-// ── Category filter chips ─────────────────────────────────────────────────────
 
 function CategoryFilter({
   active,
@@ -553,7 +547,6 @@ function CategoryFilter({
   );
 }
 
-// ── Main panel ────────────────────────────────────────────────────────────────
 
 interface ConsumoPanelProps {
   entries: EntryWithPeriod[];
@@ -594,7 +587,7 @@ export function ConsumoPanel({ entries, suppliers, toKwh = {}, toM3 = {}, toKg =
     [allSummaries],
   );
 
-  // Default to first available category so the chart always shows canonical units
+  // Seleccionar primera categoría disponible para que el gráfico siempre tenga unidades canónicas
   const effectiveCategoryFilter = categoryFilter ?? availableCategories[0] ?? null;
 
   const chartSummaries = useMemo(() => {
@@ -643,7 +636,7 @@ export function ConsumoPanel({ entries, suppliers, toKwh = {}, toM3 = {}, toKg =
       return;
     }
 
-    // PNG via canvas
+    // Exportar PNG via canvas del navegador
     const blob = new Blob([svgStr], { type: 'image/svg+xml' });
     const url = URL.createObjectURL(blob);
     const img = new Image();
@@ -771,18 +764,27 @@ export function ConsumoPanel({ entries, suppliers, toKwh = {}, toM3 = {}, toKg =
           </div>
         </div>
 
-        <div style={{
-          background: 'var(--color-surface-1)', border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-lg)', padding: 'var(--space-5)',
-        }}>
-          <OverviewChart
-            summaries={chartSummaries}
-            year={selectedYear}
-            suppliers={suppliers}
-            filteredSupplierIds={selectedSuppliers}
-            svgRef={svgRef}
-          />
-        </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`${selectedYear}-${effectiveCategoryFilter ?? 'all'}`}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            style={{
+              background: 'var(--color-surface-1)', border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-lg)', padding: 'var(--space-5)',
+            }}
+          >
+            <OverviewChart
+              summaries={chartSummaries}
+              year={selectedYear}
+              suppliers={suppliers}
+              filteredSupplierIds={selectedSuppliers}
+              svgRef={svgRef}
+            />
+          </motion.div>
+        </AnimatePresence>
       </section>
 
       {/* Meter detail section */}
@@ -814,16 +816,34 @@ export function ConsumoPanel({ entries, suppliers, toKwh = {}, toM3 = {}, toKg =
               effectiveMeterId={effectiveMeterId}
               onSelect={setSelectedMeterId}
             />
-            {selectedSummary ? (
-              <MeterDetail summary={selectedSummary} year={selectedYear} />
-            ) : (
-              <div style={{
-                flex: 1, display: 'grid', placeItems: 'center',
-                minHeight: '300px', color: 'var(--color-ink-3)', fontSize: 'var(--text-sm)',
-              }}>
-                Selecciona un medidor
-              </div>
-            )}
+            <AnimatePresence mode="wait">
+              {selectedSummary ? (
+                <motion.div
+                  key={effectiveMeterId ?? 'empty'}
+                  initial={{ opacity: 0, x: 8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -8 }}
+                  transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+                  style={{ flex: 1, minWidth: 0 }}
+                >
+                  <MeterDetail summary={selectedSummary} year={selectedYear} />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="empty"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.14 }}
+                  style={{
+                    flex: 1, display: 'grid', placeItems: 'center',
+                    minHeight: '300px', color: 'var(--color-ink-3)', fontSize: 'var(--text-sm)',
+                  }}
+                >
+                  Selecciona un medidor
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
       </section>
@@ -831,7 +851,6 @@ export function ConsumoPanel({ entries, suppliers, toKwh = {}, toM3 = {}, toKg =
   );
 }
 
-// ── Style constant ────────────────────────────────────────────────────────────
 
 const downloadBtnStyle: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: '4px',
@@ -845,7 +864,6 @@ const downloadBtnStyle: React.CSSProperties = {
   transition: 'border-color 120ms, color 120ms',
 };
 
-// ── Sub-components ─────────────────────────────────────────────────────────────
 
 function MeterList({
   summaries,

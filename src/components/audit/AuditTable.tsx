@@ -6,25 +6,29 @@ import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
 import { PeriodActions } from '@/components/audit/PeriodActions';
 import {
-  resolveAnomaly,
   calculateYear,
   closeYear,
   recalculatePeriod,
   unlockPeriod,
-  type ResolveAnomalyState,
   type BatchYearState,
   type RecalculateState,
   type UnlockPeriodState,
 } from '@/actions/audit';
 import { voidActivityEntry, type VoidEntryState } from '@/actions/activity';
-import { traducirMensajeAnomalia } from '@/lib/anomaly';
 import { formatearKg } from '@/lib/format';
 import { variantEstadoPeriodo, etiquetaEstadoPeriodo } from '@/lib/reporting-period';
 import { useToast } from '@/components/ui/Toast';
 import type { PeriodStatus } from '@/domain/ReportingPeriod';
 import type { AnomalySeverity } from '@/types/database';
+import {
+  AnomaliaItem,
+  COLOR_SEVERIDAD,
+  ETIQUETAS_SEVERIDAD,
+  type AnomaliaDetalle,
+} from '@/components/audit/AnomaliaItem';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+export type { AnomaliaDetalle };
+
 
 export interface ResultadoDetalle {
   id: string;
@@ -37,18 +41,6 @@ export interface ResultadoDetalle {
   factor_used: number;
   factor_unit: string;
   calculated_at: string;
-}
-
-export interface AnomaliaDetalle {
-  id: string;
-  activity_entry_id: string;
-  source_type: string;
-  severity: AnomalySeverity;
-  z_score: number | null;
-  message: string;
-  flagged_at: string;
-  raw_quantity: number | null;
-  raw_unit: string | null;
 }
 
 export interface ResumenEmisiones {
@@ -77,7 +69,6 @@ interface AuditTableProps {
   isAdmin: boolean;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 const MESES_CORTO = [
   'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
@@ -90,18 +81,6 @@ const FUENTE_CORTA: Record<string, string> = {
   purchased_electricity: 'Electricidad',
   purchased_steam: 'Vapor',
   fugitive: 'Fugitiva',
-};
-
-const COLOR_SEVERIDAD: Record<AnomalySeverity, string> = {
-  low: 'var(--color-signal-ok)',
-  medium: 'var(--color-signal-md)',
-  high: 'var(--color-signal-hi)',
-};
-
-const ETIQUETAS_SEVERIDAD: Record<AnomalySeverity, string> = {
-  low: 'Baja',
-  medium: 'Media',
-  high: 'Alta',
 };
 
 const FUENTE_CHIP: Record<string, string> = {
@@ -130,7 +109,7 @@ interface GrupoAnual {
 function agruparPorAnio(periodos: PeriodoFila[]): GrupoAnual[] {
   const mapa = new Map<string, GrupoAnual>();
   for (const p of periodos) {
-    const year = new Date(p.start_date).getFullYear();
+    const year = new Date(p.start_date).getUTCFullYear();
     const key = `${p.supplier_id}__${year}`;
     const existing = mapa.get(key);
     if (existing) {
@@ -151,14 +130,15 @@ function agruparPorAnio(periodos: PeriodoFila[]): GrupoAnual[] {
 }
 
 function mesesFaltantes(periodos: PeriodoFila[], year: number): number[] {
-  const presentes = new Set(periodos.map((p) => new Date(p.start_date).getMonth() + 1));
+  // Usar getUTCMonth para evitar variaciones de timezone cuando start_date es "YYYY-MM-01"
+  const presentes = new Set(periodos.map((p) => new Date(p.start_date).getUTCMonth() + 1));
   const faltantes: number[] = [];
   for (let m = 1; m <= 12; m++) {
     if (!presentes.has(m)) faltantes.push(m);
   }
   const ahora = new Date();
-  const mesActual = ahora.getMonth() + 1;
-  const anioActual = ahora.getFullYear();
+  const mesActual = ahora.getUTCMonth() + 1;
+  const anioActual = ahora.getUTCFullYear();
   if (year === anioActual) {
     return faltantes.filter((m) => m < mesActual);
   }
@@ -187,7 +167,6 @@ function puedeCerrarAnio(periodos: PeriodoFila[], year: number): boolean {
     periodos.some((p) => p.status === 'under_review');
 }
 
-// ── VoidResultButton ──────────────────────────────────────────────────────────
 
 function VoidResultButton({ activityEntryId }: { activityEntryId: string }) {
   const { toast } = useToast();
@@ -208,7 +187,7 @@ function VoidResultButton({ activityEntryId }: { activityEntryId: string }) {
       toast(state.error, 'error');
       setOpen(false);
     }
-  }, [state?.success, state?.error, toast, router]);
+  }, [state, toast, router]);
 
   return (
     <div style={{ position: 'relative', display: 'inline-block' }}>
@@ -308,7 +287,6 @@ function VoidResultButton({ activityEntryId }: { activityEntryId: string }) {
   );
 }
 
-// ── UnlockButton ──────────────────────────────────────────────────────────────
 
 function UnlockButton({ periodId }: { periodId: string }) {
   const { toast } = useToast();
@@ -328,7 +306,7 @@ function UnlockButton({ periodId }: { periodId: string }) {
       toast(state.error, 'error');
       setOpen(false);
     }
-  }, [state?.success, state?.error, toast, router]);
+  }, [state, toast, router]);
 
   if (open) {
     return (
@@ -416,20 +394,17 @@ function UnlockButton({ periodId }: { periodId: string }) {
   );
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
 
 function ScopeTable({
   rows,
   accentColor,
   periodStatus,
-  isAdmin,
 }: {
   rows: ResultadoDetalle[];
   accentColor: string;
   periodStatus: PeriodStatus;
-  isAdmin: boolean;
 }) {
-  const showVoid = periodStatus !== 'locked' || isAdmin;
+  const showVoid = periodStatus !== 'locked';
   const total = rows.reduce((s, r) => s + r.co2e_kg, 0);
   return (
     <div style={{ overflowX: 'auto' }}>
@@ -505,11 +480,9 @@ function ScopeTable({
 function ResultadosPanel({
   results,
   periodStatus,
-  isAdmin,
 }: {
   results: ResultadoDetalle[];
   periodStatus: PeriodStatus;
-  isAdmin: boolean;
 }) {
   if (results.length === 0) {
     return (
@@ -531,7 +504,7 @@ function ResultadosPanel({
               Alcance 1
             </span>
           </div>
-          <ScopeTable rows={scope1} accentColor="var(--color-accent)" periodStatus={periodStatus} isAdmin={isAdmin} />
+          <ScopeTable rows={scope1} accentColor="var(--color-accent)" periodStatus={periodStatus} />
         </div>
       )}
       {scope2.length > 0 && (
@@ -541,227 +514,18 @@ function ResultadosPanel({
               Alcance 2
             </span>
           </div>
-          <ScopeTable rows={scope2} accentColor="var(--color-scope2)" periodStatus={periodStatus} isAdmin={isAdmin} />
+          <ScopeTable rows={scope2} accentColor="var(--color-scope2)" periodStatus={periodStatus} />
         </div>
       )}
     </div>
   );
 }
 
-function AnomaliaItem({ anomalia }: { anomalia: AnomaliaDetalle }) {
-  const { toast } = useToast();
-  const [resolviendo, setResolviendo] = useState(false);
-  const [state, formAction, isPending] = useActionState<ResolveAnomalyState | null, FormData>(
-    resolveAnomaly,
-    null,
-  );
 
-  useEffect(() => {
-    if (state?.success) {
-      toast('Anomalía marcada como revisada', 'success');
-    }
-  }, [state?.success, toast]);
-
-  if (state?.success) return null;
-
-  const sevColor = COLOR_SEVERIDAD[anomalia.severity];
-
-  return (
-    <div
-      style={{
-        padding: 'var(--space-3) 0',
-        borderBottom: '1px solid var(--color-border)',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 'var(--space-3)',
-          flexWrap: 'wrap',
-          marginBottom: resolviendo ? 'var(--space-3)' : 0,
-        }}
-      >
-        <span
-          style={{
-            fontSize: '10px',
-            fontWeight: 700,
-            color: sevColor,
-            background: `color-mix(in oklch, ${sevColor} 15%, transparent)`,
-            borderRadius: 'var(--radius-md)',
-            padding: '2px 6px',
-            fontFamily: 'var(--font-mono)',
-            flexShrink: 0,
-          }}
-        >
-          {ETIQUETAS_SEVERIDAD[anomalia.severity]}
-        </span>
-
-        <span
-          style={{
-            fontSize: 'var(--text-xs)',
-            color: 'var(--color-ink-2)',
-            fontFamily: 'var(--font-mono)',
-            flexShrink: 0,
-          }}
-        >
-          {FUENTE_CORTA[anomalia.source_type] ?? anomalia.source_type}
-        </span>
-
-        {anomalia.raw_quantity != null && anomalia.raw_unit && (
-          <span
-            style={{
-              fontSize: 'var(--text-xs)',
-              color: 'var(--color-ink-1)',
-              fontFamily: 'var(--font-mono)',
-              fontWeight: 600,
-              flexShrink: 0,
-            }}
-          >
-            {anomalia.raw_quantity.toLocaleString('es-PE')} {anomalia.raw_unit}
-          </span>
-        )}
-
-        {anomalia.z_score !== null && (
-          <span
-            style={{
-              fontSize: 'var(--text-xs)',
-              color: 'var(--color-ink-3)',
-              fontFamily: 'var(--font-mono)',
-              flexShrink: 0,
-            }}
-          >
-            z={anomalia.z_score.toFixed(2)}
-          </span>
-        )}
-
-        <span
-          style={{
-            fontSize: 'var(--text-xs)',
-            color: 'var(--color-ink-2)',
-            flex: 1,
-            minWidth: '140px',
-          }}
-        >
-          {traducirMensajeAnomalia(anomalia.message)}
-        </span>
-
-        {!resolviendo && (
-          <>
-            <Link
-              href="/activity"
-              style={{
-                fontSize: 'var(--text-xs)',
-                fontFamily: 'var(--font-mono)',
-                color: 'var(--color-ink-3)',
-                textDecoration: 'none',
-                flexShrink: 0,
-              }}
-            >
-              Actividad ↗
-            </Link>
-            <button
-              type="button"
-              onClick={() => setResolviendo(true)}
-              style={{
-                fontSize: 'var(--text-xs)',
-                fontFamily: 'var(--font-mono)',
-                color: 'var(--color-ink-2)',
-                background: 'var(--color-surface-2)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-md)',
-                padding: '3px var(--space-3)',
-                cursor: 'pointer',
-                flexShrink: 0,
-              }}
-            >
-              Resolver
-            </button>
-          </>
-        )}
-      </div>
-
-      {resolviendo && (
-        <form
-          action={formAction}
-          style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}
-        >
-          <input type="hidden" name="flag_id" value={anomalia.id} />
-          <textarea
-            name="resolution_note"
-            placeholder="Motivo de resolución (opcional)"
-            rows={2}
-            style={{
-              fontSize: 'var(--text-xs)',
-              fontFamily: 'var(--font-mono)',
-              color: 'var(--color-ink-2)',
-              background: 'var(--color-surface-2)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-md)',
-              padding: 'var(--space-2) var(--space-3)',
-              resize: 'vertical',
-              minHeight: '52px',
-              outline: 'none',
-              width: '100%',
-              boxSizing: 'border-box',
-            }}
-          />
-          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
-            <button
-              type="submit"
-              disabled={isPending}
-              style={{
-                fontSize: 'var(--text-xs)',
-                fontFamily: 'var(--font-mono)',
-                fontWeight: 600,
-                color: 'var(--color-surface-0)',
-                background: isPending ? 'var(--color-ink-3)' : 'var(--color-ink-1)',
-                border: 'none',
-                borderRadius: 'var(--radius-md)',
-                padding: '4px var(--space-4)',
-                cursor: isPending ? 'default' : 'pointer',
-              }}
-            >
-              {isPending ? 'Guardando…' : 'Confirmar resolución'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setResolviendo(false)}
-              style={{
-                fontSize: 'var(--text-xs)',
-                fontFamily: 'var(--font-mono)',
-                color: 'var(--color-ink-3)',
-                background: 'transparent',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-md)',
-                padding: '4px var(--space-3)',
-                cursor: 'pointer',
-              }}
-            >
-              Cancelar
-            </button>
-            {state?.error && (
-              <span
-                style={{
-                  fontSize: 'var(--text-xs)',
-                  color: 'var(--color-signal-hi)',
-                  fontFamily: 'var(--font-mono)',
-                }}
-              >
-                {state.error}
-              </span>
-            )}
-          </div>
-        </form>
-      )}
-    </div>
-  );
-}
-
-// ── RecalculateButton ─────────────────────────────────────────────────────────
 
 function RecalculateButton({ periodId }: { periodId: string }) {
   const { toast } = useToast();
+  const router = useRouter();
   const [confirm, setConfirm] = useState(false);
   const [state, formAction, isPending] = useActionState<RecalculateState | null, FormData>(
     recalculatePeriod,
@@ -772,12 +536,13 @@ function RecalculateButton({ periodId }: { periodId: string }) {
     if (state?.success) {
       toast('Periodo recalculado correctamente', 'success');
       setConfirm(false);
+      router.refresh();
     }
     if (state?.error) {
       toast(state.error, 'error');
       setConfirm(false);
     }
-  }, [state?.success, state?.error, toast]);
+  }, [state, toast, router]);
 
   if (confirm) {
     return (
@@ -843,7 +608,6 @@ function RecalculateButton({ periodId }: { periodId: string }) {
   );
 }
 
-// ── BatchYearControls ─────────────────────────────────────────────────────────
 
 function BatchYearControls({
   supplierId,
@@ -1009,7 +773,6 @@ function BatchYearControls({
   );
 }
 
-// ── YearGroupRow ──────────────────────────────────────────────────────────────
 
 function YearGroupRow({
   grupo,
@@ -1193,7 +956,7 @@ function YearGroupRow({
             year={grupo.year}
             canCalculate={canCalc}
             canClose={canClose}
-            periodCount={grupo.periodos.filter((p) => p.status === 'under_review').length}
+            periodCount={grupo.periodos.length}
           />
         )}
       </td>
@@ -1201,7 +964,6 @@ function YearGroupRow({
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
 
 const ESTADOS_FILTRO: { valor: PeriodStatus | 'todos'; etiqueta: string }[] = [
   { valor: 'todos', etiqueta: 'Todos' },
@@ -1477,7 +1239,6 @@ export function AuditTable({ periodos, isAdmin }: AuditTableProps) {
   );
 }
 
-// ── PeriodoRow ────────────────────────────────────────────────────────────────
 
 function PeriodoRow({
   p,
@@ -1497,10 +1258,12 @@ function PeriodoRow({
   const inicioFmt = new Date(p.start_date).toLocaleDateString('es', {
     month: 'short',
     year: 'numeric',
+    timeZone: 'UTC',
   });
   const finFmt = new Date(p.end_date).toLocaleDateString('es', {
     month: 'short',
     year: 'numeric',
+    timeZone: 'UTC',
   });
   const hasResults = p.results.length > 0;
   const hasAnomalias = p.anomalias.length > 0;
@@ -1735,7 +1498,7 @@ function PeriodoRow({
                 ×
               </button>
             </div>
-            <ResultadosPanel results={p.results} periodStatus={p.status} isAdmin={isAdmin} />
+            <ResultadosPanel results={p.results} periodStatus={p.status} />
           </td>
         </tr>
       )}

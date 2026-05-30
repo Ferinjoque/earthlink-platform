@@ -169,7 +169,7 @@ describe('EmissionSource polymorphism', () => {
   });
 });
 
-// ── StationaryCombustionSource — new GRESB fuels ──────────────────────────────
+// ── StationaryCombustionSource — nuevos combustibles GRESB ───────────────────
 
 describe('StationaryCombustionSource — fuel_oil_no2', () => {
   it('returns scope1', () => {
@@ -230,7 +230,7 @@ describe('StationaryCombustionSource — propane', () => {
   });
 });
 
-// ── WaterUseSource ────────────────────────────────────────────────────────────
+// ── WaterUseSource (fuente de agua) ──────────────────────────────────────────
 
 describe('WaterUseSource', () => {
   it('returns none scope', () => {
@@ -284,7 +284,7 @@ describe('WaterUseSource', () => {
   });
 });
 
-// ── WasteSource ───────────────────────────────────────────────────────────────
+// ── WasteSource (fuente de residuos) ─────────────────────────────────────────
 
 describe('WasteSource', () => {
   it('returns none scope', () => {
@@ -331,7 +331,7 @@ describe('WasteSource', () => {
   });
 });
 
-// ── Extended polymorphism — all source types ──────────────────────────────────
+// ── Polimorfismo extendido — todos los tipos de fuente ───────────────────────
 
 describe('EmissionSource polymorphism — extended with GRESB sources', () => {
   it('validate can be called on all GRESB source types', () => {

@@ -26,6 +26,11 @@ export abstract class SupabaseRepository<
     return this.toEntity(data as unknown as Record<string, unknown>);
   }
 
+  /**
+   * Devuelve todas las filas sin filtro de tenant.
+   * Solo seguro para tablas de referencia (emission_factors, etc.).
+   * Para tablas tenant-scoped usar métodos con filtro (findBySupplierId, etc.).
+   */
   async findAll(): Promise<readonly TEntity[]> {
     const { data, error } = await this.client.from(this.tableName).select(this.selectColumns);
     if (error ?? !data) return [];
@@ -39,12 +44,12 @@ export abstract class SupabaseRepository<
       .upsert(row)
       .select(this.selectColumns)
       .single();
-    if (error ?? !data) throw new Error(`Failed to save ${this.tableName}: ${error?.message}`);
+    if (error ?? !data) throw new Error(`Error al guardar en ${this.tableName}: ${error?.message}`);
     return this.toEntity(data as unknown as Record<string, unknown>);
   }
 
   async delete(id: TId): Promise<void> {
     const { error } = await this.client.from(this.tableName).delete().eq('id', id);
-    if (error) throw new Error(`Failed to delete from ${this.tableName}: ${error.message}`);
+    if (error) throw new Error(`Error al eliminar de ${this.tableName}: ${error.message}`);
   }
 }

@@ -77,7 +77,7 @@ export function TopBar({ title, email, section }: TopBarProps) {
     setTimeout(() => inputRef.current?.focus(), 40);
   }
 
-  // ⌘K / Ctrl+K shortcut
+  // Atajo ⌘K / Ctrl+K para abrir búsqueda
   useEffect(() => {
     function handler(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -93,7 +93,7 @@ export function TopBar({ title, email, section }: TopBarProps) {
     return () => document.removeEventListener('keydown', handler);
   }, []);
 
-  // Close search on outside click
+  // Cerrar búsqueda al hacer clic fuera
   useEffect(() => {
     if (!searchOpen) return;
     function handler(e: MouseEvent) {
@@ -105,7 +105,7 @@ export function TopBar({ title, email, section }: TopBarProps) {
     return () => document.removeEventListener('mousedown', handler);
   }, [searchOpen]);
 
-  // Close user menu on outside click
+  // Cerrar menú de usuario al hacer clic fuera
   useEffect(() => {
     if (!menuOpen) return;
     function handler(e: MouseEvent) {
@@ -117,7 +117,7 @@ export function TopBar({ title, email, section }: TopBarProps) {
     return () => document.removeEventListener('mousedown', handler);
   }, [menuOpen]);
 
-  // Build search results
+  // Construir resultados de búsqueda
   const q = query.toLowerCase();
   const filteredPages = q
     ? NAV_ITEMS.filter(

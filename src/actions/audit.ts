@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { createServerClient } from '@/services/supabase/server';
+import { createServerClient, createAdminClient } from '@/services/supabase/server';
 import { AuditService } from '@/services/AuditService';
 import { EvaluationService } from '@/services/EvaluationService';
 import { ActivityEntryRepository } from '@/repos/ActivityEntryRepository';
@@ -13,7 +13,7 @@ import { ReportingPeriodRepository } from '@/repos/ReportingPeriodRepository';
 import { AuditLogRepository } from '@/repos/AuditLogRepository';
 import { AnomalyService } from '@/services/AnomalyService';
 
-// ── State types ───────────────────────────────────────────────────────────────
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface AuditActionState {
   error?: string | undefined;
@@ -29,7 +29,6 @@ export interface AuditActionState {
     | undefined;
 }
 
-// ── calculatePeriod ───────────────────────────────────────────────────────────
 
 export async function calculatePeriod(
   _prevState: AuditActionState | null,
@@ -42,7 +41,7 @@ export async function calculatePeriod(
   if (!user) return { error: 'No autenticado' };
 
   const periodId = formData.get('period_id');
-  if (typeof periodId !== 'string' || !periodId) return { error: 'Falta el ID del periodo' };
+  if (typeof periodId !== 'string' || !UUID_RE.test(periodId)) return { error: 'ID de periodo inválido' };
 
   const periodRepo = new ReportingPeriodRepository(supabase);
   const auditLogRepo = new AuditLogRepository(supabase);
@@ -50,12 +49,13 @@ export async function calculatePeriod(
   const period = await periodRepo.findById(periodId);
   if (!period) return { error: 'Periodo de reporte no encontrado' };
 
-  // Verify caller belongs to the org that owns this period
+  // Verificar que el usuario pertenece a la org propietaria del periodo
   type SupplierOrg = { organization_id: string };
   const { data: supplierRaw } = await supabase
     .from('suppliers')
     .select('organization_id')
     .eq('id', period.supplierId)
+    .is('archived_at', null)
     .maybeSingle();
   const supplierOrg = supplierRaw as SupplierOrg | null;
   if (!supplierOrg) return { error: 'Proveedor del periodo no encontrado' };
@@ -94,15 +94,26 @@ export async function calculatePeriod(
   let outcome: Awaited<ReturnType<EvaluationService['evaluate']>>;
   try {
     outcome = await evalSvc.evaluate(periodId);
-  } catch (err) {
-    return {
-      error: `Error en la evaluación: ${err instanceof Error ? err.message : 'error desconocido'}`,
-    };
+  } catch {
+    // Restablecer a 'open' para que el periodo pueda reintentarse — no dejarlo en 'calculating'
+    const adminClient = createAdminClient();
+    const { error: recoveryError } = await adminClient
+      .from('reporting_periods')
+      .update({ status: 'open' })
+      .eq('id', periodId);
+    if (recoveryError) {
+      revalidatePath('/audit');
+      revalidatePath('/dashboard');
+      return { error: 'Error crítico al calcular: no se pudo restablecer el estado del periodo. Contacta al administrador.' };
+    }
+    revalidatePath('/audit');
+    revalidatePath('/dashboard');
+    return { error: 'Error al calcular las emisiones del periodo. Intenta nuevamente.' };
   }
 
-  // Anomaly detection using prior-year entries as historical baseline
+  // Detección de anomalías usando entradas del año anterior como línea base
   try {
-    const priorYear = period.startDate.getFullYear() - 1;
+    const priorYear = period.startDate.getUTCFullYear() - 1;
     const { data: priorPeriodsRaw } = await supabase
       .from('reporting_periods')
       .select('id')
@@ -130,7 +141,7 @@ export async function calculatePeriod(
       await supabase.from('anomaly_flags').insert(
         anomalies.map((a) => ({
           activity_entry_id: a.entryId,
-          detector: 'z-score-v1',
+          detector: 'zscore_monthly',
           severity: a.severity,
           z_score: a.zScore,
           message: a.message,
@@ -139,17 +150,20 @@ export async function calculatePeriod(
       );
     }
   } catch {
-    // Anomaly detection is best-effort — don't block the transition
+    // Detección de anomalías no crítica — no bloquear la transición
   }
 
   try {
     await auditSvc.transitionStatus(periodId, 'under_review', user.id);
   } catch {
+    revalidatePath('/audit');
+    revalidatePath('/dashboard');
     return { error: 'Evaluación completada pero error al transicionar el periodo a revisión' };
   }
 
   revalidatePath('/audit');
   revalidatePath('/dashboard');
+  revalidatePath('/suppliers');
   return {
     success: true,
     totals: {
@@ -162,7 +176,6 @@ export async function calculatePeriod(
   };
 }
 
-// ── lockPeriod ────────────────────────────────────────────────────────────────
 
 export async function lockPeriod(
   _prevState: AuditActionState | null,
@@ -175,7 +188,7 @@ export async function lockPeriod(
   if (!user) return { error: 'No autenticado' };
 
   const periodId = formData.get('period_id');
-  if (typeof periodId !== 'string' || !periodId) return { error: 'Falta el ID del periodo' };
+  if (typeof periodId !== 'string' || !UUID_RE.test(periodId)) return { error: 'ID de periodo inválido' };
 
   const periodRepo = new ReportingPeriodRepository(supabase);
   const auditLogRepo = new AuditLogRepository(supabase);
@@ -183,12 +196,13 @@ export async function lockPeriod(
   const period = await periodRepo.findById(periodId);
   if (!period) return { error: 'Periodo de reporte no encontrado' };
 
-  // Verify caller belongs to the org that owns this period
+  // Verificar que el usuario pertenece a la org propietaria del periodo
   type SupplierOrg = { organization_id: string };
   const { data: supplierRaw } = await supabase
     .from('suppliers')
     .select('organization_id')
     .eq('id', period.supplierId)
+    .is('archived_at', null)
     .maybeSingle();
   const supplierOrg = supplierRaw as SupplierOrg | null;
   if (!supplierOrg) return { error: 'Proveedor del periodo no encontrado' };
@@ -211,18 +225,16 @@ export async function lockPeriod(
 
   try {
     await auditSvc.lock(periodId, user.id);
-  } catch (err) {
-    return {
-      error: `Error al bloquear el periodo: ${err instanceof Error ? err.message : 'error desconocido'}`,
-    };
+  } catch {
+    return { error: 'Error al bloquear el periodo. Intenta nuevamente.' };
   }
 
   revalidatePath('/audit');
   revalidatePath('/dashboard');
+  revalidatePath('/suppliers');
   return { success: true };
 }
 
-// ── recalculatePeriod ─────────────────────────────────────────────────────────
 
 export interface RecalculateState {
   error?: string | undefined;
@@ -248,19 +260,21 @@ export async function recalculatePeriod(
   if (!user) return { error: 'No autenticado' };
 
   const periodId = formData.get('period_id');
-  if (typeof periodId !== 'string' || !periodId) return { error: 'Falta el ID del periodo' };
+  if (typeof periodId !== 'string' || !UUID_RE.test(periodId)) return { error: 'ID de periodo inválido' };
 
   const periodRepo = new ReportingPeriodRepository(supabase);
+  const auditLogRepo = new AuditLogRepository(supabase);
 
   const period = await periodRepo.findById(periodId);
   if (!period) return { error: 'Periodo de reporte no encontrado' };
 
-  // Verify caller belongs to the org that owns this period
+  // Verificar que el usuario pertenece a la org propietaria del periodo (antes de revelar estado)
   type SupplierOrg = { organization_id: string };
   const { data: supplierRaw } = await supabase
     .from('suppliers')
     .select('organization_id')
     .eq('id', period.supplierId)
+    .is('archived_at', null)
     .maybeSingle();
   const supplierOrg = supplierRaw as SupplierOrg | null;
   if (!supplierOrg) return { error: 'Proveedor del periodo no encontrado' };
@@ -273,15 +287,26 @@ export async function recalculatePeriod(
     .maybeSingle();
   if (!memRaw) return { error: 'Solo administradores pueden recalcular periodos bloqueados' };
 
-  // Delete existing emission_results for this period, then re-run evaluation
-  const { error: deleteError } = await supabase
-    .from('emission_results')
-    .delete()
-    .eq('reporting_period_id', periodId);
-  if (deleteError) return { error: `Error al limpiar resultados previos: ${deleteError.message}` };
+  // Solo periodos bloqueados o en revisión pueden recalcularse
+  if (period.status !== 'locked' && period.status !== 'under_review') {
+    return {
+      error: `El periodo está en estado "${period.status}" — solo los periodos bloqueados o en revisión pueden recalcularse`,
+    };
+  }
 
+  // Borrar resultados previos del periodo para recalcular desde cero.
+  // emission_results es append-only (trigger bloquea DELETE directo).
+  // fn_admin_delete_period_results usa set_config local para autorizar el borrado.
+  const adminClient = createAdminClient();
+  const { error: deleteError } = await adminClient.rpc(
+    'fn_admin_delete_period_results',
+    { p_period_id: periodId },
+  );
+  if (deleteError) return { error: 'Error al limpiar resultados previos. Intenta nuevamente.' };
+
+  const activityEntryRepo = new ActivityEntryRepository(supabase);
   const evalSvc = new EvaluationService(
-    new ActivityEntryRepository(supabase),
+    activityEntryRepo,
     new EmissionFactorRepository(supabase),
     new UnitConversionRepository(supabase),
     new EmissionResultRepository(supabase),
@@ -291,14 +316,76 @@ export async function recalculatePeriod(
   let outcome: Awaited<ReturnType<EvaluationService['evaluate']>>;
   try {
     outcome = await evalSvc.evaluate(periodId);
-  } catch (err) {
-    return {
-      error: `Error en la evaluación: ${err instanceof Error ? err.message : 'error desconocido'}`,
-    };
+  } catch {
+    // Los resultados ya fueron eliminados — restablecer a under_review para que
+    // el periodo no quede bloqueado sin resultados y pueda recalcularse.
+    // Usar supabase (server client con RLS) — no se necesita admin para actualizar estado.
+    const { error: recoveryError } = await supabase
+      .from('reporting_periods')
+      .update({ status: 'under_review' })
+      .eq('id', periodId);
+    if (recoveryError) {
+      revalidatePath('/audit');
+      revalidatePath('/dashboard');
+      return { error: 'Error crítico al recalcular: no se pudo restablecer el estado del periodo. Contacta al administrador.' };
+    }
+    revalidatePath('/audit');
+    revalidatePath('/dashboard');
+    return { error: 'Error al recalcular las emisiones del periodo. Intenta nuevamente.' };
+  }
+
+  // Re-ejecutar detección de anomalías con los resultados actualizados
+  try {
+    const priorYear = period.startDate.getUTCFullYear() - 1;
+    const { data: priorPeriodsRaw } = await supabase
+      .from('reporting_periods')
+      .select('id')
+      .eq('supplier_id', period.supplierId)
+      .gte('start_date', `${priorYear}-01-01`)
+      .lte('start_date', `${priorYear}-12-31`);
+    const priorPeriodIds = (priorPeriodsRaw ?? []).map((p: { id: string }) => p.id);
+
+    const [currentEntries, historicalEntries] = await Promise.all([
+      activityEntryRepo.findByPeriodId(periodId),
+      activityEntryRepo.findByPeriodIds(priorPeriodIds),
+    ]);
+    const anomalies = new AnomalyService().detect(currentEntries, historicalEntries);
+
+    if (currentEntries.length > 0) {
+      await supabase
+        .from('anomaly_flags')
+        .delete()
+        .in('activity_entry_id', currentEntries.map((e) => e.id))
+        .eq('is_resolved', false);
+    }
+    if (anomalies.length > 0) {
+      await supabase.from('anomaly_flags').insert(
+        anomalies.map((a) => ({
+          activity_entry_id: a.entryId,
+          detector: 'zscore_monthly',
+          severity: a.severity,
+          z_score: a.zScore,
+          message: a.message,
+          threshold_used: AnomalyService.Z_THRESHOLD_LOW,
+        })),
+      );
+    }
+  } catch {
+    // Detección de anomalías no crítica — no bloquear el recálculo
+  }
+
+  try {
+    await auditLogRepo.log('RECALCULATE', 'reporting_periods', periodId, user.id, {
+      oldValues: { status: period.status },
+      newValues: { recalculated_at: new Date().toISOString() },
+    });
+  } catch {
+    // El log de auditoría es no-crítico — no bloquear el recálculo exitoso
   }
 
   revalidatePath('/audit');
   revalidatePath('/dashboard');
+  revalidatePath('/suppliers');
   return {
     success: true,
     totals: {
@@ -310,7 +397,6 @@ export async function recalculatePeriod(
   };
 }
 
-// ── calculateYear ─────────────────────────────────────────────────────────────
 
 export interface BatchYearState {
   error?: string | undefined;
@@ -339,12 +425,13 @@ export async function calculateYear(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Datos inválidos' };
   const { supplier_id, year } = parsed.data;
 
-  // Verify caller belongs to the org that owns this supplier
+  // Verificar que el usuario pertenece a la org propietaria del proveedor
   type SupplierOrg = { organization_id: string };
   const { data: supplierRaw } = await supabase
     .from('suppliers')
     .select('organization_id')
     .eq('id', supplier_id)
+    .is('archived_at', null)
     .maybeSingle();
   const supplierOrg = supplierRaw as SupplierOrg | null;
   if (!supplierOrg) return { error: 'Proveedor no encontrado' };
@@ -357,7 +444,7 @@ export async function calculateYear(
     .maybeSingle();
   if (!memRaw) return { error: 'Sin permisos para gestionar este proveedor' };
 
-  // Find all open or under_review periods for this supplier+year
+  // Buscar todos los periodos abiertos o en revisión del proveedor en el año
   type FilaPeriodo = { id: string; status: string };
   const startOfYear = `${year}-01-01`;
   const endOfYear = `${year}-12-31`;
@@ -367,7 +454,7 @@ export async function calculateYear(
     .eq('supplier_id', supplier_id)
     .gte('start_date', startOfYear)
     .lte('start_date', endOfYear)
-    .in('status', ['open', 'under_review']);
+    .eq('status', 'open');
 
   const candidatos = (periodsRaw ?? []) as FilaPeriodo[];
   if (candidatos.length === 0) {
@@ -378,36 +465,37 @@ export async function calculateYear(
   const auditLogRepo = new AuditLogRepository(supabase);
   const auditSvc = new AuditService(periodRepo, auditLogRepo);
   const activityEntryRepoYear = new ActivityEntryRepository(supabase);
+  const emissionFactorRepoYear = new EmissionFactorRepository(supabase);
+  const unitConversionRepoYear = new UnitConversionRepository(supabase);
   const evalSvc = new EvaluationService(
     activityEntryRepoYear,
-    new EmissionFactorRepository(supabase),
-    new UnitConversionRepository(supabase),
+    emissionFactorRepoYear,
+    unitConversionRepoYear,
     new EmissionResultRepository(supabase),
     periodRepo,
   );
 
-  // Fetch prior-year historical entries once for batch anomaly detection
+  // Pre-cargar tablas de referencia una sola vez para todo el lote (K periodos → 1 fetch cada una)
   const priorYear = year - 1;
-  const { data: priorPeriodsYearRaw } = await supabase
-    .from('reporting_periods')
-    .select('id')
-    .eq('supplier_id', supplier_id)
-    .gte('start_date', `${priorYear}-01-01`)
-    .lte('start_date', `${priorYear}-12-31`);
-  const priorPeriodIdsYear = (priorPeriodsYearRaw ?? []).map((p: { id: string }) => p.id);
+  const [factorTable, conversionTable, priorPeriodsYearRaw] = await Promise.all([
+    emissionFactorRepoYear.buildFactorTable(),
+    unitConversionRepoYear.buildConversionTable(),
+    supabase
+      .from('reporting_periods')
+      .select('id')
+      .eq('supplier_id', supplier_id)
+      .gte('start_date', `${priorYear}-01-01`)
+      .lte('start_date', `${priorYear}-12-31`),
+  ]);
+  const priorPeriodIdsYear = ((priorPeriodsYearRaw as { data: Array<{ id: string }> | null }).data ?? []).map((p) => p.id);
   const historicalEntriesYear = await activityEntryRepoYear.findByPeriodIds(priorPeriodIdsYear);
 
+  const adminClientYear = createAdminClient();
   let calculated = 0;
   let skipped = 0;
   const errores: string[] = [];
 
   for (const p of candidatos) {
-    // Only calculate open periods (under_review already calculated — skip)
-    if (p.status !== 'open') {
-      skipped = skipped + 1;
-      continue;
-    }
-
     try {
       await auditSvc.transitionStatus(p.id, 'calculating', user.id);
     } catch {
@@ -416,9 +504,9 @@ export async function calculateYear(
     }
 
     try {
-      await evalSvc.evaluate(p.id);
+      await evalSvc.evaluateWithCache(p.id, factorTable, conversionTable);
 
-      // Anomaly detection against prior-year baseline (best-effort)
+      // Detección de anomalías contra línea base del año anterior (no crítica)
       try {
         const currentEntries = await activityEntryRepoYear.findByPeriodId(p.id);
         const anomalies = new AnomalyService().detect(currentEntries, historicalEntriesYear);
@@ -433,7 +521,7 @@ export async function calculateYear(
           await supabase.from('anomaly_flags').insert(
             anomalies.map((a) => ({
               activity_entry_id: a.entryId,
-              detector: 'z-score-v1',
+              detector: 'zscore_monthly',
               severity: a.severity,
               z_score: a.zScore,
               message: a.message,
@@ -442,25 +530,25 @@ export async function calculateYear(
           );
         }
       } catch {
-        // best-effort
+        // Detección de anomalías no crítica — no bloquear el cálculo del lote
       }
 
       await auditSvc.transitionStatus(p.id, 'under_review', user.id);
       calculated = calculated + 1;
     } catch (err) {
-      errores.push(
-        `Periodo ${p.id}: ${err instanceof Error ? err.message : 'error desconocido'}`,
-      );
+      // Restablecer a 'open' para que el periodo pueda reintentarse
+      await adminClientYear.from('reporting_periods').update({ status: 'open' }).eq('id', p.id);
+      errores.push(`Periodo ${calculated + skipped + 1} de ${candidatos.length}: error al calcular`);
       skipped = skipped + 1;
     }
   }
 
   revalidatePath('/audit');
   revalidatePath('/dashboard');
+  revalidatePath('/suppliers');
   return { success: true, calculated, skipped, errors: errores };
 }
 
-// ── closeYear ─────────────────────────────────────────────────────────────────
 
 const closeYearSchema = z.object({
   supplier_id: z.string().uuid('ID de proveedor inválido'),
@@ -481,12 +569,13 @@ export async function closeYear(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Datos inválidos' };
   const { supplier_id, year } = parsed.data;
 
-  // Verify caller belongs to the org with admin/consultant role
+  // Verificar que el usuario es admin o consultant de la org del proveedor
   type SupplierOrg = { organization_id: string };
   const { data: supplierRaw } = await supabase
     .from('suppliers')
     .select('organization_id')
     .eq('id', supplier_id)
+    .is('archived_at', null)
     .maybeSingle();
   const supplierOrg = supplierRaw as SupplierOrg | null;
   if (!supplierOrg) return { error: 'Proveedor no encontrado' };
@@ -499,7 +588,7 @@ export async function closeYear(
     .maybeSingle();
   if (!memRaw) return { error: 'Sin permisos para gestionar este proveedor' };
 
-  // Find only under_review periods for this supplier+year (must NOT include open/locked)
+  // Solo periodos en revisión — los abiertos deben calcularse primero
   type FilaPeriodo = { id: string; status: string };
   const startOfYear = `${year}-01-01`;
   const endOfYear = `${year}-12-31`;
@@ -516,6 +605,13 @@ export async function closeYear(
     return {
       error:
         'Hay periodos abiertos sin calcular. Calcula todos los periodos antes de cerrar el año.',
+    };
+  }
+  const hayCalculando = todosLosPeriodos.some((p) => p.status === 'calculating');
+  if (hayCalculando) {
+    return {
+      error:
+        'Hay periodos en proceso de cálculo. Espera a que finalicen antes de cerrar el año.',
     };
   }
 
@@ -537,19 +633,22 @@ export async function closeYear(
       await auditSvc.lock(p.id, user.id);
       bloqueados = bloqueados + 1;
     } catch (err) {
-      errores.push(
-        `Periodo ${p.id}: ${err instanceof Error ? err.message : 'error desconocido'}`,
-      );
+      const idx = bloqueados + skipped + 1;
+      errores.push(`Periodo ${idx} de ${enRevision.length}: error al bloquear`);
+      if (err instanceof Error) {
+        // Log interno — no exponer al cliente
+        void err;
+      }
       skipped = skipped + 1;
     }
   }
 
   revalidatePath('/audit');
   revalidatePath('/dashboard');
+  revalidatePath('/suppliers');
   return { success: true, calculated: bloqueados, skipped, errors: errores };
 }
 
-// ── resolveAnomaly ────────────────────────────────────────────────────────────
 
 export interface ResolveAnomalyState {
   error?: string | undefined;
@@ -567,11 +666,12 @@ export async function resolveAnomaly(
   if (!user) return { error: 'No autenticado' };
 
   const flagId = formData.get('flag_id');
-  if (typeof flagId !== 'string' || !flagId) return { error: 'Falta el ID de la anomalía' };
+  if (typeof flagId !== 'string' || !UUID_RE.test(flagId)) return { error: 'ID de anomalía inválido' };
   const resolutionNote = formData.get('resolution_note');
-  const note = typeof resolutionNote === 'string' && resolutionNote.trim() ? resolutionNote.trim() : null;
+  const rawNote = typeof resolutionNote === 'string' ? resolutionNote.trim().slice(0, 1000) : '';
+  const note = rawNote || null;
 
-  // Verify caller belongs to same org as the anomaly flag
+  // Verificar que el usuario pertenece a la misma org que la anomalía
   type FlagOrg = {
     activity_entries: { reporting_periods: { suppliers: { organization_id: string } } };
   };
@@ -601,15 +701,16 @@ export async function resolveAnomaly(
       resolved_at: new Date().toISOString(),
       resolution_note: note,
     })
-    .eq('id', flagId);
+    .eq('id', flagId)
+    .eq('is_resolved', false);
 
-  if (error) return { error: `Error al resolver anomalía: ${error.message}` };
+  if (error) return { error: 'Error al resolver la anomalía. Intenta nuevamente.' };
 
   revalidatePath('/audit');
+  revalidatePath('/dashboard');
   return { success: true };
 }
 
-// ── unlockPeriod ──────────────────────────────────────────────────────────────
 
 export interface UnlockPeriodState {
   error?: string | undefined;
@@ -628,9 +729,12 @@ export async function unlockPeriod(
 
   const periodId = formData.get('period_id');
   const reason = formData.get('unlock_reason');
-  if (typeof periodId !== 'string' || !periodId) return { error: 'Falta el ID del periodo' };
+  if (typeof periodId !== 'string' || !UUID_RE.test(periodId)) return { error: 'ID de periodo inválido' };
   if (typeof reason !== 'string' || !reason.trim()) {
     return { error: 'La razón de desbloqueo es obligatoria' };
+  }
+  if (reason.trim().length > 1000) {
+    return { error: 'La razón de desbloqueo no puede superar 1000 caracteres' };
   }
 
   const periodRepo = new ReportingPeriodRepository(supabase);
@@ -642,6 +746,7 @@ export async function unlockPeriod(
     .from('suppliers')
     .select('organization_id')
     .eq('id', period.supplierId)
+    .is('archived_at', null)
     .maybeSingle();
   const supplierOrg = supplierRaw as SupplierOrg | null;
   if (!supplierOrg) return { error: 'Proveedor del periodo no encontrado' };
@@ -669,10 +774,21 @@ export async function unlockPeriod(
     })
     .eq('id', periodId);
 
-  if (updateError) return { error: `Error al desbloquear: ${updateError.message}` };
+  if (updateError) return { error: 'Error al desbloquear el periodo. Intenta nuevamente.' };
+
+  const auditLogRepo = new AuditLogRepository(supabase);
+  try {
+    await auditLogRepo.log('UNLOCK', 'reporting_periods', periodId, user.id, {
+      oldValues: { status: 'locked' },
+      newValues: { status: 'under_review' },
+    });
+  } catch {
+    // El log de auditoría es no-crítico — no bloquear el desbloqueo exitoso
+  }
 
   revalidatePath('/audit');
   revalidatePath('/dashboard');
+  revalidatePath('/suppliers');
   return { success: true };
 }
 

@@ -14,6 +14,7 @@ export class ActivityEntry extends Entity {
   readonly submittedAt: Date | null;
   readonly submittedBy: string | null;
   readonly dataQuality: DataQuality;
+  readonly notes: string | null;
 
   constructor(props: {
     id: string;
@@ -27,6 +28,7 @@ export class ActivityEntry extends Entity {
     submittedBy: string | null;
     createdAt: Date;
     dataQuality?: DataQuality;
+    notes?: string | null;
   }) {
     super(props.id, props.createdAt);
     this.reportingPeriodId = props.reportingPeriodId;
@@ -38,6 +40,7 @@ export class ActivityEntry extends Entity {
     this.submittedAt = props.submittedAt;
     this.submittedBy = props.submittedBy;
     this.dataQuality = props.dataQuality ?? 'measured';
+    this.notes = props.notes ?? null;
   }
 
   toActivityRecord(supplierId: string): ActivityRecord {

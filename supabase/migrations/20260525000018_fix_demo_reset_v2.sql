@@ -1,9 +1,9 @@
 -- =============================================================================
--- Migration 018: Re-apply fn_demo_reset with WHERE TRUE on DELETE suppliers
+-- Migración 018: Re-aplicar fn_demo_reset con WHERE TRUE en DELETE de suppliers
 --
--- Migration 017 was pushed before the WHERE TRUE fix was in place.
--- Supabase RPC layer requires a WHERE clause on bare DELETE statements.
--- This migration re-applies the corrected function definition.
+-- La migración 017 fue aplicada antes de tener el fix de WHERE TRUE.
+-- La capa RPC de Supabase requiere cláusula WHERE en sentencias DELETE simples.
+-- Esta migración re-aplica la definición corregida de la función.
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION public.fn_demo_reset()
@@ -13,8 +13,8 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  -- 1. TRUNCATE append-only + transactional tables (bypasses row-level triggers)
-  --    Explicit order: deepest children first, no CASCADE needed
+  -- 1. TRUNCATE tablas solo-append + transaccionales (bypasea triggers a nivel de fila)
+  --    Orden explícito: hijos más profundos primero, no se necesita CASCADE
   TRUNCATE
     public.report_exports,
     public.audit_log,
@@ -25,17 +25,17 @@ BEGIN
     public.reporting_periods
   RESTART IDENTITY;
 
-  -- 2. Remove supplier-scoped memberships (role='supplier', supplier_id IS NOT NULL)
-  --    Admin/consultant memberships (supplier_id = NULL) are preserved.
+  -- 2. Eliminar memberships de proveedor (role='supplier', supplier_id IS NOT NULL)
+  --    Las memberships de admin/consultant (supplier_id = NULL) se preservan.
   DELETE FROM public.memberships WHERE supplier_id IS NOT NULL;
 
-  -- 3. DELETE suppliers — FK memberships.supplier_id is ON DELETE SET NULL,
-  --    so any remaining supplier-scoped rows just get supplier_id = NULL.
-  --    WHERE TRUE satisfies Supabase's "requires a WHERE clause" safety check.
+  -- 3. DELETE suppliers — el FK memberships.supplier_id es ON DELETE SET NULL,
+  --    por lo que las filas restantes simplemente quedan con supplier_id = NULL.
+  --    WHERE TRUE satisface el chequeo de seguridad de Supabase "requiere cláusula WHERE".
   DELETE FROM public.suppliers WHERE TRUE;
 
-  -- 4. Re-insert demo admin memberships in case they were lost by a previous
-  --    bad reset run. Idempotent via the UNIQUE (user_id, organization_id) constraint.
+  -- 4. Re-insertar memberships de admin demo en caso de que se hayan perdido por un
+  --    reset anterior fallido. Idempotente via restricción UNIQUE (user_id, organization_id).
   INSERT INTO public.memberships (user_id, organization_id, supplier_id, role)
   VALUES
     ('00000000-0000-0000-0000-000000000999', 'aaaaaaaa-aaaa-aaaa-aaaa-000000000001', NULL, 'admin'),

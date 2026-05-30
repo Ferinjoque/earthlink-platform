@@ -1,9 +1,11 @@
 'use client';
 
-import { useActionState, useState, useEffect, useRef } from 'react';
+import { useActionState, useState, useEffect, useRef, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import { importActivityBulk } from '@/actions/activity';
+import { uploadEvidence } from '@/actions/evidence';
 import type { CsvImportState } from '@/actions/activity';
+import { EvidenceUploader } from '@/components/activity/EvidenceUploader';
 import type { EmissionSourceType } from '@/types/database';
 import type { Unit } from '@/calc/types';
 import {
@@ -76,7 +78,6 @@ function updateSourceType(row: EntryRow, st: EmissionSourceType): EntryRow {
   };
 }
 
-// ── Shared styles ─────────────────────────────────────────────────────────────
 
 function estiloInput(hasError = false): React.CSSProperties {
   return {
@@ -134,7 +135,6 @@ function FieldLabel({
   );
 }
 
-// ── GRESB hint banner ─────────────────────────────────────────────────────────
 
 function GresbHint({ sourceType }: { sourceType: EmissionSourceType }) {
   if (sourceType !== 'water_use' && sourceType !== 'waste') return null;
@@ -156,7 +156,6 @@ function GresbHint({ sourceType }: { sourceType: EmissionSourceType }) {
   );
 }
 
-// ── Card mode (1 row) ─────────────────────────────────────────────────────────
 
 function CardMode({
   row,
@@ -341,7 +340,7 @@ function CardMode({
           action={undefined}
           onSubmit={(e) => {
             e.preventDefault();
-            // Use hidden form submit via the outer form action
+            // Enviar vía el form externo para evitar doble anidamiento de formularios
           }}
           style={{ display: 'contents' }}
         >
@@ -413,7 +412,6 @@ function CardMode({
   );
 }
 
-// ── Delete confirmation modal ─────────────────────────────────────────────────
 
 function DeleteModal({
   row,
@@ -545,7 +543,6 @@ function DeleteModal({
   );
 }
 
-// ── Table mode (2+ rows) ──────────────────────────────────────────────────────
 
 const SOURCE_TYPES = Object.keys(ETIQUETAS_FUENTE) as EmissionSourceType[];
 
@@ -899,7 +896,6 @@ function TableMode({
   );
 }
 
-// ── Main BulkEntryBuilder ─────────────────────────────────────────────────────
 
 interface BulkEntryBuilderProps {
   suppliers: Supplier[];
@@ -913,6 +909,10 @@ export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuil
     { ...defaultRow(suppliers, ym), supplier_id: initialSupplierId },
   ]);
   const [pendingDelete, setPendingDelete] = useState<number | null>(null);
+  const [evidenceStep, setEvidenceStep] = useState<{ entryIds: string[] } | null>(null);
+  // Archivos seleccionados por el usuario, listos para subir al presionar Listo
+  const [pendingEvidences, setPendingEvidences] = useState<Map<string, File>>(new Map());
+  const [isUploadingEvidence, startUploadTransition] = useTransition();
   const [state, formAction, isPending] = useActionState<CsvImportState | null, FormData>(
     importActivityBulk,
     null,
@@ -929,11 +929,52 @@ export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuil
         `${n} registro${n !== 1 ? 's' : ''} importado${n !== 1 ? 's' : ''}${(state.skipped ?? 0) > 0 ? ` · ${state.skipped} omitidos` : ''}`,
         'success',
       );
+      const ids = state.entryIds ?? [];
+      if (ids.length > 0) {
+        setEvidenceStep({ entryIds: ids });
+      }
       setRows([{ ...defaultRow(suppliers), supplier_id: initialSupplierId }]);
     } else if (state.error) {
       toast(state.error, 'error');
     }
   }, [state?.submittedAt]);
+
+  function handlePendingFileChange(entryId: string, file: File | null) {
+    setPendingEvidences((prev) => {
+      const next = new Map(prev);
+      if (file) next.set(entryId, file);
+      else next.delete(entryId);
+      return next;
+    });
+  }
+
+  function handleListo() {
+    startUploadTransition(async () => {
+      // Promise.allSettled — un fallo no aborta los demás uploads
+      const settled = await Promise.allSettled(
+        Array.from(pendingEvidences.entries()).map(([eid, file]) => {
+          const fd = new FormData();
+          fd.append('evidence', file);
+          return uploadEvidence(eid, null, fd);
+        }),
+      );
+      const errores = settled
+        .filter((s): s is PromiseFulfilledResult<{ error?: string }> => s.status === 'fulfilled' && Boolean(s.value?.error))
+        .map((s) => s.value.error!)
+        .concat(
+          settled
+            .filter((s): s is PromiseRejectedResult => s.status === 'rejected')
+            .map(() => 'Error de red al subir archivo'),
+        );
+      if (errores.length > 0) {
+        toast(`Error al subir ${errores.length} archivo${errores.length !== 1 ? 's' : ''}`, 'error');
+      } else if (pendingEvidences.size > 0) {
+        toast(`${pendingEvidences.size} evidencia${pendingEvidences.size !== 1 ? 's' : ''} adjuntada${pendingEvidences.size !== 1 ? 's' : ''}`, 'success');
+      }
+      setPendingEvidences(new Map());
+      setEvidenceStep(null);
+    });
+  }
 
   function addRow() {
     setRows((prev) => {
@@ -969,7 +1010,7 @@ export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuil
   }
 
   function requestDelete(idx: number) {
-    if (rows.length === 1) return; // card mode doesn't delete last row
+    if (rows.length === 1) return; // el modo tarjeta no elimina la última fila
     setPendingDelete(idx);
   }
 
@@ -997,12 +1038,144 @@ export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuil
       })),
   );
 
-  // Shared form element for card mode
+  // Panel de evidencia opcional que aparece después de crear registros
+  if (evidenceStep) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'var(--space-5)',
+          padding: 'var(--space-6)',
+          background: 'var(--color-surface-1)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-lg)',
+        }}
+      >
+        <div>
+          <p
+            style={{
+              fontSize: 'var(--text-xs)',
+              fontFamily: 'var(--font-mono)',
+              color: 'var(--color-accent)',
+              fontWeight: 600,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              margin: '0 0 var(--space-1)',
+            }}
+          >
+            Paso opcional
+          </p>
+          <h3
+            style={{
+              fontSize: 'var(--text-base)',
+              fontWeight: 600,
+              color: 'var(--color-ink-1)',
+              margin: 0,
+            }}
+          >
+            ¿Tienes un respaldo?
+          </h3>
+          <p
+            style={{
+              fontSize: 'var(--text-sm)',
+              color: 'var(--color-ink-3)',
+              margin: 'var(--space-1) 0 0',
+            }}
+          >
+            Adjunta capturas de medidores, facturas o PDFs como evidencia de los registros que acabas de crear.
+            Formatos permitidos: JPG, PNG, WebP, PDF · Máximo 10 MB por archivo.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+          {evidenceStep.entryIds.map((entryId, idx) => (
+            <div
+              key={entryId}
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 'var(--space-4)',
+                padding: 'var(--space-3) var(--space-4)',
+                background: 'var(--color-surface-0)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-md)',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--color-ink-3)',
+                  flexShrink: 0,
+                  paddingTop: '2px',
+                  minWidth: '60px',
+                }}
+              >
+                Registro {idx + 1}
+              </span>
+              <EvidenceUploader
+                entryId={entryId}
+                files={[]}
+                onPendingFileChange={(file) => handlePendingFileChange(entryId, file)}
+              />
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
+          {pendingEvidences.size > 0 && !isUploadingEvidence && (
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)' }}>
+              {pendingEvidences.size} archivo{pendingEvidences.size !== 1 ? 's' : ''} listo{pendingEvidences.size !== 1 ? 's' : ''} para subir
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={handleListo}
+            disabled={isUploadingEvidence}
+            style={{
+              padding: 'var(--space-2) var(--space-6)',
+              background: isUploadingEvidence ? 'var(--color-ink-3)' : 'var(--color-accent)',
+              color: 'white',
+              border: 'none',
+              borderRadius: 'var(--radius-md)',
+              fontSize: 'var(--text-sm)',
+              fontFamily: 'var(--font-sans)',
+              fontWeight: 500,
+              cursor: isUploadingEvidence ? 'not-allowed' : 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 'var(--space-2)',
+            }}
+          >
+            {isUploadingEvidence ? (
+              <>
+                <span
+                  style={{
+                    width: '12px',
+                    height: '12px',
+                    border: '2px solid rgba(255,255,255,0.3)',
+                    borderTopColor: 'white',
+                    borderRadius: '50%',
+                    display: 'inline-block',
+                    animation: 'ringSpin 0.7s linear infinite',
+                  }}
+                />
+                Subiendo…
+              </>
+            ) : 'Listo'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Elemento form compartido para el modo de una sola tarjeta
   if (isCardMode) {
     const row = rows[0]!;
     return (
       <>
-        {/* Hidden form that the card submit button targets */}
+        {/* Formulario oculto al que apunta el botón submit de la tarjeta */}
         <form id="bulk-form-card" action={formAction} noValidate style={{ display: 'none' }}>
           <input type="hidden" name="json_entries" value={jsonEntries} />
         </form>

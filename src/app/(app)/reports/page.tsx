@@ -31,7 +31,7 @@ export default async function ReportesPage() {
     ...new Set(memberships.map((m) => m.organization_id).filter((id): id is string => id !== null)),
   ];
 
-  // Fetch org name for report header
+  // Cargar nombre de org para encabezado del reporte
   let orgName = 'EarthLink';
   if (orgIds.length) {
     const { data: orgsData } = await supabase
@@ -54,7 +54,7 @@ export default async function ReportesPage() {
   const supplierMap = new Map(suppliersData.map((s) => [s.id, s.name]));
   const allSupplierIds = suppliersData.map((s) => s.id);
 
-  // Fetch exportable periods (under_review or locked) — include start_date for year grouping
+  // Cargar periodos exportables (en revisión o bloqueados) con start_date para agrupar por año
   type FilaPeriodo = Pick<ReportingPeriodRow, 'id' | 'label' | 'supplier_id' | 'status' | 'start_date'>;
   const periodsData: FilaPeriodo[] = [];
   if (allSupplierIds.length) {
@@ -67,8 +67,22 @@ export default async function ReportesPage() {
     if (data) periodsData.push(...(data as FilaPeriodo[]));
   }
 
-  // Fetch emission result summaries for these periods (with scope breakdown)
+  // Cargar resúmenes de resultados de emisión con desglose por alcance
   const periodIds = periodsData.map((p) => p.id);
+
+  // Construir set de IDs de entradas anuladas para excluirlas del resumen
+  const voidedEntryIds = new Set<string>();
+  if (periodIds.length) {
+    const { data } = await supabase
+      .from('activity_entries')
+      .select('id')
+      .in('reporting_period_id', periodIds)
+      .not('voided_at', 'is', null);
+    for (const e of (data ?? []) as Array<{ id: string }>) {
+      voidedEntryIds.add(e.id);
+    }
+  }
+
   const mapaResumen = new Map<
     string,
     { totalCo2eKg: number; scope1Kg: number; scope2Kg: number; nResultados: number }
@@ -76,10 +90,11 @@ export default async function ReportesPage() {
   if (periodIds.length) {
     const { data } = await supabase
       .from('emission_results')
-      .select('reporting_period_id, co2e_kg, scope')
+      .select('reporting_period_id, activity_entry_id, co2e_kg, scope')
       .in('reporting_period_id', periodIds);
     if (data) {
-      for (const r of data as Array<{ reporting_period_id: string; co2e_kg: number; scope: number }>) {
+      for (const r of data as Array<{ reporting_period_id: string; activity_entry_id: string | null; co2e_kg: number; scope: number }>) {
+        if (r.activity_entry_id && voidedEntryIds.has(r.activity_entry_id)) continue;
         const prev = mapaResumen.get(r.reporting_period_id) ?? {
           totalCo2eKg: 0,
           scope1Kg: 0,
@@ -98,7 +113,7 @@ export default async function ReportesPage() {
 
   const periodos: PeriodoExportable[] = periodsData.map((p) => {
     const resumen = mapaResumen.get(p.id);
-    const year = new Date(p.start_date).getFullYear();
+    const year = new Date(p.start_date).getUTCFullYear();
     return {
       id: p.id,
       label: p.label,
@@ -112,7 +127,7 @@ export default async function ReportesPage() {
     };
   });
 
-  // Fetch export history for user's orgs
+  // Cargar historial de exportaciones de las orgs del usuario
   type FilaExport = Pick<
     ReportExportRow,
     'id' | 'format' | 'generated_at' | 'file_sha256' | 'reporting_period_ids'
@@ -155,7 +170,7 @@ export default async function ReportesPage() {
           maxWidth: 'var(--max-w-content)',
         }}
       >
-        {/* Editorial header — hidden in print (replaced by cover page inside ReportsPanel) */}
+        {/* Cabecera editorial — oculta en impresión (reemplazada por portada dentro de ReportsPanel) */}
         <div data-no-print className="animate-fade-up stagger-1" style={{ marginBottom: 'var(--space-8)' }}>
           <p className="eyebrow" style={{ marginBottom: 'var(--space-3)' }}>
             Protocolo GHG · Exportación de datos

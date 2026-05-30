@@ -4,7 +4,7 @@ import { ActivityEntry } from '../../../src/domain/ActivityEntry';
 import type { ActivityKind, Unit } from '../../../src/calc/types';
 import type { EmissionSourceType } from '../../../src/types/database';
 
-// ── Fixtures ──────────────────────────────────────────────────────────────────
+// ── Datos de prueba ───────────────────────────────────────────────────────────
 
 const NOW = new Date('2026-01-15T00:00:00Z');
 
@@ -36,8 +36,8 @@ function makeEntry(
   });
 }
 
-// Historical baseline: ~850 L diesel (small variance)
-// Using MIN_BASELINE (3) or more entries
+// Línea base histórica: ~850 L diesel (varianza pequeña)
+// Con MIN_BASELINE (3) o más entradas
 const historicalBaseline = [
   makeEntry(840),
   makeEntry(850),
@@ -46,7 +46,7 @@ const historicalBaseline = [
   makeEntry(855),
 ];
 
-// ── Core detect() tests ───────────────────────────────────────────────────────
+// ── Pruebas principales de detect() ──────────────────────────────────────────
 
 describe('AnomalyService.detect()', () => {
   const svc = new AnomalyService();
@@ -57,7 +57,7 @@ describe('AnomalyService.detect()', () => {
   });
 
   it('returns empty array when historical baseline has fewer than MIN_BASELINE entries', () => {
-    // With only 2 entries the z-score is statistically meaningless
+    // Con solo 2 entradas el z-score carece de significado estadístico
     const twoEntries = [makeEntry(850), makeEntry(860)];
     const result = svc.detect([makeEntry(5000)], twoEntries);
     expect(result).toHaveLength(0);
@@ -117,7 +117,7 @@ describe('AnomalyService.detect()', () => {
   });
 });
 
-// ── Secondary + unit grouping (critical correctness) ─────────────────────────
+// ── Agrupación secundaria y por unidad (corrección crítica) ──────────────────
 
 describe('AnomalyService.detect() — secondary grouping', () => {
   const svc = new AnomalyService();
@@ -134,7 +134,7 @@ describe('AnomalyService.detect() — secondary grouping', () => {
       sourceType: 'mobile_combustion',
     });
     const result = svc.detect([dieselEntry], gasolineHistory);
-    // Baseline is gasoline, current is diesel — different group key → no anomaly
+    // Línea base gasolina, actual diesel — diferente clave de grupo → sin anomalía
     expect(result).toHaveLength(0);
   });
 
@@ -166,7 +166,7 @@ describe('AnomalyService.detect() — secondary grouping', () => {
       sourceType: 'fugitive',
     });
     const result = svc.detect([r410aEntry], r134aHistory);
-    // Different refrigerant → no baseline match → no anomaly
+    // Refrigerante diferente → sin coincidencia de línea base → sin anomalía
     expect(result).toHaveLength(0);
   });
 
@@ -197,18 +197,18 @@ describe('AnomalyService.detect() — secondary grouping', () => {
       sourceType: 'purchased_electricity',
     });
     const result = svc.detect([peruEntry], usHistory);
-    // Different grid region → no baseline match → no anomaly
+    // Región de red distinta → sin línea base coincidente → sin anomalía
     expect(result).toHaveLength(0);
   });
 });
 
-// ── Unit grouping ─────────────────────────────────────────────────────────────
+// ── Agrupación por unidad ─────────────────────────────────────────────────────
 
 describe('AnomalyService.detect() — unit grouping', () => {
   const svc = new AnomalyService();
 
   it('does NOT compare kWh entries against MWh baseline', () => {
-    // Historical: 850 MWh/quarter; current: 850 kWh — looks like anomaly if mixed
+    // Histórico: 850 MWh/trimestre; actual: 850 kWh — parecería anomalía si se mezclan
     const mwhHistory = [
       makeEntry(850, { sourceType: 'purchased_electricity', activityKind: { kind: 'purchased_electricity', gridRegion: 'SEIN_PERU' }, rawUnit: 'MWh' }),
       makeEntry(840, { sourceType: 'purchased_electricity', activityKind: { kind: 'purchased_electricity', gridRegion: 'SEIN_PERU' }, rawUnit: 'MWh' }),
@@ -220,12 +220,12 @@ describe('AnomalyService.detect() — unit grouping', () => {
       rawUnit: 'kWh',
     });
     const result = svc.detect([kwhEntry], mwhHistory);
-    // Different units → different group key → no baseline → no anomaly (not a false positive)
+    // Unidades distintas → clave de grupo diferente → sin línea base → sin anomalía (no falso positivo)
     expect(result).toHaveLength(0);
   });
 });
 
-// ── Message quality ───────────────────────────────────────────────────────────
+// ── Calidad de mensajes ───────────────────────────────────────────────────────
 
 describe('AnomalyService.detect() — message content', () => {
   const svc = new AnomalyService();
@@ -239,6 +239,22 @@ describe('AnomalyService.detect() — message content', () => {
     const result = svc.detect([makeEntry(4750)], historicalBaseline);
     expect(result[0]!.message).toContain('Combustión estacionaria');
     expect(result[0]!.message).not.toContain('undefined');
+  });
+
+  it('mensaje contiene "sobre" cuando valor supera la media', () => {
+    // baseline mean ≈ 850; valor 4750 >> mean → "sobre"
+    const result = svc.detect([makeEntry(4750)], historicalBaseline);
+    expect(result[0]!.message).toContain('sobre');
+    expect(result[0]!.message).not.toContain('bajo');
+  });
+
+  it('mensaje contiene "bajo" cuando valor está por debajo de la media', () => {
+    // baseline mean ≈ 850; valor 10 << mean → "bajo"
+    const lowEntry = makeEntry(10);
+    const result = svc.detect([lowEntry], historicalBaseline);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.message).toContain('bajo');
+    expect(result[0]!.message).not.toContain('sobre');
   });
 
   it('uses raw sourceType when no Spanish label available', () => {
@@ -277,6 +293,17 @@ describe('AnomalyService._internals', () => {
     expect(AnomalyService._internals.zScore(5, [5, 5, 5])).toBeNull();
   });
 
+  it('zScore returns null when result would be Infinity (near-zero stddev from float precision)', () => {
+    // Valores extremadamente cercanos — stddev no es exactamente 0 pero z = value/stddev → Infinity
+    const tiny = Number.MIN_VALUE; // ~5e-324
+    const pop = [tiny, tiny * 2, tiny * 3];
+    const z = AnomalyService._internals.zScore(1e308, pop);
+    // Si z es Infinity la guardia debe retornar null en lugar de propagar Infinity
+    if (z !== null) {
+      expect(Number.isFinite(z)).toBe(true);
+    }
+  });
+
   it('zScore uses sample stddev (ddof=1)', () => {
     // population = [9, 10, 11], mean = 10
     // sample variance = (1 + 0 + 1) / (3-1) = 1, sample stddev = 1
@@ -285,10 +312,10 @@ describe('AnomalyService._internals', () => {
     expect(z).toBeCloseTo(2.0, 5);
   });
 
-  it('zScore value is absolute (below mean still returns positive z)', () => {
-    // 8 is 2σ below mean 10 — absolute z should be 2.0
+  it('zScore is signed (below mean returns negative z)', () => {
+    // 8 is 2σ below mean 10 — signed z should be -2.0
     const z = AnomalyService._internals.zScore(8, [9, 10, 11]);
-    expect(z).toBeCloseTo(2.0, 5);
+    expect(z).toBeCloseTo(-2.0, 5);
   });
 
   it('mean computes correctly', () => {
@@ -312,12 +339,18 @@ describe('AnomalyService._internals', () => {
   });
 
   it('severityFor thresholds are exact boundaries', () => {
-    // At exactly Z_THRESHOLD_LOW → low
+    // Exactamente en Z_THRESHOLD_LOW → low
     expect(AnomalyService._internals.severityFor(AnomalyService.Z_THRESHOLD_LOW)).toBe('low');
-    // At exactly Z_THRESHOLD_MEDIUM → medium
+    // Exactamente en Z_THRESHOLD_MEDIUM → medium
     expect(AnomalyService._internals.severityFor(AnomalyService.Z_THRESHOLD_MEDIUM)).toBe('medium');
-    // At exactly Z_THRESHOLD_HIGH → high
+    // Exactamente en Z_THRESHOLD_HIGH → high
     expect(AnomalyService._internals.severityFor(AnomalyService.Z_THRESHOLD_HIGH)).toBe('high');
+  });
+
+  it('severityFor works correctly for negative z-scores (below baseline)', () => {
+    expect(AnomalyService._internals.severityFor(-1.5)).toBe('low');
+    expect(AnomalyService._internals.severityFor(-3.5)).toBe('medium');
+    expect(AnomalyService._internals.severityFor(-5.0)).toBe('high');
   });
 });
 
@@ -378,7 +411,7 @@ describe('AnomalyService._internals.groupKey', () => {
   });
 });
 
-// ── Edge cases ────────────────────────────────────────────────────────────────
+// ── Casos límite ──────────────────────────────────────────────────────────────
 
 describe('AnomalyService.detect() — edge cases', () => {
   const svc = new AnomalyService();
@@ -403,7 +436,7 @@ describe('AnomalyService.detect() — edge cases', () => {
   });
 
   it('handles zero-value entries in baseline (skips when all zeros)', () => {
-    // If all historical values are 0, stddev = 0 → z = null → no anomaly
+    // Si todos los históricos son 0, stddev = 0 → z = null → sin anomalía
     const zeroHistory = [makeEntry(0), makeEntry(0), makeEntry(0)];
     const current = [makeEntry(500)];
     const result = svc.detect(current, zeroHistory);

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createServerClient } from '@/services/supabase/server';
 import { TopBar } from '@/components/shell/TopBar';
@@ -34,7 +34,7 @@ const ESTADO_LABELS: Record<string, string> = {
 };
 
 function formatearCo2e(kg: number): string {
-  if (kg >= 1_000_000) return `${(kg / 1_000_000).toFixed(2)} MtCO₂e`;
+  if (kg >= 1_000_000) return `${(kg / 1_000_000).toFixed(2)} ktCO₂e`;
   if (kg >= 1_000) return `${(kg / 1_000).toFixed(3)} tCO₂e`;
   return `${kg.toFixed(1)} kg CO₂e`;
 }
@@ -50,13 +50,14 @@ export default async function DetalleProveedorPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) notFound();
+  if (!user) redirect('/login');
 
   const { data: rawSupplier } = await supabase
     .from('suppliers')
     .select('id, name, category, contact_email, ruc, organization_id, created_at')
     .eq('id', id)
-    .single();
+    .is('archived_at', null)
+    .maybeSingle();
 
   if (!rawSupplier) notFound();
   const supplier = rawSupplier as Pick<
@@ -64,7 +65,7 @@ export default async function DetalleProveedorPage({
     'id' | 'name' | 'category' | 'contact_email' | 'ruc' | 'organization_id' | 'created_at'
   >;
 
-  // Defense-in-depth: verify caller belongs to this supplier's org
+  // Defensa en profundidad: verificar que el usuario pertenece a la org del proveedor
   const { data: memCheck } = await supabase
     .from('memberships')
     .select('role')
@@ -86,30 +87,47 @@ export default async function DetalleProveedorPage({
 
   const periodIds = periods.map((p) => p.id);
 
-  // Parallel: emission_results + recent activity_entries (both depend only on periodIds)
-  type FilaResultado = { reporting_period_id: string; co2e_kg: number };
+  // Fetch paralelo: emission_results, entradas recientes y voided status (todos dependen de periodIds)
+  type FilaResultado = { reporting_period_id: string; co2e_kg: number; activity_entry_id: string };
   type FilaEntrada = Pick<
     ActivityEntryRow,
     'id' | 'source_type' | 'raw_quantity' | 'raw_unit' | 'status' | 'created_at'
   >;
+  type FilaVoidCheck = { id: string; voided_at: string | null };
 
-  const [resultsRaw, rawEntriesRaw] = periodIds.length
+  const [resultsRaw, rawEntriesRaw, allEntriesVoidRaw] = periodIds.length
     ? await Promise.all([
         supabase
           .from('emission_results')
-          .select('reporting_period_id, co2e_kg')
+          .select('reporting_period_id, co2e_kg, activity_entry_id')
           .in('reporting_period_id', periodIds),
         supabase
           .from('activity_entries')
           .select('id, source_type, raw_quantity, raw_unit, status, created_at')
           .in('reporting_period_id', periodIds)
+          .is('voided_at', null)
           .order('created_at', { ascending: false })
           .limit(5),
+        supabase
+          .from('activity_entries')
+          .select('id, voided_at')
+          .in('reporting_period_id', periodIds),
       ])
-    : [{ data: [] as FilaResultado[] }, { data: [] as FilaEntrada[] }];
+    : [
+        { data: [] as FilaResultado[] },
+        { data: [] as FilaEntrada[] },
+        { data: [] as FilaVoidCheck[] },
+      ];
+
+  const voidedEntryIds = new Set(
+    ((allEntriesVoidRaw.data ?? []) as FilaVoidCheck[])
+      .filter((e) => e.voided_at !== null)
+      .map((e) => e.id),
+  );
 
   const co2eByPeriod = new Map<string, number>();
   for (const r of (resultsRaw.data ?? []) as FilaResultado[]) {
+    if (voidedEntryIds.has(r.activity_entry_id)) continue;
     co2eByPeriod.set(
       r.reporting_period_id,
       (co2eByPeriod.get(r.reporting_period_id) ?? 0) + r.co2e_kg,
@@ -286,7 +304,7 @@ export default async function DetalleProveedorPage({
                             fontSize: 'var(--text-xs)',
                           }}
                         >
-                          {new Date(p.start_date).toLocaleDateString('es-PE')}
+                          {new Date(p.start_date).toLocaleDateString('es-PE', { timeZone: 'UTC' })}
                         </td>
                         <td
                           style={{
@@ -296,7 +314,7 @@ export default async function DetalleProveedorPage({
                             fontSize: 'var(--text-xs)',
                           }}
                         >
-                          {new Date(p.end_date).toLocaleDateString('es-PE')}
+                          {new Date(p.end_date).toLocaleDateString('es-PE', { timeZone: 'UTC' })}
                         </td>
                         <td style={{ padding: 'var(--space-3) var(--space-4)' }}>
                           <Badge variant={variantEstadoPeriodo(p.status as PeriodStatus)}>

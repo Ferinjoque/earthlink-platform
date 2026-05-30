@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 import { createServerClient } from '@/services/supabase/server';
 
 export async function signIn(
@@ -26,15 +27,24 @@ export async function signIn(
   }
 
   const next = formData.get('next');
-  const destination =
-    typeof next === 'string' && next.startsWith('/') && !next.startsWith('//')
-      ? next
-      : '/dashboard';
+  let destination = '/dashboard';
+  if (typeof next === 'string' && next.length > 0) {
+    try {
+      // Normalizar con URL para neutralizar codificaciones /%09, /\\ y similares
+      const url = new URL(next, 'http://localhost');
+      if (url.host === 'localhost' && url.pathname.startsWith('/')) {
+        destination = url.pathname + url.search;
+      }
+    } catch {
+      // ruta inválida — usar destino por defecto
+    }
+  }
   redirect(destination);
 }
 
 export async function signOut(): Promise<void> {
   const supabase = await createServerClient();
   await supabase.auth.signOut();
+  revalidatePath('/', 'layout');
   redirect('/login');
 }

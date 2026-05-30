@@ -1,10 +1,10 @@
 -- =============================================================================
--- Migration 019: Remove hardcoded membership re-insert from fn_demo_reset
+-- Migración 019: Eliminar re-inserción hardcodeada de memberships de fn_demo_reset
 --
--- Step 4 of the previous version attempted to insert memberships for a
--- hardcoded user UUID that may not exist in auth.users, causing FK violation.
--- The seed script handles user creation + membership restoration after reset,
--- so the function only needs to clear data.
+-- El paso 4 de la versión anterior intentaba insertar memberships para un UUID
+-- hardcodeado que puede no existir en auth.users, causando violación de FK.
+-- El script de seed maneja la creación de usuario + restauración de memberships tras el reset,
+-- por lo que la función solo necesita limpiar datos.
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION public.fn_demo_reset()
@@ -14,7 +14,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  -- 1. TRUNCATE append-only + transactional tables (bypasses row-level triggers)
+  -- 1. TRUNCATE tablas solo-append + transaccionales (bypasea triggers a nivel de fila)
   TRUNCATE
     public.report_exports,
     public.audit_log,
@@ -25,11 +25,11 @@ BEGIN
     public.reporting_periods
   RESTART IDENTITY;
 
-  -- 2. Remove supplier-scoped memberships only (admin memberships preserved)
+  -- 2. Eliminar solo memberships de proveedor (memberships de admin se preservan)
   DELETE FROM public.memberships WHERE supplier_id IS NOT NULL;
 
-  -- 3. DELETE suppliers — ON DELETE SET NULL on memberships.supplier_id handles any
-  --    remaining rows. WHERE TRUE satisfies Supabase's "requires a WHERE clause" check.
+  -- 3. DELETE suppliers — ON DELETE SET NULL en memberships.supplier_id maneja las
+  --    filas restantes. WHERE TRUE satisface el chequeo "requiere cláusula WHERE" de Supabase.
   DELETE FROM public.suppliers WHERE TRUE;
 END;
 $$;

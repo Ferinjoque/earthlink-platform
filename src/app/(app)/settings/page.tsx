@@ -40,7 +40,7 @@ export default async function ConfiguracionPage() {
       .from('organizations')
       .select('name, country, industry')
       .eq('id', membership.organization_id)
-      .single();
+      .maybeSingle();
 
     const org = rawOrg as Pick<OrganizationRow, 'name' | 'country' | 'industry'> | null;
     if (org) {

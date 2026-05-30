@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useActionState, useEffect } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Upload, FileText, X, Table2, Download } from 'lucide-react';
 import { importActivityCsv, importActivityXlsx } from '@/actions/activity';
 import type { CsvImportState } from '@/actions/activity';
@@ -21,10 +22,9 @@ interface BulkImportPanelProps {
 
 type Tab = 'manual' | 'archivo';
 
-// ── Template downloads ────────────────────────────────────────────────────────
 
-function downloadCsvTemplate() {
-  const blob = new Blob([getCsvTemplate()], { type: 'text/csv;charset=utf-8;' });
+function downloadCsvTemplate(suppliers: Supplier[]) {
+  const blob = new Blob([getCsvTemplate(suppliers)], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -33,7 +33,6 @@ function downloadCsvTemplate() {
   URL.revokeObjectURL(url);
 }
 
-// ── CSV preview table ─────────────────────────────────────────────────────────
 
 const CABECERAS_PREVIEW = ['Fila', 'Proveedor', 'Mes', 'Fuente', 'Cant.', 'Unidad', 'Estado'];
 
@@ -131,7 +130,6 @@ const tdPrev: React.CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
-// ── Archivo tab ───────────────────────────────────────────────────────────────
 
 function ArchivoTab({ suppliers }: { suppliers: Supplier[] }) {
   const supplierMap = new Map(suppliers.map((s) => [s.id, s.name]));
@@ -291,7 +289,7 @@ function ArchivoTab({ suppliers }: { suppliers: Supplier[] }) {
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)' }}>
               Plantillas:
             </span>
-            <button type="button" className="tmpl-btn" onClick={downloadCsvTemplate} style={btnTmpl}>
+            <button type="button" className="tmpl-btn" onClick={() => downloadCsvTemplate(suppliers)} style={btnTmpl}>
               <Download size={11} /> CSV
             </button>
             <button
@@ -449,7 +447,121 @@ function ArchivoTab({ suppliers }: { suppliers: Supplier[] }) {
         <SubmitBtn disabled={xlsxPending} pending={xlsxPending} label="Importar desde Excel" />
       </form>
 
-      {/* Paste CSV (collapsible-ish — always visible but labeled clearly) */}
+      {/* Referencia de IDs de proveedores */}
+      {suppliers.length > 0 && (
+        <details>
+          <summary
+            style={{
+              fontSize: 'var(--text-sm)',
+              color: 'var(--color-ink-3)',
+              cursor: 'pointer',
+              userSelect: 'none',
+              listStyle: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-2)',
+            }}
+          >
+            <span style={{ fontSize: '10px' }}>▶</span>
+            IDs de proveedores — necesarios para el CSV
+          </summary>
+          <div
+            style={{
+              marginTop: 'var(--space-3)',
+              background: 'var(--color-surface-2)',
+              borderRadius: 'var(--radius-md)',
+              padding: 'var(--space-3)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--space-1)',
+            }}
+          >
+            <p
+              style={{
+                fontSize: 'var(--text-xs)',
+                color: 'var(--color-ink-3)',
+                margin: '0 0 var(--space-2)',
+              }}
+            >
+              Copia el UUID del proveedor que corresponda en la columna{' '}
+              <code
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  background: 'var(--color-surface-3)',
+                  padding: '1px 4px',
+                  borderRadius: 'var(--radius-xs)',
+                }}
+              >
+                supplier_id
+              </code>{' '}
+              del CSV.
+            </p>
+            <table
+              style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                fontSize: 'var(--text-xs)',
+                fontFamily: 'var(--font-mono)',
+              }}
+            >
+              <thead>
+                <tr>
+                  {['Proveedor', 'UUID'].map((h) => (
+                    <th
+                      key={h}
+                      style={{
+                        textAlign: 'left',
+                        padding: '4px 8px',
+                        color: 'var(--color-ink-3)',
+                        fontWeight: 600,
+                        borderBottom: '1px solid var(--color-border)',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {suppliers.map((s) => (
+                  <tr key={s.id}>
+                    <td
+                      style={{
+                        padding: '5px 8px',
+                        color: 'var(--color-ink-1)',
+                        fontFamily: 'var(--font-sans)',
+                        fontWeight: 500,
+                        borderBottom: '1px solid var(--color-border)',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {s.name}
+                    </td>
+                    <td
+                      style={{
+                        padding: '5px 8px',
+                        color: 'var(--color-ink-2)',
+                        borderBottom: '1px solid var(--color-border)',
+                      }}
+                    >
+                      <span
+                        title="Haz clic para copiar"
+                        onClick={() => navigator.clipboard.writeText(s.id).catch(() => undefined)}
+                        style={{ cursor: 'copy', userSelect: 'all' }}
+                      >
+                        {s.id}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      )}
+
+      {/* Pegar CSV manualmente */}
       <details>
         <summary
           style={{
@@ -490,7 +602,6 @@ function ArchivoTab({ suppliers }: { suppliers: Supplier[] }) {
   );
 }
 
-// ── Main BulkImportPanel ──────────────────────────────────────────────────────
 
 const TABS: { val: Tab; Icon: React.ElementType; label: string }[] = [
   { val: 'manual', Icon: Table2, label: 'Manual' },
@@ -550,18 +661,26 @@ export function BulkImportPanel({ suppliers, defaultSupplierId }: BulkImportPane
         ))}
       </div>
 
-      {/* Content */}
-      <div style={{ padding: 'var(--space-6)' }}>
-        {tab === 'manual' && (
-          <BulkEntryBuilder suppliers={suppliers} defaultSupplierId={defaultSupplierId} />
-        )}
-        {tab === 'archivo' && <ArchivoTab suppliers={suppliers} />}
-      </div>
+      {/* Contenido con transición de tab */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={tab}
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -4 }}
+          transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+          style={{ padding: 'var(--space-6)' }}
+        >
+          {tab === 'manual' && (
+            <BulkEntryBuilder suppliers={suppliers} defaultSupplierId={defaultSupplierId} />
+          )}
+          {tab === 'archivo' && <ArchivoTab suppliers={suppliers} />}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 const btnTmpl: React.CSSProperties = {
   background: 'none',

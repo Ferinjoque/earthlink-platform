@@ -1,3 +1,4 @@
+import Big from 'big.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { EvaluationTotals, GhgScope } from '../calc/types';
 
@@ -22,20 +23,21 @@ export class EvaluationRepository {
     const rows = data as Array<{ co2e_kg: number; scope: number }>;
     if (rows.length === 0) return null;
 
-    let total = 0;
-    let s1 = 0;
-    let s2 = 0;
+    let total = new Big(0);
+    let s1 = new Big(0);
+    let s2 = new Big(0);
     for (const r of rows) {
-      total += r.co2e_kg;
-      if (r.scope === 1) s1 += r.co2e_kg;
-      else s2 += r.co2e_kg;
+      const val = new Big(r.co2e_kg);
+      total = total.plus(val);
+      if (r.scope === 1) s1 = s1.plus(val);
+      else s2 = s2.plus(val);
     }
 
     return {
       periodId,
-      totalCo2eKg: total,
-      scope1Co2eKg: s1,
-      scope2Co2eKg: s2,
+      totalCo2eKg: total.toNumber(),
+      scope1Co2eKg: s1.toNumber(),
+      scope2Co2eKg: s2.toNumber(),
       resultCount: rows.length,
     };
   }
@@ -45,7 +47,7 @@ export class EvaluationRepository {
     if (!summary) {
       return {
         totalCo2eKg: 0,
-        byScope: { scope1: 0, scope2: 0 } as Record<GhgScope, number>,
+        byScope: { scope1: 0, scope2: 0, none: 0 },
         byActivity: {},
         recordCount: 0,
       };
@@ -56,7 +58,8 @@ export class EvaluationRepository {
       byScope: {
         scope1: summary.scope1Co2eKg,
         scope2: summary.scope2Co2eKg,
-      } as Record<GhgScope, number>,
+        none: 0,
+      },
       byActivity: {},
       recordCount: summary.resultCount,
     };

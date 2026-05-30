@@ -51,7 +51,8 @@ export default async function ConsumoPage() {
     const { data } = await supabase
       .from('suppliers')
       .select('id')
-      .in('organization_id', adminOrgIds);
+      .in('organization_id', adminOrgIds)
+      .is('archived_at', null);
     if (data) adminSupplierIds.push(...(data as Pick<SupplierRow, 'id'>[]).map((s) => s.id));
   }
 
@@ -59,18 +60,23 @@ export default async function ConsumoPage() {
 
   const suppliersData: Pick<SupplierRow, 'id' | 'name'>[] = [];
   if (supplierIds.length) {
-    const { data } = await supabase.from('suppliers').select('id, name').in('id', supplierIds);
+    const { data } = await supabase
+      .from('suppliers')
+      .select('id, name')
+      .in('id', supplierIds)
+      .is('archived_at', null);
     if (data) suppliersData.push(...data);
   }
   const supplierMap = new Map(suppliersData.map((s) => [s.id, s.name]));
+  const activeSupplierIds = suppliersData.map((s) => s.id);
 
-  // All periods (all statuses) — historical view
+  // Todos los periodos (todos los estados) — vista histórica — solo proveedores activos
   const periodsData: Pick<ReportingPeriodRow, 'id' | 'start_date' | 'supplier_id'>[] = [];
-  if (supplierIds.length) {
+  if (activeSupplierIds.length) {
     const { data } = await supabase
       .from('reporting_periods')
       .select('id, start_date, supplier_id')
-      .in('supplier_id', supplierIds);
+      .in('supplier_id', activeSupplierIds);
     if (data) periodsData.push(...data);
   }
   const periodMap = new Map(periodsData.map((p) => [p.id, p]));
@@ -86,6 +92,7 @@ export default async function ConsumoPage() {
       .from('activity_entries')
       .select('source_type, raw_quantity, raw_unit, activity_kind, reporting_period_id')
       .in('reporting_period_id', periodIds)
+      .is('voided_at', null)
       .limit(5000);
     if (data) entriesData.push(...(data as EntryFetch[]));
   }

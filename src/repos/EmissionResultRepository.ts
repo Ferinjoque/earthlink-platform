@@ -8,7 +8,7 @@ export class EmissionResultRepository {
     const row = {
       activity_entry_id: result.activityRecordId,
       reporting_period_id: periodId,
-      scope: result.scope === 'scope1' ? 1 : 2,
+      scope: result.scope === 'scope1' ? 1 : result.scope === 'scope2' ? 2 : null,
       co2e_kg: result.co2eKg,
       factor_used: factor.factorKgCo2ePerUnit,
       factor_unit: factor.standardUnit,
@@ -19,7 +19,7 @@ export class EmissionResultRepository {
       emission_factor_id: result.factorId ?? null,
     };
     const { error } = await this.client.from('emission_results').insert(row);
-    if (error) throw new Error(`Failed to insert emission_result: ${error.message}`);
+    if (error) throw new Error(`Error al insertar emission_result: ${error.message}`);
   }
 
   async insertMany(
@@ -29,7 +29,7 @@ export class EmissionResultRepository {
     const rows = results.map(({ result, periodId, factor }) => ({
       activity_entry_id: result.activityRecordId,
       reporting_period_id: periodId,
-      scope: result.scope === 'scope1' ? 1 : 2,
+      scope: result.scope === 'scope1' ? 1 : result.scope === 'scope2' ? 2 : null,
       co2e_kg: result.co2eKg,
       factor_used: factor.factorKgCo2ePerUnit,
       factor_unit: factor.standardUnit,
@@ -42,7 +42,7 @@ export class EmissionResultRepository {
     const { error } = await this.client
       .from('emission_results')
       .upsert(rows, { onConflict: 'calc_hash', ignoreDuplicates: true });
-    if (error) throw new Error(`Failed to batch-insert emission_results: ${error.message}`);
+    if (error) throw new Error(`Error al insertar emission_results en lote: ${error.message}`);
   }
 
   async findByPeriodId(periodId: string): Promise<readonly EmissionResult[]> {
@@ -61,17 +61,17 @@ export class EmissionResultRepository {
       normalizedValue: row['normalized_quantity'] as number,
       normalizedUnit: row['normalized_unit'] as EmissionResult['normalizedUnit'],
       co2eKg: row['co2e_kg'] as number,
-      scope: row['scope'] === 1 ? ('scope1' as const) : ('scope2' as const),
+      scope: row['scope'] === 1 ? ('scope1' as const) : row['scope'] === 2 ? ('scope2' as const) : ('none' as const),
       engineVersion: row['calc_version'] as string,
       calcHash: row['calc_hash'] as string,
     }));
   }
 
   update(): never {
-    throw new Error('EmissionResultRepository is append-only — update is forbidden');
+    throw new Error('EmissionResultRepository es solo escritura — update no permitido');
   }
 
   delete(): never {
-    throw new Error('EmissionResultRepository is append-only — delete is forbidden');
+    throw new Error('EmissionResultRepository es solo escritura — delete no permitido');
   }
 }

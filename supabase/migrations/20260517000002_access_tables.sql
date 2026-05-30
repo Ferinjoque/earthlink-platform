@@ -1,6 +1,6 @@
 -- =============================================================================
--- Migration 002: Auth / Access Tables (3 tables)
--- Organizations, Suppliers, Memberships
+-- Migración 002: Tablas de acceso / autenticación (3 tablas)
+-- Organizaciones, Proveedores, Membresías
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
@@ -16,8 +16,8 @@ CREATE TABLE public.organizations (
   updated_at timestamptz DEFAULT now() NOT NULL
 );
 
-COMMENT ON TABLE  public.organizations IS 'EarthLink client companies. Each organization owns suppliers.';
-COMMENT ON COLUMN public.organizations.ruc IS 'Peruvian tax ID (RUC). Optional for non-PE entities.';
+COMMENT ON TABLE  public.organizations IS 'Empresas cliente de EarthLink. Cada organización posee proveedores.';
+COMMENT ON COLUMN public.organizations.ruc IS 'RUC (identificador tributario peruano). Opcional para entidades no peruanas.';
 
 -- ---------------------------------------------------------------------------
 -- 7. suppliers
@@ -33,7 +33,7 @@ CREATE TABLE public.suppliers (
   updated_at      timestamptz DEFAULT now() NOT NULL
 );
 
-COMMENT ON TABLE public.suppliers IS 'Supply-chain entities within an organization whose emissions are audited.';
+COMMENT ON TABLE public.suppliers IS 'Entidades de la cadena de suministro dentro de una organización cuyas emisiones son auditadas.';
 
 CREATE INDEX idx_suppliers_org ON public.suppliers (organization_id);
 
@@ -55,8 +55,8 @@ CREATE TABLE public.memberships (
   )
 );
 
-COMMENT ON TABLE  public.memberships IS 'RBAC link: user ↔ organization with role. supplier role requires supplier_id.';
-COMMENT ON COLUMN public.memberships.role IS 'supplier: data entry for one supplier | consultant: read-all for org | admin: full control';
+COMMENT ON TABLE  public.memberships IS 'Vínculo RBAC: usuario ↔ organización con rol. El rol supplier requiere supplier_id.';
+COMMENT ON COLUMN public.memberships.role IS 'supplier: carga de datos para un proveedor | consultant: lectura completa de la org | admin: control total';
 
 CREATE INDEX idx_memberships_user ON public.memberships (user_id);
 CREATE INDEX idx_memberships_org  ON public.memberships (organization_id);

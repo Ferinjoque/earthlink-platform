@@ -1,20 +1,19 @@
 import type { EmissionSourceType } from '@/types/database';
 import { ETIQUETAS_FUENTE, ETIQUETA_UNIDAD } from './activity-options';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface EntryWithPeriod {
   source_type: EmissionSourceType;
   secondary: string;
   raw_quantity: number;
   raw_unit: string;
-  period_start: string; // ISO date string YYYY-MM-DD
+  period_start: string; // Fecha ISO YYYY-MM-DD
   supplier_name: string;
   supplier_id: string;
 }
 
 export interface VirtualMeter {
-  id: string; // `${source_type}::${secondary}::${raw_unit}`
+  id: string; // clave: `${source_type}::${secondary}::${raw_unit}`
   source_type: EmissionSourceType;
   secondary: string;
   unit: string;
@@ -23,7 +22,7 @@ export interface VirtualMeter {
   supplier_id: string;
 }
 
-export type MonthData = Record<number, number>; // month (1–12) → quantity sum
+export type MonthData = Record<number, number>; // mes (1–12) → suma de cantidad
 
 export interface MeterYearSummary {
   meter: VirtualMeter;
@@ -32,7 +31,6 @@ export interface MeterYearSummary {
   peak: { month: number; value: number } | null;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function meterId(e: EntryWithPeriod): string {
   return `${e.source_type}::${e.secondary}::${e.raw_unit}::${e.supplier_id}`;
@@ -91,7 +89,7 @@ export function aggregateByMonth(
 
   for (const e of yearEntries) {
     const id = meterId(e);
-    const month = parsePeriodDate(e.period_start)!.month; // 1–12
+    const month = parsePeriodDate(e.period_start)!.month; // 1–12 (enero–diciembre)
 
     if (!meterMap.has(id)) {
       meterMap.set(id, {
@@ -115,7 +113,7 @@ export function aggregateByMonth(
     summary.total += e.raw_quantity;
   }
 
-  // Compute peak after all aggregation
+  // Calcular el pico tras toda la agregación
   for (const summary of meterMap.values()) {
     let peak: { month: number; value: number } | null = null;
     for (const [m, v] of Object.entries(summary.monthly)) {

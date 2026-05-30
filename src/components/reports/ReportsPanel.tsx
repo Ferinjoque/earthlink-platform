@@ -35,7 +35,6 @@ interface ReportsPanelProps {
   orgName: string;
 }
 
-// ─── helpers ────────────────────────────────────────────────────────────────
 
 function groupByYear(periodos: PeriodoExportable[]): Map<number, PeriodoExportable[]> {
   const map = new Map<number, PeriodoExportable[]>();
@@ -44,7 +43,7 @@ function groupByYear(periodos: PeriodoExportable[]): Map<number, PeriodoExportab
     arr.push(p);
     map.set(p.year, arr);
   }
-  // Sort years descending
+  // Ordenar años de más reciente a más antiguo
   return new Map([...map.entries()].sort((a, b) => b[0] - a[0]));
 }
 
@@ -67,7 +66,6 @@ function sumarPeriodos(periodos: PeriodoExportable[]): {
   return { totalCo2eKg, scope1Kg, scope2Kg, nProveedores: proveedores.size };
 }
 
-// ─── component ───────────────────────────────────────────────────────────────
 
 export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps) {
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set());
@@ -99,7 +97,7 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
     year: 'numeric',
   });
 
-  // Trigger download when CSV content is returned + refresh history
+  // Disparar descarga cuando el CSV vuelve del servidor y refrescar historial
   useEffect(() => {
     if (state?.success && state.csvContent && state.filename) {
       const blob = new Blob([state.csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -152,26 +150,28 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
 
   const gruposPorAnio = groupByYear(periodos);
 
-  // Annual stats for selected periods
+  // Estadísticas anuales de los periodos seleccionados
   const seleccionadosList = periodos.filter((p) => seleccionados.has(p.id));
   const statsSeleccion = sumarPeriodos(seleccionadosList);
 
-  // Detect if all selected are same year (for filename)
+  // Detectar si todos los periodos son del mismo año (para el nombre del archivo)
   const aniosSeleccionados = [...new Set(seleccionadosList.map((p) => p.year))];
   const anioUnico: number | null =
     aniosSeleccionados.length === 1 && aniosSeleccionados[0] !== undefined
       ? aniosSeleccionados[0]
       : null;
 
-  // Last export sha256 for print footer
+  // sha256 del último export para pie de página en impresión
   const ultimoSha = state?.success && state.sha256 ? state.sha256 : (historial[0]?.file_sha256 ?? null);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-8)' }}>
-      {/* Print styles */}
+      {/* Estilos de impresión */}
       <style>{`
         @media print {
           @page { margin: 18mm 20mm; }
+          @page :first { margin-top: 0; }
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           .reports-print-header { display: block !important; }
           .reports-print-footer { display: block !important; }
           [data-no-print] { display: none !important; }
@@ -186,35 +186,43 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
             width: 100% !important;
             border-collapse: collapse !important;
             font-size: 8pt !important;
+            widows: 2;
+            orphans: 2;
           }
           .reports-table thead { display: table-header-group !important; }
           .reports-table th,
           .reports-table td {
-            border: 1px solid #ccc !important;
+            border: 0.5pt solid #ccc !important;
             color: #000 !important;
             background: transparent !important;
-            padding: 4pt 6pt !important;
+            padding: 3.5pt 5pt !important;
             font-size: 8pt !important;
+            word-break: break-word;
           }
           .reports-table thead th {
-            background: #f0f0f0 !important;
+            background: #f4f4f4 !important;
             font-weight: 700 !important;
+            border-bottom: 1pt solid #999 !important;
           }
-          .reports-table tr { page-break-inside: avoid; }
+          .reports-table tr { break-inside: avoid; page-break-inside: avoid; }
+          .reports-table tbody tr:nth-child(even) td { background: #fafafa !important; }
           .reports-summary-cards { display: none !important; }
-          .reports-year-group { page-break-inside: avoid; margin-top: 16pt; }
+          .reports-year-group { break-inside: avoid; page-break-inside: avoid; margin-top: 16pt; }
           .reports-year-group + .reports-year-group { margin-top: 24pt; }
           .reports-year-heading {
             font-size: 11pt !important;
             font-weight: 700 !important;
             color: #000 !important;
-            border-bottom: 1.5px solid #000 !important;
+            border-bottom: 1.5pt solid #000 !important;
             padding-bottom: 4pt !important;
             margin-bottom: 8pt !important;
+            break-after: avoid;
+            page-break-after: avoid;
           }
           .reports-checkbox-col { display: none !important; }
           .reports-actions-row { display: none !important; }
           .rp-year-content { grid-template-rows: 1fr !important; }
+          a { text-decoration: none !important; color: inherit !important; }
         }
 
         .reports-print-header { display: none; }
@@ -226,7 +234,7 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
         .reports-year-toggle:hover { color: var(--color-ink-1) !important; }
         .reports-collapse-btn:hover { opacity: 0.7; }
 
-        /* Collapse/expand animation via CSS grid rows */
+        /* Animación colapso/expansión vía filas de grid CSS */
         .rp-year-content {
           display: grid;
           grid-template-rows: 1fr;
@@ -239,16 +247,16 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
           overflow: hidden;
         }
 
-        /* (summary card uses inline transition — no CSS animation needed) */
+        /* (tarjeta resumen usa transición inline — no se necesita animación CSS) */
       `}</style>
 
-      {/* Hidden download anchor */}
+      {/* Enlace de descarga oculto */}
       <a ref={downloadRef} style={{ display: 'none' }} aria-hidden="true" />
 
       {/* ── Print-only cover page ── */}
       <div className="reports-print-header" aria-hidden="true">
         <div style={{ pageBreakAfter: 'always', display: 'flex', flexDirection: 'column', minHeight: '240mm', justifyContent: 'space-between', padding: '0 0 16pt' }}>
-          {/* Wordmark */}
+          {/* Logotipo */}
           <div>
             <p style={{ fontFamily: 'var(--font-mono)', fontSize: '9pt', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#333', margin: '0 0 6pt', fontWeight: 700 }}>
               EarthLink
@@ -256,7 +264,7 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
             <div style={{ width: '32pt', height: '1.5pt', background: '#000', margin: '0 0 0' }} />
           </div>
 
-          {/* Main title block */}
+          {/* Bloque de título principal */}
           <div style={{ padding: '0' }}>
             <p style={{ fontFamily: 'var(--font-mono)', fontSize: '7pt', color: '#999', margin: '0 0 14pt', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
               Protocolo GHG · Alcances 1 y 2
@@ -276,7 +284,7 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
             </p>
           </div>
 
-          {/* Stats strip */}
+          {/* Franja de estadísticas */}
           {(() => {
             const statsPortada = seleccionados.size > 0 ? statsSeleccion : sumarPeriodos(periodos);
             const nPeriodos = seleccionados.size > 0 ? seleccionados.size : periodos.length;
@@ -303,7 +311,7 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
             );
           })()}
 
-          {/* Footer: integrity */}
+          {/* Pie de página: integridad */}
           <div style={{ borderTop: '0.5pt solid #e8e8e8', paddingTop: '6pt' }}>
             <p style={{ fontFamily: 'var(--font-mono)', fontSize: '6pt', color: '#bbb', margin: 0 }}>
               Generado por EarthLink · {fechaHoy}
@@ -891,7 +899,6 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
   );
 }
 
-// ─── sub-components ──────────────────────────────────────────────────────────
 
 function SummaryKpi({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
@@ -906,7 +913,6 @@ function SummaryKpi({ label, value, color }: { label: string; value: string; col
   );
 }
 
-// ─── style constants ──────────────────────────────────────────────────────────
 
 const estiloTh: React.CSSProperties = {
   textAlign: 'left',

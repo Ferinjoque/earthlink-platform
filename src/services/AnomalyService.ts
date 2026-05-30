@@ -18,21 +18,20 @@ export class AnomalyService {
   static readonly Z_THRESHOLD_LOW = 2.0;
   static readonly Z_THRESHOLD_MEDIUM = 3.0;
   static readonly Z_THRESHOLD_HIGH = 4.5;
-  // Minimum data points needed for a statistically meaningful z-score
+  // Mínimo de puntos de datos para un z-score estadísticamente significativo
   static readonly MIN_BASELINE = 3;
 
   /**
-   * Pure detection — no I/O.
+   * Detección pura — sin I/O.
    *
-   * Compares each current entry against historical entries for the SAME
-   * (sourceType × secondary × rawUnit) group. Entries with different fuel
-   * types, refrigerants, grid regions, or measurement units are NEVER
-   * mixed into the same baseline — mixing units (e.g. kWh vs MWh) would
-   * produce meaningless z-scores, and mixing fuel types (diesel vs LPG)
-   * conflates unrelated consumption patterns.
+   * Compara cada entrada actual contra las históricas del MISMO grupo
+   * (sourceType × secondary × rawUnit). Nunca se mezclan tipos de combustible,
+   * refrigerantes, regiones eléctricas ni unidades distintas en la misma línea base
+   * — mezclar unidades (kWh vs MWh) produce z-scores sin sentido, y mezclar
+   * combustibles (diesel vs LPG) confunde patrones de consumo no relacionados.
    *
-   * Uses sample standard deviation (ddof = 1) for unbiased estimation.
-   * Requires at least MIN_BASELINE data points in the group.
+   * Usa desviación estándar muestral (ddof = 1) para estimación sin sesgo.
+   * Requiere al menos MIN_BASELINE puntos en el grupo.
    */
   detect(
     current: readonly ActivityEntry[],
@@ -57,7 +56,7 @@ export class AnomalyService {
 
       const values = baseline.map((h) => h.rawQuantity);
       const z = AnomalyService.zScore(entry.rawQuantity, values);
-      if (z === null || z < AnomalyService.Z_THRESHOLD_LOW) continue;
+      if (z === null || Math.abs(z) < AnomalyService.Z_THRESHOLD_LOW) continue;
 
       const mean = AnomalyService.mean(values);
       const stddev = AnomalyService.stddev(values, mean);
@@ -75,6 +74,7 @@ export class AnomalyService {
 
       const sourceLabel = SOURCE_LABELS[entry.sourceType] ?? entry.sourceType;
       const secondaryLabel = secondary && secondary !== 'default' ? ` (${secondary})` : '';
+      const direction = entry.rawQuantity >= mean ? 'sobre' : 'bajo';
 
       anomalies.push({
         entryId: entry.id,
@@ -85,14 +85,13 @@ export class AnomalyService {
         historicalMean: mean,
         historicalStddev: stddev,
         severity,
-        message: `${sourceLabel}${secondaryLabel}: ${entry.rawQuantity.toLocaleString('es', { maximumFractionDigits: 2 })} ${entry.rawUnit} es ${z.toFixed(2)}σ sobre la media histórica (${mean.toFixed(2)} ${entry.rawUnit}). Verificar datos.`,
+        message: `${sourceLabel}${secondaryLabel}: ${entry.rawQuantity.toLocaleString('es', { maximumFractionDigits: 2 })} ${entry.rawUnit} es ${Math.abs(z).toFixed(2)}σ ${direction} la media histórica (${mean.toFixed(2)} ${entry.rawUnit}). Verificar datos.`,
       });
     }
 
     return anomalies;
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
 
   private static groupKey(
     sourceType: EmissionSourceType,
@@ -121,23 +120,23 @@ export class AnomalyService {
     }
   }
 
-  /**
-   * Z-score using sample standard deviation (ddof = 1).
-   * Returns null when the population is too small or has zero variance.
-   */
+  // Retorna null si la población es muy pequeña, varianza cero, o resultado no finito
   private static zScore(value: number, population: readonly number[]): number | null {
     if (population.length < AnomalyService.MIN_BASELINE) return null;
     const m = AnomalyService.mean(population);
     const s = AnomalyService.stddev(population, m);
     if (s === 0) return null;
-    return Math.abs(value - m) / s;
+    const z = (value - m) / s;
+    // Desviaciones estándar muy pequeñas (cerca de 0 por punto flotante) pueden producir Infinity
+    if (!Number.isFinite(z)) return null;
+    return z;
   }
 
   private static mean(values: readonly number[]): number {
     return values.reduce((acc, v) => acc + v, 0) / values.length;
   }
 
-  /** Sample standard deviation (ddof = 1). */
+  // Desviación estándar muestral (ddof = 1) para estimación sin sesgo
   private static stddev(values: readonly number[], mean: number): number {
     if (values.length < 2) return 0;
     const variance =
@@ -146,12 +145,13 @@ export class AnomalyService {
   }
 
   private static severityFor(z: number): DetectedAnomaly['severity'] {
-    if (z >= AnomalyService.Z_THRESHOLD_HIGH) return 'high';
-    if (z >= AnomalyService.Z_THRESHOLD_MEDIUM) return 'medium';
+    const absZ = Math.abs(z);
+    if (absZ >= AnomalyService.Z_THRESHOLD_HIGH) return 'high';
+    if (absZ >= AnomalyService.Z_THRESHOLD_MEDIUM) return 'medium';
     return 'low';
   }
 
-  // Expose internals for testing
+  // Expuesto para tests unitarios
   static readonly _internals = {
     zScore: AnomalyService.zScore.bind(AnomalyService),
     mean: AnomalyService.mean.bind(AnomalyService),

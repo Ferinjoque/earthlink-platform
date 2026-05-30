@@ -1,6 +1,6 @@
 -- =============================================================================
--- Migration 004: Audit Tables (2 tables)
--- Append-only immutable records — mutation guards applied in migration 005.
+-- Migración 004: Tablas de auditoría (2 tablas)
+-- Registros inmutables solo-append — guardias de mutación aplicados en migración 005.
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
@@ -19,9 +19,9 @@ CREATE TABLE public.audit_log (
   user_agent   text
 );
 
-COMMENT ON TABLE  public.audit_log IS 'Immutable event ledger. Every mutation to critical tables is automatically logged. No UPDATE or DELETE permitted.';
+COMMENT ON TABLE  public.audit_log IS 'Registro de eventos inmutable. Cada mutación a tablas críticas queda automáticamente registrada. No se permiten UPDATE ni DELETE.';
 COMMENT ON COLUMN public.audit_log.action IS 'INSERT | UPDATE | DELETE | LOCK | EXPORT | LOGIN | ANOMALY_RESOLVED';
-COMMENT ON COLUMN public.audit_log.record_id IS 'Primary key of the affected row in table_name.';
+COMMENT ON COLUMN public.audit_log.record_id IS 'Clave primaria de la fila afectada en table_name.';
 
 CREATE INDEX idx_audit_performed_at     ON public.audit_log (performed_at DESC);
 CREATE INDEX idx_audit_table_record     ON public.audit_log (table_name, record_id);
@@ -43,9 +43,9 @@ CREATE TABLE public.report_exports (
   expires_at           timestamptz
 );
 
-COMMENT ON TABLE  public.report_exports IS 'Append-only registry of all generated GHG reports. Each export immutably records its SHA-256 digest for verification.';
-COMMENT ON COLUMN public.report_exports.file_sha256 IS 'Hex SHA-256 of the exported file — users can verify report integrity offline.';
-COMMENT ON COLUMN public.report_exports.scope_filter IS 'Which GHG scopes are included: [1], [2], or [1,2].';
+COMMENT ON TABLE  public.report_exports IS 'Registro solo-append de todos los reportes GHG generados. Cada exportación registra inmutablemente su hash SHA-256 para verificación.';
+COMMENT ON COLUMN public.report_exports.file_sha256 IS 'SHA-256 hexadecimal del archivo exportado — los usuarios pueden verificar la integridad del reporte sin conexión.';
+COMMENT ON COLUMN public.report_exports.scope_filter IS 'Alcances GHG incluidos en el reporte: [1], [2], o [1,2].';
 
 CREATE INDEX idx_exports_org        ON public.report_exports (organization_id);
 CREATE INDEX idx_exports_generated  ON public.report_exports (generated_at DESC);

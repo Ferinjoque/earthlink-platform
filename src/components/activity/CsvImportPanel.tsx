@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Upload, FileText, X } from 'lucide-react';
 import { importActivityCsv } from '@/actions/activity';
 import type { CsvImportState } from '@/actions/activity';
@@ -39,6 +40,7 @@ export function CsvImportPanel() {
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const router = useRouter();
 
   useEffect(() => {
     if (!state?.submittedAt) return;
@@ -48,10 +50,11 @@ export function CsvImportPanel() {
         `${n} registro${n !== 1 ? 's' : ''} importado${n !== 1 ? 's' : ''}${(state.skipped ?? 0) > 0 ? ` · ${state.skipped} omitidos` : ''}`,
         'success',
       );
+      router.refresh();
     } else if (state.error) {
       toast(state.error, 'error');
     }
-  }, [state?.submittedAt]);
+  }, [state?.submittedAt, router]);
 
   function loadFile(file: File) {
     setFileName(file.name);

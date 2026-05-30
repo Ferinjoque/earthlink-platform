@@ -1,12 +1,12 @@
 -- =============================================================================
--- Migration 009: Schema catch-up + seed + demo user
--- The remote DB had an old 4-table schema that conflicts with our 15-table rebuild.
--- This migration drops the old tables, creates the full new schema idempotently,
--- seeds reference + demo data, and creates the demo auth user.
+-- Migración 009: Sincronización de esquema + seed + usuario demo
+-- La BD remota tenía un esquema antiguo de 4 tablas que conflictúa con la reconstrucción de 15 tablas.
+-- Esta migración elimina las tablas antiguas, crea el esquema completo de forma idempotente,
+-- inserta datos de referencia + demo y crea el usuario de autenticación demo.
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
--- 0. Drop old conflicting tables (FK dependency order)
+-- 0. Eliminar tablas antiguas conflictivas (orden de dependencia FK)
 -- ---------------------------------------------------------------------------
 DROP TABLE IF EXISTS public.environmental_evaluations CASCADE;
 DROP TABLE IF EXISTS public.suppliers                 CASCADE;
@@ -14,7 +14,7 @@ DROP TABLE IF EXISTS public.companies                 CASCADE;
 DROP TABLE IF EXISTS public.emission_factors          CASCADE;
 
 -- ---------------------------------------------------------------------------
--- 1. Reference tables
+-- 1. Tablas de referencia
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.fuel_types (
   id           uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -97,7 +97,7 @@ CREATE TABLE IF NOT EXISTS public.unit_conversions (
 );
 
 -- ---------------------------------------------------------------------------
--- 2. Access tables
+-- 2. Tablas de acceso
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_set_updated_at()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -159,7 +159,7 @@ CREATE TRIGGER trg_suppliers_updated_at
   FOR EACH ROW EXECUTE FUNCTION public.fn_set_updated_at();
 
 -- ---------------------------------------------------------------------------
--- 3. Transactional tables
+-- 3. Tablas transaccionales
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.reporting_periods (
   id          uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -274,7 +274,7 @@ CREATE INDEX IF NOT EXISTS idx_anomalies_entry    ON public.anomaly_flags (activ
 CREATE INDEX IF NOT EXISTS idx_anomalies_severity ON public.anomaly_flags (severity) WHERE NOT is_resolved;
 
 -- ---------------------------------------------------------------------------
--- 4. Audit tables
+-- 4. Tablas de auditoría
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.audit_log (
   id           uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -310,13 +310,13 @@ CREATE INDEX IF NOT EXISTS idx_exports_org       ON public.report_exports (organ
 CREATE INDEX IF NOT EXISTS idx_exports_generated ON public.report_exports (generated_at DESC);
 
 -- ---------------------------------------------------------------------------
--- 5. Triggers: append-only guards + auto-audit
+-- 5. Triggers: guardias solo-append + auto-auditoría
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_prevent_mutation()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
   RAISE EXCEPTION
-    'Table "%" is append-only. Mutating record "%" is not permitted.',
+    'La tabla "%" es solo-append. No está permitido mutar el registro "%".',
     TG_TABLE_NAME, OLD.id
     USING ERRCODE = 'restrict_violation';
 END;
@@ -379,7 +379,7 @@ CREATE TRIGGER trg_audit_anomaly_flags
   FOR EACH ROW EXECUTE FUNCTION public.fn_audit_changes();
 
 -- ---------------------------------------------------------------------------
--- 6. Emission factor auto-key trigger (migration 006)
+-- 6. Trigger de clave automática para factores de emisión (migración 006)
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_compute_ef_key()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -416,7 +416,7 @@ CREATE TRIGGER trg_ef_key
   FOR EACH ROW EXECUTE FUNCTION public.fn_compute_ef_key();
 
 -- ---------------------------------------------------------------------------
--- 7. Row Level Security — enable + real policies (migration 005 + 007)
+-- 7. Row Level Security — activar + políticas reales (migración 005 + 007)
 -- ---------------------------------------------------------------------------
 ALTER TABLE public.fuel_types       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.refrigerants     ENABLE ROW LEVEL SECURITY;
@@ -434,7 +434,7 @@ ALTER TABLE public.anomaly_flags     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_log         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.report_exports    ENABLE ROW LEVEL SECURITY;
 
--- Reference tables: public read
+-- Tablas de referencia: lectura pública
 DROP POLICY IF EXISTS "ref_read_all"   ON public.fuel_types;
 DROP POLICY IF EXISTS "ref_read_all"   ON public.refrigerants;
 DROP POLICY IF EXISTS "ref_read_all"   ON public.grid_regions;
@@ -446,7 +446,7 @@ CREATE POLICY "ref_read_all" ON public.grid_regions     FOR SELECT USING (true);
 CREATE POLICY "ref_read_all" ON public.emission_factors FOR SELECT USING (true);
 CREATE POLICY "ref_read_all" ON public.unit_conversions FOR SELECT USING (true);
 
--- RLS helper functions
+-- Funciones de ayuda para RLS
 CREATE OR REPLACE FUNCTION public.fn_is_org_member(p_org_id uuid)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER AS $$
   SELECT EXISTS (
@@ -462,7 +462,7 @@ RETURNS text LANGUAGE sql STABLE SECURITY DEFINER AS $$
   LIMIT 1;
 $$;
 
--- Organizations
+-- Organizaciones
 DROP POLICY IF EXISTS "org_select" ON public.organizations;
 DROP POLICY IF EXISTS "org_insert" ON public.organizations;
 DROP POLICY IF EXISTS "org_update" ON public.organizations;
@@ -474,7 +474,7 @@ CREATE POLICY "org_update" ON public.organizations FOR UPDATE
   USING (public.fn_user_role_in_org(id) = 'admin')
   WITH CHECK (public.fn_user_role_in_org(id) = 'admin');
 
--- Suppliers
+-- Proveedores
 DROP POLICY IF EXISTS "supplier_select" ON public.suppliers;
 DROP POLICY IF EXISTS "supplier_insert" ON public.suppliers;
 DROP POLICY IF EXISTS "supplier_update" ON public.suppliers;
@@ -486,7 +486,7 @@ CREATE POLICY "supplier_update" ON public.suppliers FOR UPDATE
   USING (public.fn_user_role_in_org(organization_id) IN ('admin', 'consultant'))
   WITH CHECK (public.fn_user_role_in_org(organization_id) IN ('admin', 'consultant'));
 
--- Memberships
+-- Membresías
 DROP POLICY IF EXISTS "membership_own"       ON public.memberships;
 DROP POLICY IF EXISTS "membership_org_admin" ON public.memberships;
 DROP POLICY IF EXISTS "membership_insert"    ON public.memberships;
@@ -500,7 +500,7 @@ CREATE POLICY "membership_insert" ON public.memberships FOR INSERT
     OR auth.uid() = user_id
   );
 
--- Reporting periods
+-- Periodos de reporte
 DROP POLICY IF EXISTS "period_select" ON public.reporting_periods;
 DROP POLICY IF EXISTS "period_insert" ON public.reporting_periods;
 DROP POLICY IF EXISTS "period_update" ON public.reporting_periods;
@@ -529,7 +529,7 @@ CREATE POLICY "period_update" ON public.reporting_periods FOR UPDATE
     )
   );
 
--- Activity entries
+-- Entradas de actividad
 DROP POLICY IF EXISTS "activity_select"          ON public.activity_entries;
 DROP POLICY IF EXISTS "activity_insert_supplier" ON public.activity_entries;
 DROP POLICY IF EXISTS "activity_insert_staff"    ON public.activity_entries;
@@ -576,7 +576,7 @@ CREATE POLICY "activity_update_staff" ON public.activity_entries FOR UPDATE
     )
   );
 
--- Emission results
+-- Resultados de emisiones
 DROP POLICY IF EXISTS "emission_result_select" ON public.emission_results;
 CREATE POLICY "emission_result_select" ON public.emission_results FOR SELECT
   USING (
@@ -589,7 +589,7 @@ CREATE POLICY "emission_result_select" ON public.emission_results FOR SELECT
     )
   );
 
--- Evidence files
+-- Archivos de evidencia
 DROP POLICY IF EXISTS "evidence_select" ON public.evidence_files;
 DROP POLICY IF EXISTS "evidence_insert" ON public.evidence_files;
 CREATE POLICY "evidence_select" ON public.evidence_files FOR SELECT
@@ -615,7 +615,7 @@ CREATE POLICY "evidence_insert" ON public.evidence_files FOR INSERT
     )
   );
 
--- Anomaly flags
+-- Marcadores de anomalías
 DROP POLICY IF EXISTS "anomaly_select" ON public.anomaly_flags;
 CREATE POLICY "anomaly_select" ON public.anomaly_flags FOR SELECT
   USING (
@@ -629,20 +629,20 @@ CREATE POLICY "anomaly_select" ON public.anomaly_flags FOR SELECT
     )
   );
 
--- Audit log
+-- Registro de auditoría
 DROP POLICY IF EXISTS "audit_log_read"              ON public.audit_log;
 DROP POLICY IF EXISTS "audit_log_insert_phase1"     ON public.audit_log;
 CREATE POLICY "audit_log_read" ON public.audit_log FOR SELECT USING (true);
 CREATE POLICY "audit_log_insert_phase1" ON public.audit_log FOR INSERT WITH CHECK (true);
 
--- Report exports
+-- Exportaciones de reportes
 DROP POLICY IF EXISTS "report_exports_read"         ON public.report_exports;
 DROP POLICY IF EXISTS "report_exports_insert_phase1" ON public.report_exports;
 CREATE POLICY "report_exports_read" ON public.report_exports FOR SELECT USING (true);
 CREATE POLICY "report_exports_insert_phase1" ON public.report_exports FOR INSERT WITH CHECK (true);
 
 -- ---------------------------------------------------------------------------
--- 8. Seed data
+-- 8. Datos de seed
 -- ---------------------------------------------------------------------------
 INSERT INTO public.fuel_types (id, code, label, scope, activity_kind) VALUES
   ('11111111-0001-0001-0001-000000000001', 'natural_gas', 'Natural Gas',     1, 'stationary_combustion'),
@@ -775,7 +775,7 @@ VALUES
   ('dddddddd-dddd-dddd-dddd-000000000010', 'cccccccc-cccc-cccc-cccc-000000000006', 'stationary_combustion', '{"kind":"stationary_combustion","fuel":"lpg"}'::jsonb,              880.0, 'L',    '11111111-0001-0001-0001-000000000003', NULL,                                   'draft',     NULL,                      NULL)
 ON CONFLICT (id) DO NOTHING;
 
--- Disable audit triggers temporarily so seed inserts don't create audit rows for locked periods
+-- Deshabilitar triggers de auditoría temporalmente para que las inserciones semilla no generen filas de auditoría en periodos bloqueados
 ALTER TABLE public.activity_entries  DISABLE TRIGGER trg_audit_activity_entries;
 ALTER TABLE public.reporting_periods DISABLE TRIGGER trg_audit_reporting_periods;
 
@@ -813,7 +813,7 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
--- 9. Demo auth user + memberships
+-- 9. Usuario demo de autenticación + membresías
 -- email: admin@earthlink.test  |  password: Earthlink2025!
 -- ---------------------------------------------------------------------------
 CREATE EXTENSION IF NOT EXISTS pgcrypto;

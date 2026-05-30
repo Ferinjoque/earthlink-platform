@@ -1,6 +1,6 @@
 -- =============================================================================
--- Migration 001: Reference / Lookup Tables (5 tables)
--- GHG Protocol Scope 1 & 2 master data
+-- Migración 001: Tablas de referencia / lookup (5 tablas)
+-- Datos maestros GHG Protocol Alcance 1 y 2
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
@@ -15,8 +15,8 @@ CREATE TABLE public.fuel_types (
   created_at   timestamptz DEFAULT now() NOT NULL
 );
 
-COMMENT ON TABLE  public.fuel_types IS 'Master list of combustion fuels for Scope 1 sources.';
-COMMENT ON COLUMN public.fuel_types.code IS 'Machine key matching ActivityKind.fuel discriminant.';
+COMMENT ON TABLE  public.fuel_types IS 'Catálogo maestro de combustibles para fuentes de Alcance 1.';
+COMMENT ON COLUMN public.fuel_types.code IS 'Clave de máquina que corresponde al discriminador ActivityKind.fuel.';
 
 -- ---------------------------------------------------------------------------
 -- 2. refrigerants
@@ -29,8 +29,8 @@ CREATE TABLE public.refrigerants (
   created_at timestamptz DEFAULT now() NOT NULL
 );
 
-COMMENT ON TABLE  public.refrigerants IS 'Refrigerant master data with IPCC AR6 GWP-100 values.';
-COMMENT ON COLUMN public.refrigerants.gwp_ar6 IS 'Global Warming Potential (100-yr) from IPCC Sixth Assessment Report.';
+COMMENT ON TABLE  public.refrigerants IS 'Datos maestros de refrigerantes con valores GWP-100 del IPCC AR6.';
+COMMENT ON COLUMN public.refrigerants.gwp_ar6 IS 'Potencial de calentamiento global (100 años) según el Sexto Informe de Evaluación del IPCC.';
 
 -- ---------------------------------------------------------------------------
 -- 3. grid_regions
@@ -43,8 +43,8 @@ CREATE TABLE public.grid_regions (
   created_at timestamptz DEFAULT now() NOT NULL
 );
 
-COMMENT ON TABLE  public.grid_regions IS 'Electricity grid regions for Scope 2 location-based calculations.';
-COMMENT ON COLUMN public.grid_regions.code IS 'Machine key matching ActivityKind.gridRegion discriminant.';
+COMMENT ON TABLE  public.grid_regions IS 'Regiones de red eléctrica para cálculos basados en localización de Alcance 2.';
+COMMENT ON COLUMN public.grid_regions.code IS 'Clave de máquina que corresponde al discriminador ActivityKind.gridRegion.';
 
 -- ---------------------------------------------------------------------------
 -- 4. emission_factors
@@ -84,9 +84,9 @@ CREATE TABLE public.emission_factors (
   )
 );
 
-COMMENT ON TABLE  public.emission_factors IS 'Emission factors from IPCC AR6, DEFRA 2024, MINEM 2023. Static — no live API calls.';
-COMMENT ON COLUMN public.emission_factors.co2e_per_unit IS 'kg CO2e per normalized unit (kWh for gas/electricity, L for liquid fuels, kg for refrigerants).';
-COMMENT ON COLUMN public.emission_factors.source_db IS 'Authoritative source: IPCC_AR6 | DEFRA_2024 | MINEM_2023';
+COMMENT ON TABLE  public.emission_factors IS 'Factores de emisión de IPCC AR6, DEFRA 2024, MINEM 2023. Estáticos — sin llamadas a APIs externas.';
+COMMENT ON COLUMN public.emission_factors.co2e_per_unit IS 'kg CO2e por unidad normalizada (kWh para gas/electricidad, L para combustibles líquidos, kg para refrigerantes).';
+COMMENT ON COLUMN public.emission_factors.source_db IS 'Fuente autoritativa: IPCC_AR6 | DEFRA_2024 | MINEM_2023';
 
 CREATE INDEX idx_ef_source_type ON public.emission_factors (source_type);
 CREATE INDEX idx_ef_fuel_type   ON public.emission_factors (fuel_type_id) WHERE fuel_type_id IS NOT NULL;
@@ -106,5 +106,5 @@ CREATE TABLE public.unit_conversions (
   UNIQUE (from_unit, to_unit)
 );
 
-COMMENT ON TABLE  public.unit_conversions IS 'Multiplicative conversion factors: result = input * factor.';
-COMMENT ON COLUMN public.unit_conversions.factor IS 'Multiply from_unit quantity by this to get to_unit quantity.';
+COMMENT ON TABLE  public.unit_conversions IS 'Factores de conversión multiplicativos: resultado = entrada × factor.';
+COMMENT ON COLUMN public.unit_conversions.factor IS 'Multiplicar la cantidad en from_unit por este valor para obtener la cantidad en to_unit.';

@@ -3,11 +3,13 @@
 import { Fragment, useState, useActionState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Paperclip, FileText, Image } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { AnomalyBadge } from '@/components/activity/AnomalyBadge';
 import { traducirMensajeAnomalia } from '@/lib/anomaly';
 import { voidActivityEntry, type VoidEntryState } from '@/actions/activity';
 import { useToast } from '@/components/ui/Toast';
+import type { EvidenceFileView } from '@/actions/evidence';
 import type { ActivityEntryStatus, AnomalySeverity, EmissionSourceType } from '@/types/database';
 
 export interface ActivityEntryView {
@@ -23,6 +25,8 @@ export interface ActivityEntryView {
   notes: string | null;
   voided_at?: string | null;
   void_reason?: string | null;
+  evidence_count?: number;
+  evidence_files?: EvidenceFileView[];
   anomaly?:
     | {
         severity: AnomalySeverity;
@@ -79,6 +83,17 @@ const COLOR_SEVERIDAD: Record<AnomalySeverity, string> = {
 
 const CABECERAS = ['Periodo', 'Fuente', 'Cantidad', 'Estado', 'Anomalía / Motivo', 'Enviado', ''];
 
+function iconoPorMime(mime: string) {
+  if (mime.startsWith('image/')) return <Image size={11} aria-hidden="true" />;
+  return <FileText size={11} aria-hidden="true" />;
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1_048_576) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / 1_048_576).toFixed(1)} MB`;
+}
+
 const estiloSelect: React.CSSProperties = {
   fontSize: 'var(--text-xs)',
   fontFamily: 'var(--font-mono)',
@@ -99,7 +114,6 @@ const estiloCelda: React.CSSProperties = {
   color: 'var(--color-ink-1)',
 };
 
-// ── VoidEntryButton ───────────────────────────────────────────────────────────
 
 function VoidEntryButton({ entryId }: { entryId: string }) {
   const { toast } = useToast();
@@ -221,21 +235,26 @@ function VoidEntryButton({ entryId }: { entryId: string }) {
   );
 }
 
-// ── EntradaFila ───────────────────────────────────────────────────────────────
 
 function EntradaFila({
   entry,
   expandida,
   toggleExpandida,
   setExpandida,
+  expandidaEvidencia,
+  setExpandidaEvidencia,
   isVoided,
 }: {
   entry: ActivityEntryView;
   expandida: string | null;
   toggleExpandida: (id: string) => void;
   setExpandida: React.Dispatch<React.SetStateAction<string | null>>;
+  expandidaEvidencia: string | null;
+  setExpandidaEvidencia: React.Dispatch<React.SetStateAction<string | null>>;
   isVoided: boolean;
 }) {
+  const evidenceFiles = entry.evidence_files ?? [];
+  const singleFile = evidenceFiles.length === 1 ? evidenceFiles[0] : null;
   return (
     <Fragment>
       <tr
@@ -349,15 +368,133 @@ function EntradaFila({
         <td
           style={{
             ...estiloCelda,
-            width: '52px',
-            textAlign: 'center',
+            width: '80px',
+            textAlign: 'right',
             paddingLeft: 'var(--space-2)',
-            paddingRight: 'var(--space-2)',
+            paddingRight: 'var(--space-3)',
           }}
         >
-          {!isVoided && <VoidEntryButton entryId={entry.id} />}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', justifyContent: 'flex-end' }}>
+            {evidenceFiles.length > 0 && (
+              singleFile ? (
+                /* 1 archivo: enlace directo → abre en pestaña nueva */
+                <a
+                  href={singleFile.signedUrl ?? '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={`${singleFile.original_name} · ${formatBytes(singleFile.file_size_bytes)}`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '2px',
+                    fontSize: '10px',
+                    fontFamily: 'var(--font-mono)',
+                    color: 'var(--color-accent)',
+                    textDecoration: 'none',
+                  }}
+                >
+                  <Paperclip size={10} aria-hidden="true" />
+                  1
+                </a>
+              ) : (
+                /* N archivos: expande lista inline */
+                <button
+                  type="button"
+                  onClick={() => {
+                    setExpandida(null);
+                    setExpandidaEvidencia((prev) => (prev === entry.id ? null : entry.id));
+                  }}
+                  aria-expanded={expandidaEvidencia === entry.id}
+                  title={`${evidenceFiles.length} archivos adjuntos`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '2px',
+                    fontSize: '10px',
+                    fontFamily: 'var(--font-mono)',
+                    color: expandidaEvidencia === entry.id ? 'var(--color-accent)' : 'var(--color-ink-3)',
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Paperclip size={10} aria-hidden="true" />
+                  {evidenceFiles.length}
+                </button>
+              )
+            )}
+            {!isVoided &&
+              entry.period_status !== 'locked' &&
+              entry.period_status !== 'calculating' && (
+                <VoidEntryButton entryId={entry.id} />
+              )}
+          </div>
         </td>
       </tr>
+
+      {/* ── Panel de evidencias expandible (N archivos) ── */}
+      {expandidaEvidencia === entry.id && evidenceFiles.length > 1 && (
+        <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+          <td
+            colSpan={7}
+            style={{
+              padding: 'var(--space-3) var(--space-4) var(--space-4)',
+              background: 'oklch(58% 0.16 155 / 3%)',
+            }}
+          >
+            <ul
+              style={{
+                listStyle: 'none',
+                margin: 0,
+                padding: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--space-2)',
+              }}
+            >
+              {evidenceFiles.map((f) => (
+                <li
+                  key={f.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--space-2)',
+                    fontSize: 'var(--text-xs)',
+                  }}
+                >
+                  <span style={{ color: 'var(--color-accent)', flexShrink: 0 }}>
+                    {iconoPorMime(f.mime_type)}
+                  </span>
+                  {f.signedUrl ? (
+                    <a
+                      href={f.signedUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        color: 'var(--color-ink-2)',
+                        textDecoration: 'underline',
+                        textDecorationColor: 'var(--color-border)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        maxWidth: '240px',
+                      }}
+                    >
+                      {f.original_name}
+                    </a>
+                  ) : (
+                    <span style={{ color: 'var(--color-ink-3)' }}>{f.original_name}</span>
+                  )}
+                  <span style={{ color: 'var(--color-ink-3)', flexShrink: 0, fontFamily: 'var(--font-mono)' }}>
+                    {formatBytes(f.file_size_bytes)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </td>
+        </tr>
+      )}
 
       {/* ── Panel de anomalía expandible ── */}
       {expandida === entry.id && entry.anomaly && (
@@ -467,17 +604,18 @@ function EntradaFila({
           </td>
         </tr>
       )}
+
     </Fragment>
   );
 }
 
-// ── ActivityList ──────────────────────────────────────────────────────────────
 
 export function ActivityList({ entries, periodos, pagination }: ActivityListProps) {
   const [filtroEstado, setFiltroEstado] = useState<ActivityEntryStatus | 'todos'>('todos');
   const [filtroFuente, setFiltroFuente] = useState<EmissionSourceType | 'todos'>('todos');
   const [filtroPeriodo, setFiltroPeriodo] = useState<string>('todos');
   const [expandida, setExpandida] = useState<string | null>(null);
+  const [expandidaEvidencia, setExpandidaEvidencia] = useState<string | null>(null);
   const [mostrarAnulados, setMostrarAnulados] = useState(false);
 
   const activas = entries.filter((e) => !e.voided_at);
@@ -719,6 +857,8 @@ export function ActivityList({ entries, periodos, pagination }: ActivityListProp
                   expandida={expandida}
                   toggleExpandida={toggleExpandida}
                   setExpandida={setExpandida}
+                  expandidaEvidencia={expandidaEvidencia}
+                  setExpandidaEvidencia={setExpandidaEvidencia}
                   isVoided={false}
                 />
               ))}
@@ -730,6 +870,8 @@ export function ActivityList({ entries, periodos, pagination }: ActivityListProp
                     expandida={expandida}
                     toggleExpandida={toggleExpandida}
                     setExpandida={setExpandida}
+                    expandidaEvidencia={expandidaEvidencia}
+                    setExpandidaEvidencia={setExpandidaEvidencia}
                     isVoided
                   />
                 ))}

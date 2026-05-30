@@ -1,16 +1,15 @@
 /**
- * OOP hierarchy for GHG emission sources.
+ * Jerarquía POO para fuentes de emisión GHG.
  *
- * Polymorphism is real, not decorative:
- *   - validate(raw) — each subclass enforces its own unit whitelist + evidence rules
- *   - factorKey()   — each subclass knows the (activity_type, region) tuple for factor lookup
- *   - scope()       — returns the GHG Protocol scope for this source type
+ * El polimorfismo es funcional, no decorativo:
+ *   - validate(raw) — cada subclase aplica su propia lista blanca de unidades + reglas de evidencia
+ *   - factorKey()   — cada subclase conoce la tupla (activity_type, region) para lookup de factores
+ *   - scope()       — devuelve el alcance GHG Protocol de esta fuente
  */
 import type { Unit, GhgScope, ActivityKind, GridRegion, WaterSubtype, WasteSubtype } from '../calc/types';
 
 export type ValidationResult = { valid: true } | { valid: false; reason: string };
 
-// ── Abstract base ─────────────────────────────────────────────────────────────
 
 export abstract class EmissionSource {
   abstract readonly activityKind: ActivityKind;
@@ -31,7 +30,6 @@ export abstract class EmissionSource {
   }
 }
 
-// ── Scope 1 ───────────────────────────────────────────────────────────────────
 
 abstract class Scope1Source extends EmissionSource {
   scope(): GhgScope {
@@ -107,7 +105,6 @@ export class FugitiveEmissionSource extends Scope1Source {
   }
 }
 
-// ── Scope 2 ───────────────────────────────────────────────────────────────────
 
 abstract class Scope2Source extends EmissionSource {
   scope(): GhgScope {
@@ -152,7 +149,6 @@ export class PurchasedSteamSource extends Scope2Source {
   }
 }
 
-// ── No-scope (water, waste) ───────────────────────────────────────────────────
 // Consumo rastreado para GRESB pero sin GHG directo en Alcances 1 y 2.
 
 abstract class NoScopeSource extends EmissionSource {

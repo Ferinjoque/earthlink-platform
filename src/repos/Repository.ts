@@ -1,6 +1,6 @@
 /**
- * Abstract repository interface.
- * Concrete implementations: SupabaseRepository (production), InMemoryRepository (tests).
+ * Interfaz abstracta de repositorio.
+ * Implementaciones concretas: SupabaseRepository (producción), InMemoryRepository (tests).
  */
 import type { Entity } from '../domain/Entity';
 

@@ -4,13 +4,15 @@ const SOURCE_LABELS: Record<string, string> = {
   purchased_electricity: 'Electricidad',
   purchased_steam: 'Vapor',
   fugitive: 'Emisiones fugitivas',
+  water_use: 'Consumo de agua',
+  waste: 'Generación de residuos',
 };
 
 export function traducirMensajeAnomalia(msg: string): string {
   if (!msg) return msg;
   if (msg.includes('sobre la media histórica') || msg.includes('Verificar datos')) return msg;
 
-  // Seed format: "X consumption of Y Z in P is Nσ above the Q baseline of B Z. Verify ..."
+  // Detecta mensajes en inglés del seed con formato: "X consumption of Y Z in P is Nσ above the Q baseline of B Z."
   const m1 = msg.match(
     /^(.+?)\s+consumption of ([\d,.]+)\s+(\S+)\s+in\s+(.+?)\s+is\s+([\d.]+)σ\s+above the\s+(.+?)\s+baseline of\s+([\d,.]+)\s+\S+\./i,
   );
@@ -19,7 +21,7 @@ export function traducirMensajeAnomalia(msg: string): string {
     return `${fuel}: ${qty} ${unit} en ${period} es ${zscore}σ sobre la línea base de ${basePeriod} (${baseQty} ${unit}). Verificar facturas.`;
   }
 
-  // Old AnomalyService English format
+  // Formato antiguo de AnomalyService en inglés
   const m2 = msg.match(
     /^(\S+)\s+quantity\s+([\d.]+)\s+(\S+)\s+is\s+([\d.]+)σ\s+above historical mean of\s+([\d.]+)/i,
   );

@@ -19,7 +19,7 @@ test.describe('Dashboard — estructura y datos', () => {
   test('muestra al menos 4 tarjetas KPI', async ({ page }) => {
     const eyebrows = page.locator('.eyebrow');
     await expect(eyebrows).toHaveCount(await eyebrows.count());
-    // At minimum: CO₂e verificado, Cobertura, Anomalías activas, En revisión
+    // Mínimo: CO₂e verificado, Cobertura, Anomalías activas, En revisión
     await expect(page.getByText('CO₂e verificado')).toBeVisible();
     await expect(page.getByText('Cobertura')).toBeVisible();
     await expect(page.getByText('Anomalías activas')).toBeVisible();
@@ -29,7 +29,7 @@ test.describe('Dashboard — estructura y datos', () => {
   test('el selector de año está visible y funcional', async ({ page }) => {
     const yearSelector = page.getByRole('combobox').or(page.locator('select'));
     const yearLinks = page.locator('a[href*="year="]');
-    // Either a select or navigation links for year filtering
+    // Ya sea un select o enlaces de navegación para filtrar por año
     const yearEl = await yearLinks.count() > 0 ? yearLinks.first() : yearSelector.first();
     await expect(yearEl).toBeVisible();
   });

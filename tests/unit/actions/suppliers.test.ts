@@ -36,6 +36,7 @@ function mockClient({
   membershipFound = true,
   insertError = null as null | { message: string },
   updateError = null as null | { message: string },
+  archivedAt = null as string | null,
 }: {
   role?: string;
   supplierOrgId?: string;
@@ -43,10 +44,11 @@ function mockClient({
   membershipFound?: boolean;
   insertError?: null | { message: string };
   updateError?: null | { message: string };
+  archivedAt?: string | null;
 } = {}) {
   const singleMock = vi.fn().mockImplementation((table: string) => {
     if (table === 'suppliers') {
-      const data = supplierFound ? { organization_id: supplierOrgId } : null;
+      const data = supplierFound ? { organization_id: supplierOrgId, archived_at: archivedAt } : null;
       return Promise.resolve({ data, error: null });
     }
     if (table === 'memberships') {
@@ -56,7 +58,9 @@ function mockClient({
     return Promise.resolve({ data: null, error: null });
   });
 
-  const updateResult = { eq: vi.fn().mockResolvedValue({ error: updateError }) };
+  const updateResult = {
+    eq: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: updateError }) }),
+  };
 
   const chainBuilder = (table: string) => {
     const currentTable = table;
@@ -172,7 +176,7 @@ describe('createSupplier', () => {
       organization_id: VALID_ORG_ID,
     });
     const result = await createSupplier(null, fd);
-    expect(result.error).toMatch(/duplicate key/i);
+    expect(result.error).toMatch(/Error al guardar/i);
   });
 
   it('returns success on valid create', async () => {
@@ -208,11 +212,18 @@ describe('archiveSupplier', () => {
     expect(result.error).toMatch(/administrador/i);
   });
 
-  it('rejects missing id', async () => {
+  it('rejects missing or invalid id', async () => {
     mockClient();
     const fd = makeFormData({ id: '' });
     const result = await archiveSupplier(null, fd);
-    expect(result.error).toMatch(/requerido/i);
+    expect(result.error).toMatch(/inválido/i);
+  });
+
+  it('rejects non-UUID id format', async () => {
+    mockClient();
+    const fd = makeFormData({ id: 'not-a-uuid' });
+    const result = await archiveSupplier(null, fd);
+    expect(result.error).toMatch(/inválido/i);
   });
 
   it('returns error when supplier not found', async () => {
@@ -226,7 +237,7 @@ describe('archiveSupplier', () => {
     mockClient({ updateError: { message: 'row-level security' } });
     const fd = makeFormData({ id: VALID_SUPPLIER_ID });
     const result = await archiveSupplier(null, fd);
-    expect(result.error).toMatch(/row-level security/i);
+    expect(result.error).toMatch(/Error al guardar/i);
   });
 
   it('returns success when admin archives supplier', async () => {
@@ -234,6 +245,13 @@ describe('archiveSupplier', () => {
     const fd = makeFormData({ id: VALID_SUPPLIER_ID });
     const result = await archiveSupplier(null, fd);
     expect(result.success).toBe(true);
+  });
+
+  it('returns error when supplier is already archived', async () => {
+    mockClient({ archivedAt: '2024-01-01T00:00:00Z' });
+    const fd = makeFormData({ id: VALID_SUPPLIER_ID });
+    const result = await archiveSupplier(null, fd);
+    expect(result.error).toMatch(/ya está archivado/i);
   });
 });
 
@@ -290,7 +308,7 @@ describe('updateSupplier', () => {
     mockClient({ updateError: { message: 'unique constraint' } });
     const fd = makeFormData({ id: VALID_SUPPLIER_ID, nombre: 'Updated', categoria: 'Manufactura' });
     const result = await updateSupplier(null, fd);
-    expect(result.error).toMatch(/unique constraint/i);
+    expect(result.error).toMatch(/Error al guardar/i);
   });
 
   it('returns success with valid input as admin', async () => {

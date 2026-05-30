@@ -11,9 +11,10 @@ import { AnomalyFlagRepository } from '@/repos/AnomalyFlagRepository';
 import { parseCsvText } from '@/lib/csv';
 import { parseXlsxBuffer } from '@/lib/xlsx';
 import type { ActivityKind, Unit, WaterSubtype, WasteSubtype } from '@/calc/types';
-import type { EmissionSourceType } from '@/types/database';
+import type { Database } from '@/types/database';
 
-// ── Zod validation schemas ────────────────────────────────────────────────────
+type ActivityEntryInsert = Database['public']['Tables']['activity_entries']['Insert'];
+
 
 const SOURCE_TYPES_ENUM = [
   'stationary_combustion',
@@ -31,14 +32,13 @@ const createEntrySchema = z.object({
   supplier_id: z.string().uuid('ID de proveedor inválido'),
   year_month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Formato de mes inválido (YYYY-MM)'),
   source_type: z.enum(SOURCE_TYPES_ENUM),
-  secondary: z.string().default(''),
-  raw_quantity: z.coerce.number().positive('La cantidad debe ser positiva'),
-  raw_unit: z.string().min(1, 'La unidad es obligatoria'),
+  secondary: z.string().max(100, 'El subtipo no puede superar 100 caracteres').default(''),
+  raw_quantity: z.coerce.number().nonnegative('La cantidad debe ser mayor o igual a cero'),
+  raw_unit: z.string().min(1, 'La unidad es obligatoria').max(50, 'La unidad no puede superar 50 caracteres'),
   data_quality: z.enum(DATA_QUALITY_VALUES).default('measured'),
-  notes: z.string().optional(),
+  notes: z.string().max(1000, 'Las notas no pueden superar 1000 caracteres').optional(),
 });
 
-// ── State types ───────────────────────────────────────────────────────────────
 
 export interface ActivityFormState {
   error?: string | undefined;
@@ -53,9 +53,9 @@ export interface CsvImportState {
   skipped?: number | undefined;
   success?: boolean | undefined;
   submittedAt?: number | undefined;
+  entryIds?: string[] | undefined;
 }
 
-// ── Build ActivityKind discriminated union from flat form values ───────────────
 
 const STATIONARY_FUELS = [
   'natural_gas', 'diesel', 'lpg', 'fuel_oil_no2', 'propane',
@@ -112,7 +112,6 @@ function buildActivityKind(sourceType: string, secondary: string): ActivityKind 
   }
 }
 
-// ── findOrCreatePeriod ────────────────────────────────────────────────────────
 
 const MESES_CORTO = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'] as const;
 
@@ -147,6 +146,9 @@ async function findOrCreatePeriod(
     if (existingPeriod.status === 'locked') {
       return { error: 'El periodo de ese mes está bloqueado y no acepta nuevas entradas' };
     }
+    if (existingPeriod.status === 'calculating') {
+      return { error: 'El periodo de ese mes está siendo calculado. Espera a que finalice.' };
+    }
     return { periodId: existingPeriod.id };
   }
 
@@ -168,6 +170,25 @@ async function findOrCreatePeriod(
     .single();
 
   if (insertError || !newPeriod) {
+    // Conflicto de unicidad: otra solicitud concurrente creó el periodo primero
+    if (insertError?.code === '23505') {
+      const { data: retryRaw } = await supabase
+        .from('reporting_periods')
+        .select('id, status')
+        .eq('supplier_id', supplierId)
+        .eq('start_date', startDate)
+        .maybeSingle();
+      const retryPeriod = retryRaw as PeriodRow | null;
+      if (retryPeriod) {
+        if (retryPeriod.status === 'locked') {
+          return { error: 'El periodo de ese mes está bloqueado y no acepta nuevas entradas' };
+        }
+        if (retryPeriod.status === 'calculating') {
+          return { error: 'El periodo de ese mes está siendo calculado. Espera a que finalice.' };
+        }
+        return { periodId: retryPeriod.id };
+      }
+    }
     return { error: 'No se pudo crear el periodo de reporte' };
   }
 
@@ -177,9 +198,69 @@ async function findOrCreatePeriod(
   return { periodId: (newPeriod as NewPeriodRow).id };
 }
 
-// ── verifySupplierAccess ──────────────────────────────────────────────────────
 
-type SupplierOrg = { organization_id: string };
+interface ImportRowData {
+  supplier_id: string;
+  year_month: string;
+  source_type: string;
+  secondary: string;
+  raw_quantity: number;
+  raw_unit: string;
+  data_quality: string;
+  notes?: string;
+}
+
+/**
+ * Resuelve periodos en batch (deduplica pares supplier+mes) y construye las filas de BD
+ * listas para un INSERT masivo. Reduce N consultas a K (K = periodos únicos).
+ */
+async function buildBatchEntries(
+  supabase: SupabaseClient,
+  rows: ImportRowData[],
+  userId: string,
+  now: Date,
+): Promise<{ entryRows: ActivityEntryInsert[]; skipped: number }> {
+  const uniqueKeys = [...new Set(rows.map((r) => `${r.supplier_id}|${r.year_month}`))];
+  const periodMap = new Map<string, string>();
+
+  for (const key of uniqueKeys) {
+    const pipeIdx = key.indexOf('|');
+    const supplierId = key.slice(0, pipeIdx);
+    const yearMonth = key.slice(pipeIdx + 1);
+    const result = await findOrCreatePeriod(supabase, supplierId, yearMonth);
+    if (!('error' in result)) periodMap.set(key, result.periodId);
+  }
+
+  let skipped = 0;
+  const entryRows: ActivityEntryInsert[] = [];
+
+  for (const row of rows) {
+    const key = `${row.supplier_id}|${row.year_month}`;
+    const periodId = periodMap.get(key);
+    if (!periodId) { skipped = skipped + 1; continue; }
+    const activityKind = buildActivityKind(row.source_type, row.secondary);
+    if (!activityKind) { skipped = skipped + 1; continue; }
+    entryRows.push({
+      id: crypto.randomUUID(),
+      reporting_period_id: periodId,
+      source_type: row.source_type,
+      activity_kind: activityKind as ActivityEntryInsert['activity_kind'],
+      raw_quantity: row.raw_quantity,
+      raw_unit: row.raw_unit,
+      status: 'submitted',
+      submitted_at: now.toISOString(),
+      submitted_by: userId,
+      created_at: now.toISOString(),
+      data_quality: row.data_quality,
+      notes: row.notes ?? null,
+    });
+  }
+
+  return { entryRows, skipped };
+}
+
+
+type SupplierOrg = { organization_id: string; archived_at: string | null };
 type MembershipCheck = { role: string; supplier_id: string | null };
 
 async function verifySupplierAccess(
@@ -189,11 +270,12 @@ async function verifySupplierAccess(
 ): Promise<{ ok: true } | { error: string }> {
   const { data: supplierRaw } = await supabase
     .from('suppliers')
-    .select('organization_id')
+    .select('organization_id, archived_at')
     .eq('id', supplierId)
     .maybeSingle();
   const supplier = supplierRaw as SupplierOrg | null;
   if (!supplier) return { error: 'Proveedor no encontrado' };
+  if (supplier.archived_at) return { error: 'No se puede registrar actividad en un proveedor archivado' };
 
   const { data: memRaw } = await supabase
     .from('memberships')
@@ -204,7 +286,7 @@ async function verifySupplierAccess(
   const mem = memRaw as MembershipCheck | null;
   if (!mem) return { error: 'Sin permisos para registrar actividad en este proveedor' };
 
-  // Supplier-role users may only write to their assigned supplier
+  // Rol 'supplier' solo puede escribir en su proveedor asignado
   if (mem.role === 'supplier' && mem.supplier_id !== supplierId) {
     return { error: 'Sin permisos para registrar actividad en este proveedor' };
   }
@@ -212,7 +294,6 @@ async function verifySupplierAccess(
   return { ok: true };
 }
 
-// ── createActivityEntry ───────────────────────────────────────────────────────
 
 export async function createActivityEntry(
   _prevState: ActivityFormState | null,
@@ -234,7 +315,7 @@ export async function createActivityEntry(
     return { fieldErrors };
   }
 
-  const { supplier_id, year_month, source_type, secondary, raw_quantity, raw_unit, data_quality } = parsed.data;
+  const { supplier_id, year_month, source_type, secondary, raw_quantity, raw_unit, data_quality, notes } = parsed.data;
 
   const accessCheck = await verifySupplierAccess(supabase, supplier_id, user.id);
   if ('error' in accessCheck) return { error: accessCheck.error, submittedAt: Date.now() };
@@ -268,6 +349,7 @@ export async function createActivityEntry(
     submittedBy: user.id,
     createdAt: now,
     dataQuality: data_quality,
+    notes: notes ?? null,
   });
 
   try {
@@ -276,14 +358,23 @@ export async function createActivityEntry(
     return { error: 'Error al guardar el registro. Intenta nuevamente.', submittedAt: Date.now() };
   }
 
-  // Anomaly detection — best-effort, non-fatal
+  // Detección de anomalías — no crítica, no bloquea si falla
+  // Línea base: entradas del año anterior del mismo proveedor (igual que calculatePeriod)
   try {
-    const historical = await entryRepo.findByPeriodId(reporting_period_id);
+    const entryYear = Number(year_month.split('-')[0]);
+    const priorYear = entryYear - 1;
+    const { data: priorPeriodsRaw } = await supabase
+      .from('reporting_periods')
+      .select('id')
+      .eq('supplier_id', supplier_id)
+      .gte('start_date', `${priorYear}-01-01`)
+      .lte('start_date', `${priorYear}-12-31`);
+    const priorPeriodIds = (priorPeriodsRaw ?? []).map((p: { id: string }) => p.id);
+    const historical = priorPeriodIds.length > 0
+      ? await entryRepo.findByPeriodIds(priorPeriodIds)
+      : [];
     const svc = new AnomalyService();
-    const anomalies = svc.detect(
-      [newEntry],
-      historical.filter((e) => e.id !== newEntry.id),
-    );
+    const anomalies = svc.detect([newEntry], historical);
 
     for (const a of anomalies) {
       const flag = new AnomalyFlag({
@@ -303,14 +394,16 @@ export async function createActivityEntry(
       await anomalyRepo.save(flag);
     }
   } catch {
-    // Entry saved — anomaly detection is non-critical
+    // Entrada guardada — la detección de anomalías es opcional
   }
 
   revalidatePath('/activity');
+  revalidatePath('/audit');
+  revalidatePath('/dashboard');
+  revalidatePath('/suppliers', 'layout');
   return { success: true, submittedAt: Date.now() };
 }
 
-// ── importActivityCsv ─────────────────────────────────────────────────────────
 
 export async function importActivityCsv(
   _prevState: CsvImportState | null,
@@ -334,6 +427,14 @@ export async function importActivityCsv(
   const validRows = rows.filter((r) => r.errors.length === 0 && r.data !== null);
   let skipped = rows.length - validRows.length;
 
+  if (validRows.length > 500) {
+    return {
+      error: 'El CSV contiene más de 500 filas válidas. Divide el archivo en lotes de máximo 500 filas.',
+      skipped,
+      submittedAt: Date.now(),
+    };
+  }
+
   if (validRows.length === 0) {
     return {
       error: `No se encontraron filas válidas. ${skipped} fila(s) con errores de validación.`,
@@ -342,72 +443,59 @@ export async function importActivityCsv(
     };
   }
 
-  // Batch access check — verify user belongs to all suppliers referenced
+  // Verificar que el usuario tenga acceso a todos los proveedores del lote
   const uniqueSupplierIds = [...new Set(validRows.map((r) => r.data!.supplier_id))];
   for (const supplierId of uniqueSupplierIds) {
     const check = await verifySupplierAccess(supabase, supplierId, user.id);
-    if ('error' in check) return { error: check.error, submittedAt: Date.now() };
+    if ('error' in check) return { error: check.error, skipped, submittedAt: Date.now() };
   }
 
-  const entryRepo = new ActivityEntryRepository(supabase);
-  let imported = 0;
   const now = new Date();
-
-  for (const row of validRows) {
-    if (!row.data) continue;
-
-    const periodResult = await findOrCreatePeriod(supabase, row.data.supplier_id, row.data.year_month);
-    if ('error' in periodResult) {
-      skipped = skipped + 1;
-      continue;
-    }
-
-    const activityKind = buildActivityKind(row.data.source_type, row.data.secondary);
-    if (!activityKind) {
-      skipped = skipped + 1;
-      continue;
-    }
-
-    const entry = new ActivityEntry({
-      id: crypto.randomUUID(),
-      reportingPeriodId: periodResult.periodId,
-      sourceType: row.data.source_type,
-      activityKind,
-      rawQuantity: row.data.raw_quantity,
-      rawUnit: row.data.raw_unit as Unit,
-      status: 'submitted',
-      submittedAt: now,
-      submittedBy: user.id,
-      createdAt: now,
-      dataQuality: row.data.data_quality,
+  const rowData: ImportRowData[] = validRows
+    .filter((r) => r.data !== null)
+    .map((r) => {
+      const d = r.data!;
+      const base: ImportRowData = {
+        supplier_id: d.supplier_id,
+        year_month: d.year_month,
+        source_type: d.source_type,
+        secondary: d.secondary,
+        raw_quantity: d.raw_quantity,
+        raw_unit: d.raw_unit,
+        data_quality: d.data_quality,
+      };
+      if (d.notes !== undefined) base.notes = d.notes;
+      return base;
     });
 
-    try {
-      await entryRepo.save(entry);
-      imported = imported + 1;
-    } catch {
-      skipped = skipped + 1;
-    }
+  const { entryRows, skipped: periodSkipped } = await buildBatchEntries(supabase, rowData, user.id, now);
+  skipped = skipped + periodSkipped;
+
+  if (entryRows.length > 0) {
+    const { error: insertError } = await supabase.from('activity_entries').insert(entryRows);
+    if (insertError) return { error: 'Error al guardar registros. Intenta nuevamente.', skipped, submittedAt: Date.now() };
   }
 
   revalidatePath('/activity');
-  return { success: true, imported, skipped, submittedAt: Date.now() };
+  revalidatePath('/audit');
+  revalidatePath('/dashboard');
+  revalidatePath('/suppliers');
+  return { success: true, imported: entryRows.length, skipped, submittedAt: Date.now() };
 }
 
-// ── importActivityBulk ────────────────────────────────────────────────────────
 
 const bulkEntrySchema = z.array(
   z.object({
     supplier_id: z.string().uuid('UUID de proveedor inválido'),
     year_month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Formato YYYY-MM inválido'),
     source_type: z.enum(SOURCE_TYPES_ENUM),
-    secondary: z.string().default(''),
-    raw_quantity: z.coerce.number().positive('La cantidad debe ser positiva'),
-    raw_unit: z.string().min(1, 'Unidad obligatoria'),
+    secondary: z.string().max(100, 'El subtipo no puede superar 100 caracteres').default(''),
+    raw_quantity: z.coerce.number().nonnegative('La cantidad debe ser mayor o igual a cero'),
+    raw_unit: z.string().min(1, 'Unidad obligatoria').max(50, 'La unidad no puede superar 50 caracteres'),
     data_quality: z.enum(DATA_QUALITY_VALUES).default('measured'),
-    notes: z.string().optional(),
+    notes: z.string().max(1000, 'Las notas no pueden superar 1000 caracteres').optional(),
   }),
-).min(1, 'Se requiere al menos una fila');
+).min(1, 'Se requiere al menos una fila').max(500, 'No se pueden importar más de 500 filas por lote');
 
 export async function importActivityBulk(
   _prevState: CsvImportState | null,
@@ -420,6 +508,9 @@ export async function importActivityBulk(
   const rawJson = formData.get('json_entries');
   if (typeof rawJson !== 'string' || !rawJson.trim()) {
     return { error: 'No se proporcionaron datos', submittedAt: Date.now() };
+  }
+  if (rawJson.length > 500_000) {
+    return { error: 'El lote supera el límite permitido (500 KB)', submittedAt: Date.now() };
   }
 
   let parsed: unknown;
@@ -436,52 +527,48 @@ export async function importActivityBulk(
 
   const bulkRows = validation.data;
 
-  // Batch access check
+  // Verificar acceso por lote
   const uniqueSupplierIds = [...new Set(bulkRows.map((r) => r.supplier_id))];
   for (const supplierId of uniqueSupplierIds) {
     const check = await verifySupplierAccess(supabase, supplierId, user.id);
     if ('error' in check) return { error: check.error, submittedAt: Date.now() };
   }
 
-  const entryRepo = new ActivityEntryRepository(supabase);
-  let importedCount = 0;
-  let skippedCount = 0;
   const now = new Date();
+  const rowData: ImportRowData[] = bulkRows.map((row) => {
+    const base: ImportRowData = {
+      supplier_id: row.supplier_id,
+      year_month: row.year_month,
+      source_type: row.source_type,
+      secondary: row.secondary,
+      raw_quantity: row.raw_quantity,
+      raw_unit: row.raw_unit,
+      data_quality: row.data_quality,
+    };
+    if (row.notes !== undefined) base.notes = row.notes;
+    return base;
+  });
 
-  for (const row of bulkRows) {
-    const periodResult = await findOrCreatePeriod(supabase, row.supplier_id, row.year_month);
-    if ('error' in periodResult) { skippedCount++; continue; }
+  const { entryRows, skipped } = await buildBatchEntries(supabase, rowData, user.id, now);
 
-    const activityKind = buildActivityKind(row.source_type, row.secondary);
-    if (!activityKind) { skippedCount++; continue; }
-
-    const entry = new ActivityEntry({
-      id: crypto.randomUUID(),
-      reportingPeriodId: periodResult.periodId,
-      sourceType: row.source_type,
-      activityKind,
-      rawQuantity: row.raw_quantity,
-      rawUnit: row.raw_unit as Unit,
-      status: 'submitted',
-      submittedAt: now,
-      submittedBy: user.id,
-      createdAt: now,
-      dataQuality: row.data_quality,
-    });
-
-    try {
-      await entryRepo.save(entry);
-      importedCount++;
-    } catch {
-      skippedCount++;
-    }
+  if (entryRows.length > 0) {
+    const { error: insertError } = await supabase.from('activity_entries').insert(entryRows);
+    if (insertError) return { error: 'Error al guardar registros. Intenta nuevamente.', skipped, submittedAt: Date.now() };
   }
 
   revalidatePath('/activity');
-  return { success: true, imported: importedCount, skipped: skippedCount, submittedAt: Date.now() };
+  revalidatePath('/audit');
+  revalidatePath('/dashboard');
+  revalidatePath('/suppliers');
+  return {
+    success: true,
+    imported: entryRows.length,
+    skipped,
+    entryIds: entryRows.map((r) => r.id as string),
+    submittedAt: Date.now(),
+  };
 }
 
-// ── voidActivityEntry ─────────────────────────────────────────────────────────
 
 export interface VoidEntryState {
   error?: string | undefined;
@@ -500,9 +587,13 @@ export async function voidActivityEntry(
 
   const entryId = formData.get('entry_id');
   const reason = formData.get('void_reason');
-  if (typeof entryId !== 'string' || !entryId) return { error: 'Falta el ID del registro' };
+  if (typeof entryId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entryId))
+    return { error: 'ID de registro inválido' };
   if (typeof reason !== 'string' || !reason.trim()) {
     return { error: 'La razón de anulación es obligatoria' };
+  }
+  if (reason.trim().length > 1000) {
+    return { error: 'La razón de anulación no puede superar 1000 caracteres' };
   }
 
   type EntryPeriod = {
@@ -528,10 +619,17 @@ export async function voidActivityEntry(
     .select('role')
     .eq('user_id', user.id)
     .eq('organization_id', orgId)
+    .in('role', ['admin', 'consultant'])
     .maybeSingle();
   const mem = memRaw as { role: string } | null;
   if (!mem) return { error: 'Sin permisos para este registro' };
 
+  if (periodStatus === 'calculating') {
+    return { error: 'No se puede anular registros mientras el periodo está siendo calculado' };
+  }
+  if (periodStatus === 'under_review' && mem.role !== 'admin') {
+    return { error: 'Solo administradores pueden anular registros en periodos bajo revisión' };
+  }
   if (periodStatus === 'locked' && mem.role !== 'admin') {
     return { error: 'Solo administradores pueden anular registros en periodos bloqueados' };
   }
@@ -544,14 +642,26 @@ export async function voidActivityEntry(
       voided_by: user.id,
     })
     .eq('id', entryId);
-  if (updateError) return { error: `Error al anular: ${updateError.message}` };
+  if (updateError) return { error: 'Error al anular el registro. Intenta nuevamente.' };
+
+  // Resolver anomalías activas de la entrada anulada — ya no son relevantes para cálculos
+  try {
+    await supabase
+      .from('anomaly_flags')
+      .update({ is_resolved: true, resolved_by: user.id, resolved_at: new Date().toISOString() })
+      .eq('activity_entry_id', entryId)
+      .eq('is_resolved', false);
+  } catch {
+    // No-crítico — la anulación ya fue aplicada en DB
+  }
 
   revalidatePath('/activity');
   revalidatePath('/audit');
+  revalidatePath('/dashboard');
+  revalidatePath('/suppliers');
   return { success: true };
 }
 
-// ── deleteActivityEntry ───────────────────────────────────────────────────────
 
 export interface DeleteEntryState {
   error?: string | undefined;
@@ -569,35 +679,45 @@ export async function deleteActivityEntry(
   if (!user) return { error: 'No autenticado' };
 
   const entryId = formData.get('entry_id');
-  if (typeof entryId !== 'string' || !entryId) return { error: 'Falta el ID del registro' };
+  if (typeof entryId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entryId))
+    return { error: 'ID de registro inválido' };
 
-  // Fetch period status + org via join
+  // Obtener estado del periodo y org mediante join
   type EntryPeriod = {
     reporting_period_id: string;
+    voided_at: string | null;
     reporting_periods: { status: string; suppliers: { organization_id: string } };
   };
   const { data: entryRaw } = await supabase
     .from('activity_entries')
-    .select('reporting_period_id, reporting_periods(status, suppliers(organization_id))')
+    .select('reporting_period_id, voided_at, reporting_periods(status, suppliers(organization_id))')
     .eq('id', entryId)
     .maybeSingle();
   const entryData = entryRaw as EntryPeriod | null;
   if (!entryData) return { error: 'Registro no encontrado' };
+
+  if (entryData.voided_at !== null) {
+    return { error: 'El registro ya fue anulado y no puede eliminarse. Usa la anulación para mantener la trazabilidad.' };
+  }
 
   const periodStatus = entryData.reporting_periods?.status;
   const orgId = entryData.reporting_periods?.suppliers?.organization_id;
 
   if (!orgId) return { error: 'Proveedor del registro no encontrado' };
 
-  // Membership check
+  // Solo admin/consultant pueden eliminar entradas
   const { data: memRaw } = await supabase
     .from('memberships')
     .select('role')
     .eq('user_id', user.id)
     .eq('organization_id', orgId)
+    .in('role', ['admin', 'consultant'])
     .maybeSingle();
   if (!memRaw) return { error: 'Sin permisos para eliminar este registro' };
 
+  if (periodStatus === 'calculating') {
+    return { error: 'No se puede eliminar registros mientras el periodo está siendo calculado' };
+  }
   if (periodStatus === 'locked') {
     return { error: 'Periodo bloqueado. Contacta al administrador.' };
   }
@@ -606,13 +726,15 @@ export async function deleteActivityEntry(
     .from('activity_entries')
     .delete()
     .eq('id', entryId);
-  if (deleteError) return { error: `Error al eliminar: ${deleteError.message}` };
+  if (deleteError) return { error: 'Error al eliminar el registro. Intenta nuevamente.' };
 
   revalidatePath('/activity');
+  revalidatePath('/audit');
+  revalidatePath('/suppliers');
+  revalidatePath('/dashboard');
   return { success: true };
 }
 
-// ── importActivityXlsx ────────────────────────────────────────────────────────
 
 export async function importActivityXlsx(
   _prevState: CsvImportState | null,
@@ -630,6 +752,13 @@ export async function importActivityXlsx(
   }
 
   const buffer = await file.arrayBuffer();
+
+  // Verificar magic bytes de ZIP/XLSX (PK\x03\x04) para rechazar binarios arbitrarios
+  const magic = new Uint8Array(buffer.slice(0, 4));
+  if (magic.length < 4 || magic[0] !== 0x50 || magic[1] !== 0x4b || magic[2] !== 0x03 || magic[3] !== 0x04) {
+    return { error: 'El archivo no es un Excel válido (.xlsx)', submittedAt: Date.now() };
+  }
+
   const rows = await parseXlsxBuffer(buffer);
 
   const validRows = rows.filter((r) => r.errors.length === 0 && r.data !== null);
@@ -643,47 +772,42 @@ export async function importActivityXlsx(
     };
   }
 
-  // Batch access check
+  // Verificar acceso por lote
   const uniqueSupplierIds = [...new Set(validRows.map((r) => r.data!.supplier_id))];
   for (const supplierId of uniqueSupplierIds) {
     const check = await verifySupplierAccess(supabase, supplierId, user.id);
     if ('error' in check) return { error: check.error, skipped, submittedAt: Date.now() };
   }
 
-  const entryRepo = new ActivityEntryRepository(supabase);
-  let importedCount = 0;
   const now = new Date();
-
-  for (const row of validRows) {
-    if (!row.data) continue;
-
-    const periodResult = await findOrCreatePeriod(supabase, row.data.supplier_id, row.data.year_month);
-    if ('error' in periodResult) { skipped++; continue; }
-
-    const activityKind = buildActivityKind(row.data.source_type, row.data.secondary);
-    if (!activityKind) { skipped++; continue; }
-
-    const entry = new ActivityEntry({
-      id: crypto.randomUUID(),
-      reportingPeriodId: periodResult.periodId,
-      sourceType: row.data.source_type,
-      activityKind,
-      rawQuantity: row.data.raw_quantity,
-      rawUnit: row.data.raw_unit as Unit,
-      status: 'submitted',
-      submittedAt: now,
-      submittedBy: user.id,
-      createdAt: now,
+  const rowData: ImportRowData[] = validRows
+    .filter((r) => r.data !== null)
+    .map((r) => {
+      const d = r.data!;
+      const base: ImportRowData = {
+        supplier_id: d.supplier_id,
+        year_month: d.year_month,
+        source_type: d.source_type,
+        secondary: d.secondary,
+        raw_quantity: d.raw_quantity,
+        raw_unit: d.raw_unit,
+        data_quality: d.data_quality,
+      };
+      if (d.notes !== undefined) base.notes = d.notes;
+      return base;
     });
 
-    try {
-      await entryRepo.save(entry);
-      importedCount++;
-    } catch {
-      skipped++;
-    }
+  const { entryRows, skipped: periodSkipped } = await buildBatchEntries(supabase, rowData, user.id, now);
+  skipped = skipped + periodSkipped;
+
+  if (entryRows.length > 0) {
+    const { error: insertError } = await supabase.from('activity_entries').insert(entryRows);
+    if (insertError) return { error: 'Error al guardar registros. Intenta nuevamente.', skipped, submittedAt: Date.now() };
   }
 
   revalidatePath('/activity');
-  return { success: true, imported: importedCount, skipped, submittedAt: Date.now() };
+  revalidatePath('/audit');
+  revalidatePath('/dashboard');
+  revalidatePath('/suppliers');
+  return { success: true, imported: entryRows.length, skipped, submittedAt: Date.now() };
 }

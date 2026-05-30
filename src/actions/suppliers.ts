@@ -93,7 +93,7 @@ export async function createSupplier(
     ruc: ruc || null,
   });
 
-  if (error) return { error: error.message };
+  if (error) return { error: 'Error al guardar el proveedor. Intenta nuevamente.' };
 
   revalidatePath('/suppliers');
   return { success: true };
@@ -158,11 +158,13 @@ export async function updateSupplier(
       contact_email: contacto || null,
       ruc: ruc || null,
     })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('organization_id', supplier.organization_id);
 
-  if (error) return { error: error.message };
+  if (error) return { error: 'Error al guardar el proveedor. Intenta nuevamente.' };
 
   revalidatePath('/suppliers');
+  revalidatePath(`/suppliers/${id}`);
   return { success: true };
 }
 
@@ -177,15 +179,18 @@ export async function archiveSupplier(
   if (!user) return { error: 'No autenticado' };
 
   const id = formData.get('id');
-  if (typeof id !== 'string' || !id) return { error: 'ID de proveedor requerido' };
+  if (typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
+    return { error: 'ID de proveedor inválido' };
 
+  type SupplierWithArchived = SupplierData & { archived_at: string | null };
   const { data: rawSupplier } = await supabase
     .from('suppliers')
-    .select('organization_id')
+    .select('organization_id, archived_at')
     .eq('id', id)
     .maybeSingle();
-  const supplier = rawSupplier as SupplierData | null;
+  const supplier = rawSupplier as SupplierWithArchived | null;
   if (!supplier) return { error: 'Proveedor no encontrado' };
+  if (supplier.archived_at) return { error: 'El proveedor ya está archivado' };
 
   const { data: rawMembership } = await supabase
     .from('memberships')
@@ -199,12 +204,24 @@ export async function archiveSupplier(
     return { error: 'Solo un administrador puede archivar proveedores' };
   }
 
+  // Bloquear archivado si hay periodos en estados activos
+  const { data: activePeriods } = await supabase
+    .from('reporting_periods')
+    .select('id')
+    .eq('supplier_id', id)
+    .in('status', ['open', 'calculating'])
+    .limit(1);
+  if (activePeriods && activePeriods.length > 0) {
+    return { error: 'No se puede archivar un proveedor con periodos abiertos o en cálculo. Completa o cierra todos los periodos primero.' };
+  }
+
   const { error } = await supabase
     .from('suppliers')
     .update({ archived_at: new Date().toISOString() })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('organization_id', supplier.organization_id);
 
-  if (error) return { error: error.message };
+  if (error) return { error: 'Error al guardar el proveedor. Intenta nuevamente.' };
 
   revalidatePath('/suppliers');
   return { success: true };

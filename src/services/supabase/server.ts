@@ -1,5 +1,6 @@
 import 'server-only';
 import { createServerClient as createSSRServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import type { Database } from '@/types/database';
 
@@ -7,6 +8,17 @@ function getRequiredEnv(key: string): string {
   const value = process.env[key];
   if (!value) throw new Error(`Missing required env var: ${key}`);
   return value;
+}
+
+/**
+ * Cliente con service_role para operaciones privilegiadas del servidor
+ * (subida a Storage, bypass de RLS en migraciones). NUNCA exponer al cliente.
+ */
+export function createAdminClient() {
+  return createClient<Database>(
+    getRequiredEnv('NEXT_PUBLIC_SUPABASE_URL'),
+    getRequiredEnv('SUPABASE_SERVICE_ROLE_KEY'),
+  );
 }
 
 export async function createServerClient() {
@@ -25,8 +37,8 @@ export async function createServerClient() {
               cookieStore.set(name, value, options);
             });
           } catch {
-            // Called from a Server Component — cookies are read-only here.
-            // Middleware handles session refresh writes.
+            // Llamado desde un Server Component — las cookies son de solo lectura aquí.
+            // El middleware maneja las escrituras de refresco de sesión.
           }
         },
       },

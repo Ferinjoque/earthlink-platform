@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
@@ -6,6 +7,7 @@ import { createServerClient } from '@/services/supabase/server';
 import { TopBar } from '@/components/shell/TopBar';
 import { Badge } from '@/components/ui/Badge';
 import { PrintButton } from '@/components/ui/PrintButton';
+import { EvidenceSection } from '@/components/activity/EvidenceSection';
 import type {
   ReportingPeriodRow,
   SupplierRow,
@@ -14,22 +16,11 @@ import type {
   AuditLogRow,
   MembershipRow,
   AnomalyFlagRow,
+  AnomalySeverity,
 } from '@/types/database';
 import { variantEstadoPeriodo, etiquetaEstadoPeriodo } from '@/lib/reporting-period';
-import { traducirMensajeAnomalia } from '@/lib/anomaly';
 import type { PeriodStatus } from '@/domain/ReportingPeriod';
-
-const COLOR_SEVERIDAD: Record<string, string> = {
-  low: 'var(--color-signal-ok)',
-  medium: 'var(--color-signal-md)',
-  high: 'var(--color-signal-hi)',
-};
-
-const ETIQUETA_SEVERIDAD: Record<string, string> = {
-  low: 'Baja',
-  medium: 'Media',
-  high: 'Alta',
-};
+import { AnomaliaItem, type AnomaliaDetalle } from '@/components/audit/AnomaliaItem';
 
 export const metadata: Metadata = { title: 'Detalle de periodo' };
 
@@ -43,7 +34,7 @@ const FUENTE_LABELS: Record<string, string> = {
 
 function formatearKg(kg: number): string {
   if (kg === 0) return '—';
-  if (kg >= 1_000_000) return `${(kg / 1_000_000).toFixed(3)} MtCO₂e`;
+  if (kg >= 1_000_000) return `${(kg / 1_000_000).toFixed(3)} ktCO₂e`;
   if (kg >= 1_000) return `${(kg / 1_000).toFixed(3)} tCO₂e`;
   return `${kg.toFixed(2)} kg CO₂e`;
 }
@@ -54,7 +45,7 @@ export default async function DetallePeriodoPage({
   params: Promise<{ periodId: string }>;
 }) {
   const { periodId } = await params;
-  if (!periodId || !/^[0-9a-f-]{36}$/i.test(periodId)) notFound();
+  if (!periodId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(periodId)) notFound();
 
   const supabase = await createServerClient();
   const {
@@ -62,7 +53,7 @@ export default async function DetallePeriodoPage({
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  // Load period + supplier
+  // Cargar periodo y proveedor
   type PeriodoCompleto = Pick<
     ReportingPeriodRow,
     'id' | 'label' | 'supplier_id' | 'status' | 'start_date' | 'end_date'
@@ -85,7 +76,7 @@ export default async function DetallePeriodoPage({
   if (!rawSupplier) notFound();
   const supplier = rawSupplier as Pick<SupplierRow, 'id' | 'name' | 'organization_id'>;
 
-  // Auth: membership check
+  // Verificar membresía del usuario en la org
   const { data: memCheck } = await supabase
     .from('memberships')
     .select('role')
@@ -96,7 +87,7 @@ export default async function DetallePeriodoPage({
   if (!memCheck) notFound();
   const membership = memCheck as Pick<MembershipRow, 'role'>;
 
-  // Parallel fetch: emission results + audit log
+  // Fetch paralelo: resultados de emisión y registro de auditoría
   type FilaResultado = Pick<
     EmissionResultRow,
     | 'id'
@@ -117,7 +108,7 @@ export default async function DetallePeriodoPage({
     'id' | 'action' | 'performed_at' | 'performed_by' | 'new_values'
   >;
 
-  const [resultsRaw, auditLogRaw] = await Promise.all([
+  const [resultsRaw, auditLogRaw, voidedEntriesRaw] = await Promise.all([
     supabase
       .from('emission_results')
       .select(
@@ -131,41 +122,76 @@ export default async function DetallePeriodoPage({
       .select('id, action, performed_at, performed_by, new_values')
       .eq('record_id', periodId)
       .order('performed_at', { ascending: true }),
+    supabase
+      .from('activity_entries')
+      .select('id')
+      .eq('reporting_period_id', periodId)
+      .not('voided_at', 'is', null),
   ]);
 
-  const results = (resultsRaw.data ?? []) as FilaResultado[];
+  const voidedEntryIds = new Set<string>(
+    ((voidedEntriesRaw.data ?? []) as Array<{ id: string }>).map((e) => e.id),
+  );
+  const results = ((resultsRaw.data ?? []) as FilaResultado[]).filter(
+    (r) => !voidedEntryIds.has(r.activity_entry_id),
+  );
   const auditLog = (auditLogRaw.data ?? []) as FilaAuditLog[];
 
-  // Parallel fetch: entry details + anomaly flags (both depend only on entryIds)
-  const entryIds = [...new Set(results.map((r) => r.activity_entry_id))];
   type FilaEntrada = Pick<ActivityEntryRow, 'id' | 'source_type' | 'raw_quantity' | 'raw_unit'>;
   type FilaFlag = Pick<
     AnomalyFlagRow,
     'id' | 'activity_entry_id' | 'severity' | 'z_score' | 'message' | 'flagged_at'
   >;
 
-  const [entriesRaw, flagsRaw] = entryIds.length
-    ? await Promise.all([
-        supabase
-          .from('activity_entries')
-          .select('id, source_type, raw_quantity, raw_unit')
-          .in('id', entryIds),
-        supabase
-          .from('anomaly_flags')
-          .select('id, activity_entry_id, severity, z_score, message, flagged_at')
-          .in('activity_entry_id', entryIds)
-          .eq('is_resolved', false)
-          .order('flagged_at', { ascending: false }),
-      ])
-    : [{ data: [] as FilaEntrada[] }, { data: [] as FilaFlag[] }];
+  // IDs de entradas con resultados (para tabla de emisiones)
+  const resultEntryIds = [...new Set(results.map((r) => r.activity_entry_id))];
+
+  // Todas las entradas del periodo (para sección de evidencias — incluye no calculadas)
+  const { data: allEntriesRaw } = await supabase
+    .from('activity_entries')
+    .select('id, source_type, raw_quantity, raw_unit')
+    .eq('reporting_period_id', periodId)
+    .is('voided_at', null)
+    .order('created_at', { ascending: true });
+
+  const allEntries = (allEntriesRaw ?? []) as FilaEntrada[];
+  const entryIds = allEntries.map((e) => e.id);
+
+  const flagsRaw = entryIds.length
+    ? await supabase
+        .from('anomaly_flags')
+        .select('id, activity_entry_id, severity, z_score, message, flagged_at')
+        .in('activity_entry_id', entryIds)
+        .eq('is_resolved', false)
+        .order('flagged_at', { ascending: false })
+    : { data: [] as FilaFlag[] };
 
   const entryMap = new Map<string, FilaEntrada>();
-  for (const e of (entriesRaw.data ?? []) as FilaEntrada[]) {
+  for (const e of allEntries) {
     entryMap.set(e.id, e);
   }
+
+  // Mapa limitado a entradas con resultados (para tabla de emisiones)
+  void resultEntryIds;
+
   const flagsData = (flagsRaw.data ?? []) as FilaFlag[];
 
-  // Aggregates
+  const anomaliasDetalle: AnomaliaDetalle[] = flagsData.map((f) => {
+    const entrada = entryMap.get(f.activity_entry_id);
+    return {
+      id: f.id,
+      activity_entry_id: f.activity_entry_id,
+      source_type: entrada?.source_type ?? '',
+      severity: f.severity as AnomalySeverity,
+      z_score: f.z_score,
+      message: f.message,
+      flagged_at: f.flagged_at,
+      raw_quantity: entrada?.raw_quantity ?? null,
+      raw_unit: entrada?.raw_unit ?? null,
+    };
+  });
+
+  // Totales agregados
   let totalCo2e = 0;
   let scope1Co2e = 0;
   let scope2Co2e = 0;
@@ -179,11 +205,13 @@ export default async function DetallePeriodoPage({
     day: '2-digit',
     month: 'long',
     year: 'numeric',
+    timeZone: 'UTC',
   });
   const finFmt = new Date(period.end_date).toLocaleDateString('es-PE', {
     day: '2-digit',
     month: 'long',
     year: 'numeric',
+    timeZone: 'UTC',
   });
 
   return (
@@ -359,78 +387,12 @@ export default async function DetallePeriodoPage({
                 background: 'var(--color-surface-1)',
                 border: '1px solid var(--color-border)',
                 borderRadius: 'var(--radius-lg)',
-                overflow: 'hidden',
+                padding: '0 var(--space-4)',
               }}
             >
-              {flagsData.map((f, idx) => {
-                const entrada = entryMap.get(f.activity_entry_id);
-                return (
-                  <div
-                    key={f.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: 'var(--space-4)',
-                      padding: 'var(--space-4) var(--space-5)',
-                      borderBottom:
-                        idx < flagsData.length - 1 ? '1px solid var(--color-border)' : 'none',
-                      flexWrap: 'wrap',
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: 'var(--text-xs)',
-                        fontWeight: 700,
-                        color: COLOR_SEVERIDAD[f.severity] ?? 'var(--color-ink-2)',
-                        fontFamily: 'var(--font-mono)',
-                        minWidth: '40px',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {ETIQUETA_SEVERIDAD[f.severity] ?? f.severity}
-                    </span>
-                    {f.z_score !== null && (
-                      <span
-                        style={{
-                          fontSize: 'var(--text-xs)',
-                          fontFamily: 'var(--font-mono)',
-                          color: 'var(--color-ink-2)',
-                          flexShrink: 0,
-                        }}
-                      >
-                        z={f.z_score.toFixed(2)}
-                      </span>
-                    )}
-                    {entrada && (
-                      <span
-                        style={{
-                          fontSize: 'var(--text-xs)',
-                          fontFamily: 'var(--font-mono)',
-                          color: 'var(--color-ink-3)',
-                          flexShrink: 0,
-                        }}
-                      >
-                        {FUENTE_LABELS[entrada.source_type] ?? entrada.source_type}
-                      </span>
-                    )}
-                    <span
-                      style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-2)', flex: 1 }}
-                    >
-                      {traducirMensajeAnomalia(f.message)}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: '10px',
-                        color: 'var(--color-ink-3)',
-                        fontFamily: 'var(--font-mono)',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {new Date(f.flagged_at).toLocaleDateString('es')}
-                    </span>
-                  </div>
-                );
-              })}
+              {anomaliasDetalle.map((a) => (
+                <AnomaliaItem key={a.id} anomalia={a} />
+              ))}
             </div>
           </section>
         )}
@@ -648,8 +610,89 @@ export default async function DetallePeriodoPage({
           )}
         </section>
 
+        {/* ── Evidencias adjuntas por entrada ── */}
+        {entryIds.length > 0 && (
+          <section className="animate-fade-up stagger-5" data-no-print>
+            <div style={{ marginBottom: 'var(--space-4)' }}>
+              <h3
+                style={{
+                  fontSize: 'var(--text-base)',
+                  fontWeight: 600,
+                  color: 'var(--color-ink-1)',
+                  margin: 0,
+                }}
+              >
+                Evidencias adjuntas
+              </h3>
+              <p
+                style={{
+                  fontSize: 'var(--text-sm)',
+                  color: 'var(--color-ink-3)',
+                  margin: 'var(--space-1) 0 0',
+                }}
+              >
+                Archivos de respaldo opcionales por cada entrada de actividad.
+              </p>
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--space-3)',
+              }}
+            >
+              {entryIds.map((eid) => {
+                const entrada = entryMap.get(eid);
+                return (
+                  <div
+                    key={eid}
+                    style={{
+                      background: 'var(--color-surface-1)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius-md)',
+                      padding: 'var(--space-3) var(--space-4)',
+                      display: 'flex',
+                      gap: 'var(--space-4)',
+                      alignItems: 'flex-start',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 'var(--text-xs)',
+                        fontFamily: 'var(--font-mono)',
+                        color: 'var(--color-ink-3)',
+                        flexShrink: 0,
+                        minWidth: '160px',
+                      }}
+                    >
+                      {FUENTE_LABELS[entrada?.source_type ?? ''] ?? entrada?.source_type ?? eid.slice(0, 8)}
+                      {entrada && (
+                        <span style={{ display: 'block', color: 'var(--color-ink-3)' }}>
+                          {entrada.raw_quantity.toLocaleString('es')} {entrada.raw_unit}
+                        </span>
+                      )}
+                    </span>
+                    <div style={{ flex: 1 }}>
+                      <Suspense
+                        fallback={
+                          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)' }}>
+                            Cargando…
+                          </span>
+                        }
+                      >
+                        <EvidenceSection entryId={eid} readOnly />
+                      </Suspense>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
         {/* ── Audit log timeline ── */}
-        <section className="animate-fade-up stagger-5">
+        <section className="animate-fade-up stagger-6" data-no-print>
           <div style={{ marginBottom: 'var(--space-5)' }}>
             <h3
               style={{
