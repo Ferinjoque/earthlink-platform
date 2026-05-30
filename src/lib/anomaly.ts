@@ -17,7 +17,16 @@ export function traducirMensajeAnomalia(msg: string): string {
     /^(.+?)\s+consumption of ([\d,.]+)\s+(\S+)\s+in\s+(.+?)\s+is\s+([\d.]+)σ\s+above the\s+(.+?)\s+baseline of\s+([\d,.]+)\s+\S+\./i,
   );
   if (m1) {
-    const [, fuel = '', qty = '', unit = '', period = '', zscore = '', basePeriod = '', baseQty = ''] = m1;
+    const [
+      ,
+      fuel = '',
+      qty = '',
+      unit = '',
+      period = '',
+      zscore = '',
+      basePeriod = '',
+      baseQty = '',
+    ] = m1;
     return `${fuel}: ${qty} ${unit} en ${period} es ${zscore}σ sobre la línea base de ${basePeriod} (${baseQty} ${unit}). Verificar facturas.`;
   }
 

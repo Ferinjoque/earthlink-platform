@@ -28,10 +28,7 @@ export default async function ProveedoresPage() {
 
   const orgsData: { id: string; name: string }[] = [];
   if (orgIds.length > 1) {
-    const { data } = await supabase
-      .from('organizations')
-      .select('id, name')
-      .in('id', orgIds);
+    const { data } = await supabase.from('organizations').select('id, name').in('id', orgIds);
     if (data) orgsData.push(...(data as { id: string; name: string }[]));
   }
 

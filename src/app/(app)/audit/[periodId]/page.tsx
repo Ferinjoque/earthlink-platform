@@ -14,7 +14,6 @@ import type {
   EmissionResultRow,
   ActivityEntryRow,
   AuditLogRow,
-  MembershipRow,
   AnomalyFlagRow,
   AnomalySeverity,
 } from '@/types/database';
@@ -45,7 +44,11 @@ export default async function DetallePeriodoPage({
   params: Promise<{ periodId: string }>;
 }) {
   const { periodId } = await params;
-  if (!periodId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(periodId)) notFound();
+  if (
+    !periodId ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(periodId)
+  )
+    notFound();
 
   const supabase = await createServerClient();
   const {
@@ -85,7 +88,6 @@ export default async function DetallePeriodoPage({
     .maybeSingle();
 
   if (!memCheck) notFound();
-  const membership = memCheck as Pick<MembershipRow, 'role'>;
 
   // Fetch paralelo: resultados de emisión y registro de auditoría
   type FilaResultado = Pick<
@@ -666,7 +668,9 @@ export default async function DetallePeriodoPage({
                         minWidth: '160px',
                       }}
                     >
-                      {FUENTE_LABELS[entrada?.source_type ?? ''] ?? entrada?.source_type ?? eid.slice(0, 8)}
+                      {FUENTE_LABELS[entrada?.source_type ?? ''] ??
+                        entrada?.source_type ??
+                        eid.slice(0, 8)}
                       {entrada && (
                         <span style={{ display: 'block', color: 'var(--color-ink-3)' }}>
                           {entrada.raw_quantity.toLocaleString('es')} {entrada.raw_unit}
@@ -753,7 +757,9 @@ export default async function DetallePeriodoPage({
                   calculate: 'Cálculo',
                   void: 'Anulación',
                 };
-                const accion = ACCION_LABEL[entry.action.toLowerCase()] ?? entry.action.replace(/_/g, ' ').toLowerCase();
+                const accion =
+                  ACCION_LABEL[entry.action.toLowerCase()] ??
+                  entry.action.replace(/_/g, ' ').toLowerCase();
                 const newVals = entry.new_values as Record<string, unknown> | null;
                 const nuevoEstado = newVals?.status as string | undefined;
                 return (

@@ -89,12 +89,8 @@ export function MonthlyChart({ summary }: MonthlyChartProps) {
                 rx={3}
                 ry={3}
                 style={{
-                  fill: isPeak
-                    ? 'oklch(58% 0.16 155)'
-                    : 'oklch(58% 0.16 155 / 28%)',
-                  stroke: isPeak
-                    ? 'oklch(58% 0.16 155)'
-                    : 'oklch(58% 0.16 155 / 55%)',
+                  fill: isPeak ? 'oklch(58% 0.16 155)' : 'oklch(58% 0.16 155 / 28%)',
+                  stroke: isPeak ? 'oklch(58% 0.16 155)' : 'oklch(58% 0.16 155 / 55%)',
                   strokeWidth: 1,
                 }}
               />

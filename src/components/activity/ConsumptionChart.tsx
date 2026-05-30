@@ -2,7 +2,6 @@
 
 import { useState, useId } from 'react';
 
-
 export interface ConsumoMensual {
   yearMonth: string; // "YYYY-MM"
   label: string; // "Ene 2026"
@@ -23,8 +22,20 @@ interface ConsumptionChartProps {
   proveedores: ProveedorResumen[];
 }
 
-
-const MESES_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+const MESES_ES = [
+  'Ene',
+  'Feb',
+  'Mar',
+  'Abr',
+  'May',
+  'Jun',
+  'Jul',
+  'Ago',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dic',
+];
 
 const COLOR_ENERGIA = 'var(--color-accent)'; // green
 const COLOR_AGUA = 'oklch(55% 0.15 230)'; // blue
@@ -67,7 +78,6 @@ interface ChartSeries {
   unit: string;
   points: SeriesPoint[];
 }
-
 
 function SvgLineChart({
   series,
@@ -120,12 +130,7 @@ function SvgLineChart({
     >
       <defs>
         <clipPath id={clipId}>
-          <rect
-            x={SVG_PADDING.left}
-            y={SVG_PADDING.top}
-            width={plotW}
-            height={plotH + 1}
-          />
+          <rect x={SVG_PADDING.left} y={SVG_PADDING.top} width={plotW} height={plotH + 1} />
         </clipPath>
       </defs>
 
@@ -173,8 +178,7 @@ function SvgLineChart({
           months.length > 8
             ? `${MESES_ES[(parseInt(mon ?? '1', 10) - 1) % 12]?.slice(0, 1) ?? ''}`
             : `${MESES_ES[(parseInt(mon ?? '1', 10) - 1) % 12] ?? ''}`;
-        const showYear =
-          idx === 0 || (year !== months[idx - 1]?.split('-')[0]);
+        const showYear = idx === 0 || year !== months[idx - 1]?.split('-')[0];
         return (
           <g key={ym}>
             <text
@@ -253,16 +257,13 @@ function SvgLineChart({
   );
 }
 
-
 export function ConsumptionChart({ consumo, proveedores }: ConsumptionChartProps) {
   const [proveedorActivo, setProveedorActivo] = useState<string>('todos');
   const clipId = useId().replace(/:/g, '-') + '-clip';
 
   // Filtrar datos según proveedor activo
   const datosFiltrados =
-    proveedorActivo === 'todos'
-      ? consumo
-      : consumo.filter((d) => d.supplierId === proveedorActivo);
+    proveedorActivo === 'todos' ? consumo : consumo.filter((d) => d.supplierId === proveedorActivo);
 
   // Obtener meses únicos ordenados de los datos filtrados
   const months = [...new Set(datosFiltrados.map((d) => d.yearMonth))].sort();
@@ -325,8 +326,8 @@ export function ConsumptionChart({ consumo, proveedores }: ConsumptionChartProps
     ? (datosFiltrados.find((d) => d.yearMonth === ultimoMes)?.label ?? ultimoMes)
     : null;
 
-  const seriesActivas = [seriesEnergia, seriesAgua, seriesResiduos].filter(
-    (s) => s.points.some((p) => p.value > 0),
+  const seriesActivas = [seriesEnergia, seriesAgua, seriesResiduos].filter((s) =>
+    s.points.some((p) => p.value > 0),
   );
 
   return (
@@ -368,11 +369,7 @@ export function ConsumptionChart({ consumo, proveedores }: ConsumptionChartProps
           marginBottom: 'var(--space-6)',
         }}
       >
-        <StatCard
-          label="CO₂e total"
-          value={formatCo2e(totalCo2eKg)}
-          accent={COLOR_ENERGIA}
-        />
+        <StatCard label="CO₂e total" value={formatCo2e(totalCo2eKg)} accent={COLOR_ENERGIA} />
         <StatCard
           label="Agua registrada"
           value={formatQty(totalAguaM3, 'm³')}
@@ -384,11 +381,7 @@ export function ConsumptionChart({ consumo, proveedores }: ConsumptionChartProps
           accent={COLOR_RESIDUOS}
         />
         {ultimoLabel && (
-          <StatCard
-            label="Último periodo"
-            value={ultimoLabel}
-            accent="var(--color-ink-3)"
-          />
+          <StatCard label="Último periodo" value={ultimoLabel} accent="var(--color-ink-3)" />
         )}
       </div>
 
@@ -457,7 +450,6 @@ export function ConsumptionChart({ consumo, proveedores }: ConsumptionChartProps
   );
 }
 
-
 function PillButton({
   active,
   onClick,
@@ -477,9 +469,7 @@ function PillButton({
         fontWeight: active ? 600 : 400,
         color: active ? 'var(--color-accent)' : 'var(--color-ink-2)',
         background: active ? 'var(--color-accent-soft)' : 'var(--color-surface-2)',
-        border: active
-          ? '1px solid var(--color-accent)'
-          : '1px solid var(--color-border)',
+        border: active ? '1px solid var(--color-accent)' : '1px solid var(--color-border)',
         borderRadius: 'var(--radius-pill)',
         padding: '3px var(--space-3)',
         cursor: 'pointer',
@@ -492,15 +482,7 @@ function PillButton({
   );
 }
 
-function StatCard({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: string;
-  accent: string;
-}) {
+function StatCard({ label, value, accent }: { label: string; value: string; accent: string }) {
   return (
     <div
       style={{

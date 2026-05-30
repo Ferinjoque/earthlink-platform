@@ -61,7 +61,12 @@ export class EmissionResultRepository {
       normalizedValue: row['normalized_quantity'] as number,
       normalizedUnit: row['normalized_unit'] as EmissionResult['normalizedUnit'],
       co2eKg: row['co2e_kg'] as number,
-      scope: row['scope'] === 1 ? ('scope1' as const) : row['scope'] === 2 ? ('scope2' as const) : ('none' as const),
+      scope:
+        row['scope'] === 1
+          ? ('scope1' as const)
+          : row['scope'] === 2
+            ? ('scope2' as const)
+            : ('none' as const),
       engineVersion: row['calc_version'] as string,
       calcHash: row['calc_hash'] as string,
     }));

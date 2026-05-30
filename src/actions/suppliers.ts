@@ -179,7 +179,10 @@ export async function archiveSupplier(
   if (!user) return { error: 'No autenticado' };
 
   const id = formData.get('id');
-  if (typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
+  if (
+    typeof id !== 'string' ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+  )
     return { error: 'ID de proveedor inválido' };
 
   type SupplierWithArchived = SupplierData & { archived_at: string | null };
@@ -212,7 +215,10 @@ export async function archiveSupplier(
     .in('status', ['open', 'calculating'])
     .limit(1);
   if (activePeriods && activePeriods.length > 0) {
-    return { error: 'No se puede archivar un proveedor con periodos abiertos o en cálculo. Completa o cierra todos los periodos primero.' };
+    return {
+      error:
+        'No se puede archivar un proveedor con periodos abiertos o en cálculo. Completa o cierra todos los periodos primero.',
+    };
   }
 
   const { error } = await supabase

@@ -25,7 +25,6 @@ import type {
   Unit,
 } from './types';
 
-
 function ok<T>(value: T): CalcResult<T> {
   return { ok: true, value };
 }
@@ -37,7 +36,6 @@ function err<T>(error: CalcError): CalcResult<T> {
 // Categorías sin emisiones GHG directas — CO2e = 0, scope = 'none'
 const NO_GHG_KINDS: ReadonlySet<ActivityKind['kind']> = new Set(['water_use', 'waste']);
 
-
 function validateActivity(record: ActivityRecord): CalcResult<ActivityRecord> {
   if (!isFinite(record.rawValue) || record.rawValue < 0) {
     return err({
@@ -48,7 +46,6 @@ function validateActivity(record: ActivityRecord): CalcResult<ActivityRecord> {
   }
   return ok(record);
 }
-
 
 function normalizeUnit(
   rawValue: number,
@@ -69,7 +66,6 @@ function normalizeUnit(
 
   return ok(Big(rawValue).times(Big(factor)).toNumber());
 }
-
 
 function resolveFactorKey(activity: ActivityKind): string {
   switch (activity.kind) {
@@ -116,11 +112,9 @@ function resolveFactor(activity: ActivityKind, factors: FactorTable): CalcResult
   return ok(factor);
 }
 
-
 function applyFactor(normalizedValue: number, factorKgCo2ePerUnit: number): number {
   return Big(normalizedValue).times(Big(factorKgCo2ePerUnit)).toNumber();
 }
-
 
 function stampProvenance(
   record: ActivityRecord,
@@ -155,7 +149,6 @@ function stampProvenanceZero(record: ActivityRecord): string {
   });
   return createHash('sha256').update(canonical, 'utf8').digest('hex');
 }
-
 
 export function calculate(
   record: ActivityRecord,
@@ -212,7 +205,6 @@ export function calculate(
   });
 }
 
-
 export function aggregate(results: readonly EmissionResult[]): EvaluationTotals {
   let totalBig = Big(0);
   const byScopeAcc: Record<GhgScope, Big> = { scope1: Big(0), scope2: Big(0), none: Big(0) };
@@ -245,7 +237,6 @@ export function aggregate(results: readonly EmissionResult[]): EvaluationTotals 
   };
 }
 
-
 export function score(totals: EvaluationTotals, history: readonly EvaluationTotals[]): RiskScore {
   let trend: 'up' | 'down' | 'stable' = 'stable';
 
@@ -273,7 +264,6 @@ export function score(totals: EvaluationTotals, history: readonly EvaluationTota
 
   return { score: rawScore, level, anomalyCount: 0, trend };
 }
-
 
 export const _internals = {
   validateActivity,

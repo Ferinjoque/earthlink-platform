@@ -33,9 +33,7 @@ export default async function AuditoriaPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const nowYear = new Date().getFullYear();
   const selectedYear =
-    params.year && /^\d{4}$/.test(params.year)
-      ? parseInt(params.year, 10)
-      : nowYear;
+    params.year && /^\d{4}$/.test(params.year) ? parseInt(params.year, 10) : nowYear;
   const supabase = await createServerClient();
   const {
     data: { user },
@@ -122,7 +120,10 @@ export default async function AuditoriaPage({ searchParams }: PageProps) {
     | 'factor_unit'
     | 'calculated_at'
   >;
-  type FilaEntradaMin = Pick<ActivityEntryRow, 'id' | 'reporting_period_id' | 'source_type' | 'raw_quantity' | 'raw_unit' | 'voided_at'>;
+  type FilaEntradaMin = Pick<
+    ActivityEntryRow,
+    'id' | 'reporting_period_id' | 'source_type' | 'raw_quantity' | 'raw_unit' | 'voided_at'
+  >;
 
   const [resultsRaw, allEntriesRaw] = await Promise.all([
     nonOpenPeriodIds.length
@@ -337,24 +338,29 @@ export default async function AuditoriaPage({ searchParams }: PageProps) {
             </span>
           ))}
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 'var(--space-2)' }}>
-            {[nowYear - 1, nowYear, nowYear + 1].filter((y) => y >= 2024).map((y) => (
-              <Link
-                key={y}
-                href={`/audit?year=${y}`}
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 'var(--text-xs)',
-                  padding: '3px var(--space-3)',
-                  borderRadius: 'var(--radius-md)',
-                  border: y === selectedYear ? '1px solid var(--color-accent)' : '1px solid var(--color-border)',
-                  background: y === selectedYear ? 'var(--color-accent-soft)' : 'transparent',
-                  color: y === selectedYear ? 'var(--color-accent)' : 'var(--color-ink-3)',
-                  textDecoration: 'none',
-                }}
-              >
-                {y}
-              </Link>
-            ))}
+            {[nowYear - 1, nowYear, nowYear + 1]
+              .filter((y) => y >= 2024)
+              .map((y) => (
+                <Link
+                  key={y}
+                  href={`/audit?year=${y}`}
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 'var(--text-xs)',
+                    padding: '3px var(--space-3)',
+                    borderRadius: 'var(--radius-md)',
+                    border:
+                      y === selectedYear
+                        ? '1px solid var(--color-accent)'
+                        : '1px solid var(--color-border)',
+                    background: y === selectedYear ? 'var(--color-accent-soft)' : 'transparent',
+                    color: y === selectedYear ? 'var(--color-accent)' : 'var(--color-ink-3)',
+                    textDecoration: 'none',
+                  }}
+                >
+                  {y}
+                </Link>
+              ))}
           </div>
         </section>
 
@@ -384,7 +390,8 @@ export default async function AuditoriaPage({ searchParams }: PageProps) {
                   margin: 'var(--space-1) 0 0',
                 }}
               >
-                Registros CO₂e inmutables para {selectedYear} — estas cifras ya no pueden modificarse.
+                Registros CO₂e inmutables para {selectedYear} — estas cifras ya no pueden
+                modificarse.
               </p>
             </div>
             <LockedPeriodsTable rows={lockedRows} />

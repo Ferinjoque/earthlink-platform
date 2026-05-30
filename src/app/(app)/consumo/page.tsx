@@ -118,7 +118,11 @@ export default async function ConsumoPage() {
     .select('from_unit, to_unit, factor')
     .in('to_unit', ['kWh', 'm3', 'kg']);
 
-  const convRows = (rawConversions ?? []) as { from_unit: string; to_unit: string; factor: number }[];
+  const convRows = (rawConversions ?? []) as {
+    from_unit: string;
+    to_unit: string;
+    factor: number;
+  }[];
   const toKwh: Record<string, number> = Object.fromEntries(
     convRows.filter((r) => r.to_unit === 'kWh').map((r) => [r.from_unit, r.factor]),
   );

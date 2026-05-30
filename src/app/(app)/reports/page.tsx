@@ -55,7 +55,10 @@ export default async function ReportesPage() {
   const allSupplierIds = suppliersData.map((s) => s.id);
 
   // Cargar periodos exportables (en revisión o bloqueados) con start_date para agrupar por año
-  type FilaPeriodo = Pick<ReportingPeriodRow, 'id' | 'label' | 'supplier_id' | 'status' | 'start_date'>;
+  type FilaPeriodo = Pick<
+    ReportingPeriodRow,
+    'id' | 'label' | 'supplier_id' | 'status' | 'start_date'
+  >;
   const periodsData: FilaPeriodo[] = [];
   if (allSupplierIds.length) {
     const { data } = await supabase
@@ -93,7 +96,12 @@ export default async function ReportesPage() {
       .select('reporting_period_id, activity_entry_id, co2e_kg, scope')
       .in('reporting_period_id', periodIds);
     if (data) {
-      for (const r of data as Array<{ reporting_period_id: string; activity_entry_id: string | null; co2e_kg: number; scope: number }>) {
+      for (const r of data as Array<{
+        reporting_period_id: string;
+        activity_entry_id: string | null;
+        co2e_kg: number;
+        scope: number;
+      }>) {
         if (r.activity_entry_id && voidedEntryIds.has(r.activity_entry_id)) continue;
         const prev = mapaResumen.get(r.reporting_period_id) ?? {
           totalCo2eKg: 0,
@@ -171,7 +179,11 @@ export default async function ReportesPage() {
         }}
       >
         {/* Cabecera editorial — oculta en impresión (reemplazada por portada dentro de ReportsPanel) */}
-        <div data-no-print className="animate-fade-up stagger-1" style={{ marginBottom: 'var(--space-8)' }}>
+        <div
+          data-no-print
+          className="animate-fade-up stagger-1"
+          style={{ marginBottom: 'var(--space-8)' }}
+        >
           <p className="eyebrow" style={{ marginBottom: 'var(--space-3)' }}>
             Protocolo GHG · Exportación de datos
           </p>
