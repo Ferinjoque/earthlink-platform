@@ -20,8 +20,7 @@ export const AYUDA_FUENTE: Record<EmissionSourceType, string> = {
     'Quema de combustibles en vehículos o maquinaria móvil de la organización. Alcance 1 según GHG Protocol.',
   purchased_electricity:
     'Electricidad comprada de la red eléctrica. Alcance 2 según GHG Protocol. Fórmula: consumo (kWh) × factor de la región de red (kg CO₂e/kWh).',
-  purchased_steam:
-    'Vapor o calor comprado a un proveedor externo. Alcance 2 según GHG Protocol.',
+  purchased_steam: 'Vapor o calor comprado a un proveedor externo. Alcance 2 según GHG Protocol.',
   fugitive:
     'Fugas no intencionales de gases refrigerantes en equipos HVAC/R. Alcance 1. Fórmula: masa fugada (kg) × GWP del refrigerante.',
   water_use:
@@ -52,12 +51,14 @@ export const OPCIONES_SECUNDARIAS: Partial<
     {
       value: 'fuel_oil_no2',
       label: 'Fuel Oil No. 2 (Diésel pesado)',
-      ayuda: 'Diésel pesado / Gas oil. Factor DEFRA 2024: ~2.68 kg CO₂e/L. Usado en generadores de emergencia.',
+      ayuda:
+        'Diésel pesado / Gas oil. Factor DEFRA 2024: ~2.68 kg CO₂e/L. Usado en generadores de emergencia.',
     },
     {
       value: 'propane',
       label: 'Propano',
-      ayuda: 'Propano en cilindros. Factor DEFRA 2024: ~1.49 kg CO₂e/L. Usado en calefacción y cocinas.',
+      ayuda:
+        'Propano en cilindros. Factor DEFRA 2024: ~1.49 kg CO₂e/L. Usado en calefacción y cocinas.',
     },
   ],
   mobile_combustion: [
@@ -69,7 +70,8 @@ export const OPCIONES_SECUNDARIAS: Partial<
     {
       value: 'SEIN_PERU',
       label: 'SEIN — Perú',
-      ayuda: 'Sistema Eléctrico Interconectado Nacional del Perú. Factor MINEM 2023: ~0.4517 kg CO₂e/kWh.',
+      ayuda:
+        'Sistema Eléctrico Interconectado Nacional del Perú. Factor MINEM 2023: ~0.4517 kg CO₂e/kWh.',
     },
     { value: 'LATAM_AVG', label: 'Promedio LATAM' },
     { value: 'US_AVERAGE', label: 'Promedio EE.UU.' },
@@ -128,7 +130,8 @@ export const OPCIONES_SECUNDARIAS: Partial<
     {
       value: 'disposed_trash',
       label: 'Residuos enviados a vertedero',
-      ayuda: 'Residuos sólidos urbanos e industriales dispuestos en relleno sanitario o incinerados.',
+      ayuda:
+        'Residuos sólidos urbanos e industriales dispuestos en relleno sanitario o incinerados.',
     },
     {
       value: 'recycled',
@@ -152,7 +155,10 @@ export const UNIDADES_POR_FUENTE: Record<EmissionSourceType, UnitInfo[]> = {
     { unit: 'gallon', ayuda: 'Galón estadounidense. 1 gal EE.UU. = 3.785 L.' },
     { unit: 'GJ', ayuda: 'Gigajoule. Unidad de energía. 1 GJ = 277.78 kWh = 947.8 kBtu.' },
     { unit: 'kWh', ayuda: 'Kilovatio-hora. 1 kWh = 3.6 MJ = 3.412 kBtu.' },
-    { unit: 'therms', ayuda: 'Therm. Unidad energética anglosajona. 1 therm = 100 kBtu = 29.3 kWh.' },
+    {
+      unit: 'therms',
+      ayuda: 'Therm. Unidad energética anglosajona. 1 therm = 100 kBtu = 29.3 kWh.',
+    },
     { unit: 'MMBtu', ayuda: 'Millón de BTU. 1 MMBtu = 1000 kBtu = 293 kWh.' },
     { unit: 'MBtu', ayuda: 'Equivalente a MMBtu en convención GRESB. 1 MBtu = 1000 kBtu.' },
     { unit: 'MJ', ayuda: 'Megajoule. 1 MJ = 0.278 kWh = 0.948 kBtu.' },
@@ -178,14 +184,25 @@ export const UNIDADES_POR_FUENTE: Record<EmissionSourceType, UnitInfo[]> = {
     { unit: 'tonne', ayuda: 'Tonelada métrica. 1 t = 1000 kg.' },
   ],
   water_use: [
-    { unit: 'kgal_us', ayuda: 'Mil galones (EE.UU.). Unidad GRESB estándar para agua. 1 kgal = 3,785 L = 3.785 m³.' },
-    { unit: 'megaliter', ayuda: 'Megalitro. Unidad GRESB estándar para grandes consumos. 1 ML = 1,000 m³ = 264,172 gal.' },
+    {
+      unit: 'kgal_us',
+      ayuda: 'Mil galones (EE.UU.). Unidad GRESB estándar para agua. 1 kgal = 3,785 L = 3.785 m³.',
+    },
+    {
+      unit: 'megaliter',
+      ayuda:
+        'Megalitro. Unidad GRESB estándar para grandes consumos. 1 ML = 1,000 m³ = 264,172 gal.',
+    },
     { unit: 'm3', ayuda: 'Metro cúbico. Unidad métrica de volumen. 1 m³ = 1,000 L = 0.264 kgal.' },
     { unit: 'L', ayuda: 'Litro. Para consumos pequeños. 1 L = 0.001 m³.' },
     { unit: 'gallon', ayuda: 'Galón (EE.UU.). 1 galón = 3.785 L = 0.001 kgal.' },
   ],
   waste: [
-    { unit: 'ton_us', ayuda: 'Tonelada corta (EE.UU.). Unidad GRESB estándar para residuos. 1 ton corta = 0.907 toneladas métricas = 2,000 lb.' },
+    {
+      unit: 'ton_us',
+      ayuda:
+        'Tonelada corta (EE.UU.). Unidad GRESB estándar para residuos. 1 ton corta = 0.907 toneladas métricas = 2,000 lb.',
+    },
     { unit: 'tonne', ayuda: 'Tonelada métrica. 1 t = 1000 kg = 1.102 toneladas cortas.' },
     { unit: 'kg', ayuda: 'Kilogramo. Para residuos de menor volumen.' },
     { unit: 'lb', ayuda: 'Libra. 1 lb = 0.4536 kg = 0.000454 toneladas métricas.' },
@@ -214,28 +231,27 @@ export function etiquetaUnidad(unit: Unit): string {
 
 export function labelSecundarioPara(sourceType: EmissionSourceType): string {
   switch (sourceType) {
-    case 'purchased_electricity': return 'Región de red eléctrica';
-    case 'fugitive': return 'Refrigerante';
-    case 'water_use': return 'Tipo de agua';
-    case 'waste': return 'Método de disposición';
-    default: return 'Tipo de combustible';
+    case 'purchased_electricity':
+      return 'Región de red eléctrica';
+    case 'fugitive':
+      return 'Refrigerante';
+    case 'water_use':
+      return 'Tipo de agua';
+    case 'waste':
+      return 'Método de disposición';
+    default:
+      return 'Tipo de combustible';
   }
 }
 
 export const ALL_SOURCE_TYPES = Object.keys(ETIQUETAS_FUENTE) as EmissionSourceType[];
 
 export const ALL_UNITS: Unit[] = [
-  ...new Set(
-    (Object.values(UNIDADES_POR_FUENTE) as UnitInfo[][])
-      .flat()
-      .map((u) => u.unit),
-  ),
+  ...new Set((Object.values(UNIDADES_POR_FUENTE) as UnitInfo[][]).flat().map((u) => u.unit)),
 ];
 
 export const ALL_SECONDARIES: string[] = [
   ...new Set(
-    (Object.values(OPCIONES_SECUNDARIAS) as { value: string }[][])
-      .flat()
-      .map((o) => o.value),
+    (Object.values(OPCIONES_SECUNDARIAS) as { value: string }[][]).flat().map((o) => o.value),
   ),
 ];

@@ -3,7 +3,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
-
 type ToastVariant = 'success' | 'error' | 'info';
 
 interface ToastItem {
@@ -16,7 +15,6 @@ interface ToastContextValue {
   toast: (message: string, variant?: ToastVariant) => void;
 }
 
-
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 export function useToast(): ToastContextValue {
@@ -24,7 +22,6 @@ export function useToast(): ToastContextValue {
   if (!ctx) throw new Error('useToast must be used within ToastProvider');
   return ctx;
 }
-
 
 const VARIANT_STYLES: Record<ToastVariant, { background: string; color: string; border: string }> =
   {
@@ -99,7 +96,6 @@ function ToastBubble({ item, onDismiss }: { item: ToastItem; onDismiss: (id: num
   );
 }
 
-
 let nextId = 1;
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
@@ -133,7 +129,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <ToastContext.Provider value={{ toast }}>

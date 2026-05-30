@@ -3,7 +3,7 @@
 import { Fragment, useState, useActionState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Paperclip, FileText, Image } from 'lucide-react';
+import { Paperclip, FileText, Image as ImageIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { AnomalyBadge } from '@/components/activity/AnomalyBadge';
 import { traducirMensajeAnomalia } from '@/lib/anomaly';
@@ -84,7 +84,7 @@ const COLOR_SEVERIDAD: Record<AnomalySeverity, string> = {
 const CABECERAS = ['Periodo', 'Fuente', 'Cantidad', 'Estado', 'Anomalía / Motivo', 'Enviado', ''];
 
 function iconoPorMime(mime: string) {
-  if (mime.startsWith('image/')) return <Image size={11} aria-hidden="true" />;
+  if (mime.startsWith('image/')) return <ImageIcon size={11} aria-hidden="true" />;
   return <FileText size={11} aria-hidden="true" />;
 }
 
@@ -113,7 +113,6 @@ const estiloCelda: React.CSSProperties = {
   padding: 'var(--space-2) var(--space-3)',
   color: 'var(--color-ink-1)',
 };
-
 
 function VoidEntryButton({ entryId }: { entryId: string }) {
   const { toast } = useToast();
@@ -149,7 +148,14 @@ function VoidEntryButton({ entryId }: { entryId: string }) {
         <input type="hidden" name="entry_id" value={entryId} />
         <label
           htmlFor={`void-reason-${entryId}`}
-          style={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}
+          style={{
+            position: 'absolute',
+            width: '1px',
+            height: '1px',
+            overflow: 'hidden',
+            clip: 'rect(0,0,0,0)',
+            whiteSpace: 'nowrap',
+          }}
         >
           Motivo de anulacion
         </label>
@@ -235,7 +241,6 @@ function VoidEntryButton({ entryId }: { entryId: string }) {
   );
 }
 
-
 function EntradaFila({
   entry,
   expandida,
@@ -260,8 +265,7 @@ function EntradaFila({
       <tr
         className="activity-row"
         style={{
-          borderBottom:
-            expandida === entry.id ? 'none' : '1px solid var(--color-border)',
+          borderBottom: expandida === entry.id ? 'none' : '1px solid var(--color-border)',
           transition: 'background 100ms',
           opacity: isVoided ? 0.55 : 1,
         }}
@@ -361,9 +365,7 @@ function EntradaFila({
             whiteSpace: 'nowrap',
           }}
         >
-          {entry.submitted_at
-            ? new Date(entry.submitted_at).toLocaleDateString('es')
-            : '—'}
+          {entry.submitted_at ? new Date(entry.submitted_at).toLocaleDateString('es') : '—'}
         </td>
         <td
           style={{
@@ -374,9 +376,16 @@ function EntradaFila({
             paddingRight: 'var(--space-3)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', justifyContent: 'flex-end' }}>
-            {evidenceFiles.length > 0 && (
-              singleFile ? (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-2)',
+              justifyContent: 'flex-end',
+            }}
+          >
+            {evidenceFiles.length > 0 &&
+              (singleFile ? (
                 /* 1 archivo: enlace directo → abre en pestaña nueva */
                 <a
                   href={singleFile.signedUrl ?? '#'}
@@ -393,8 +402,7 @@ function EntradaFila({
                     textDecoration: 'none',
                   }}
                 >
-                  <Paperclip size={10} aria-hidden="true" />
-                  1
+                  <Paperclip size={10} aria-hidden="true" />1
                 </a>
               ) : (
                 /* N archivos: expande lista inline */
@@ -412,7 +420,10 @@ function EntradaFila({
                     gap: '2px',
                     fontSize: '10px',
                     fontFamily: 'var(--font-mono)',
-                    color: expandidaEvidencia === entry.id ? 'var(--color-accent)' : 'var(--color-ink-3)',
+                    color:
+                      expandidaEvidencia === entry.id
+                        ? 'var(--color-accent)'
+                        : 'var(--color-ink-3)',
                     background: 'none',
                     border: 'none',
                     padding: 0,
@@ -422,13 +433,10 @@ function EntradaFila({
                   <Paperclip size={10} aria-hidden="true" />
                   {evidenceFiles.length}
                 </button>
-              )
-            )}
+              ))}
             {!isVoided &&
               entry.period_status !== 'locked' &&
-              entry.period_status !== 'calculating' && (
-                <VoidEntryButton entryId={entry.id} />
-              )}
+              entry.period_status !== 'calculating' && <VoidEntryButton entryId={entry.id} />}
           </div>
         </td>
       </tr>
@@ -486,7 +494,13 @@ function EntradaFila({
                   ) : (
                     <span style={{ color: 'var(--color-ink-3)' }}>{f.original_name}</span>
                   )}
-                  <span style={{ color: 'var(--color-ink-3)', flexShrink: 0, fontFamily: 'var(--font-mono)' }}>
+                  <span
+                    style={{
+                      color: 'var(--color-ink-3)',
+                      flexShrink: 0,
+                      fontFamily: 'var(--font-mono)',
+                    }}
+                  >
                     {formatBytes(f.file_size_bytes)}
                   </span>
                 </li>
@@ -604,11 +618,9 @@ function EntradaFila({
           </td>
         </tr>
       )}
-
     </Fragment>
   );
 }
-
 
 export function ActivityList({ entries, periodos, pagination }: ActivityListProps) {
   const [filtroEstado, setFiltroEstado] = useState<ActivityEntryStatus | 'todos'>('todos');
@@ -900,7 +912,7 @@ export function ActivityList({ entries, periodos, pagination }: ActivityListProp
               color: 'var(--color-ink-3)',
             }}
           >
-            {((pagination.page - 1) * pagination.pageSize) + 1}
+            {(pagination.page - 1) * pagination.pageSize + 1}
             {' – '}
             {Math.min(pagination.page * pagination.pageSize, pagination.total)}
             {' de '}

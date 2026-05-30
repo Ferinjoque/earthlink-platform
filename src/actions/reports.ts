@@ -14,7 +14,10 @@ import type {
 
 const exportSchema = z.object({
   period_ids: z.string().min(1, 'Selecciona al menos un periodo'),
-  year: z.string().regex(/^\d{4}$/).optional(),
+  year: z
+    .string()
+    .regex(/^\d{4}$/)
+    .optional(),
 });
 
 export interface ExportCsvState {
@@ -74,7 +77,10 @@ export async function exportCsv(
   const periods = (periodsRaw ?? []) as FilaPeriodo[];
 
   if (periods.length === 0) {
-    return { error: 'Los periodos seleccionados no están disponibles para exportación (deben estar en revisión o bloqueados)' };
+    return {
+      error:
+        'Los periodos seleccionados no están disponibles para exportación (deben estar en revisión o bloqueados)',
+    };
   }
 
   const supplierIds = [...new Set(periods.map((p) => p.supplier_id))];

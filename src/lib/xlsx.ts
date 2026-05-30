@@ -17,7 +17,6 @@ export interface XlsxSupplier {
 const HEADER_BG = 'FF1A2E1A';
 const ACCENT_BG = 'FFE8F5E9';
 
-
 export async function generateXlsxTemplate(suppliers: XlsxSupplier[]): Promise<Uint8Array> {
   const ExcelJS = (await import('exceljs')).default;
   const wb = new ExcelJS.Workbook();
@@ -48,24 +47,159 @@ export async function generateXlsxTemplate(suppliers: XlsxSupplier[]): Promise<U
 
   const exampleSupplierId = suppliers[0]?.id ?? '00000000-0000-4000-8000-000000000001';
   const examples: unknown[][] = [
-    [exampleSupplierId, '2026-01', 'stationary_combustion', 'natural_gas',    1000,  'm3_ng',   'measured',  'Caldera principal'],
-    [exampleSupplierId, '2026-01', 'stationary_combustion', 'diesel',          500,  'L',       'measured',  'Generador emergencia'],
-    [exampleSupplierId, '2026-01', 'stationary_combustion', 'lpg',             200,  'L',       'estimated', 'Cocina industrial'],
-    [exampleSupplierId, '2026-01', 'stationary_combustion', 'fuel_oil_no2',    300,  'kBtu',    'measured',  'Caldera auxiliar'],
-    [exampleSupplierId, '2026-01', 'stationary_combustion', 'propane',         100,  'L',       'estimated', 'Calefaccion exterior'],
-    [exampleSupplierId, '2026-01', 'mobile_combustion',     'diesel',          200,  'L',       'measured',  'Flota vehicular'],
-    [exampleSupplierId, '2026-01', 'mobile_combustion',     'gasoline',        150,  'L',       'measured',  'Vehiculos livianos'],
-    [exampleSupplierId, '2026-01', 'purchased_electricity', 'SEIN_PERU',      5000,  'kWh',     'measured',  'Piso 2 oficinas'],
-    [exampleSupplierId, '2026-01', 'purchased_electricity', 'LATAM_AVG',      1200,  'kWh',     'measured',  'Sede regional'],
-    [exampleSupplierId, '2026-01', 'fugitive',              'R410A',           2.5,  'kg',      'measured',  'Mantenimiento HVAC'],
-    [exampleSupplierId, '2026-01', 'fugitive',              'R134A',           2.0,  'kg',      'measured',  'Camara frigorifica'],
-    [exampleSupplierId, '2026-01', 'fugitive',              'R32',             1.5,  'kg',      'measured',  'Minisplit oficina'],
-    [exampleSupplierId, '2026-01', 'purchased_steam',       '',                100,  'GJ',      'calculated',''],
-    [exampleSupplierId, '2026-01', 'water_use',             'potable_mixed',   150,  'kgal_us', 'measured',  'Medidor principal'],
-    [exampleSupplierId, '2026-01', 'water_use',             'reclaimed_mixed',  30,  'kgal_us', 'estimated', 'Riego exterior'],
-    [exampleSupplierId, '2026-01', 'waste',                 'disposed_trash',  2.5,  'ton_us',  'measured',  'Contenedor general'],
-    [exampleSupplierId, '2026-01', 'waste',                 'recycled',        1.2,  'ton_us',  'measured',  'Reciclaje'],
-    [exampleSupplierId, '2026-01', 'waste',                 'composted',       0.8,  'tonne',   'measured',  'Compost organico'],
+    [
+      exampleSupplierId,
+      '2026-01',
+      'stationary_combustion',
+      'natural_gas',
+      1000,
+      'm3_ng',
+      'measured',
+      'Caldera principal',
+    ],
+    [
+      exampleSupplierId,
+      '2026-01',
+      'stationary_combustion',
+      'diesel',
+      500,
+      'L',
+      'measured',
+      'Generador emergencia',
+    ],
+    [
+      exampleSupplierId,
+      '2026-01',
+      'stationary_combustion',
+      'lpg',
+      200,
+      'L',
+      'estimated',
+      'Cocina industrial',
+    ],
+    [
+      exampleSupplierId,
+      '2026-01',
+      'stationary_combustion',
+      'fuel_oil_no2',
+      300,
+      'kBtu',
+      'measured',
+      'Caldera auxiliar',
+    ],
+    [
+      exampleSupplierId,
+      '2026-01',
+      'stationary_combustion',
+      'propane',
+      100,
+      'L',
+      'estimated',
+      'Calefaccion exterior',
+    ],
+    [
+      exampleSupplierId,
+      '2026-01',
+      'mobile_combustion',
+      'diesel',
+      200,
+      'L',
+      'measured',
+      'Flota vehicular',
+    ],
+    [
+      exampleSupplierId,
+      '2026-01',
+      'mobile_combustion',
+      'gasoline',
+      150,
+      'L',
+      'measured',
+      'Vehiculos livianos',
+    ],
+    [
+      exampleSupplierId,
+      '2026-01',
+      'purchased_electricity',
+      'SEIN_PERU',
+      5000,
+      'kWh',
+      'measured',
+      'Piso 2 oficinas',
+    ],
+    [
+      exampleSupplierId,
+      '2026-01',
+      'purchased_electricity',
+      'LATAM_AVG',
+      1200,
+      'kWh',
+      'measured',
+      'Sede regional',
+    ],
+    [
+      exampleSupplierId,
+      '2026-01',
+      'fugitive',
+      'R410A',
+      2.5,
+      'kg',
+      'measured',
+      'Mantenimiento HVAC',
+    ],
+    [
+      exampleSupplierId,
+      '2026-01',
+      'fugitive',
+      'R134A',
+      2.0,
+      'kg',
+      'measured',
+      'Camara frigorifica',
+    ],
+    [exampleSupplierId, '2026-01', 'fugitive', 'R32', 1.5, 'kg', 'measured', 'Minisplit oficina'],
+    [exampleSupplierId, '2026-01', 'purchased_steam', '', 100, 'GJ', 'calculated', ''],
+    [
+      exampleSupplierId,
+      '2026-01',
+      'water_use',
+      'potable_mixed',
+      150,
+      'kgal_us',
+      'measured',
+      'Medidor principal',
+    ],
+    [
+      exampleSupplierId,
+      '2026-01',
+      'water_use',
+      'reclaimed_mixed',
+      30,
+      'kgal_us',
+      'estimated',
+      'Riego exterior',
+    ],
+    [
+      exampleSupplierId,
+      '2026-01',
+      'waste',
+      'disposed_trash',
+      2.5,
+      'ton_us',
+      'measured',
+      'Contenedor general',
+    ],
+    [exampleSupplierId, '2026-01', 'waste', 'recycled', 1.2, 'ton_us', 'measured', 'Reciclaje'],
+    [
+      exampleSupplierId,
+      '2026-01',
+      'waste',
+      'composted',
+      0.8,
+      'tonne',
+      'measured',
+      'Compost organico',
+    ],
   ];
 
   for (const row of examples) {
@@ -244,7 +378,6 @@ export async function generateXlsxTemplate(suppliers: XlsxSupplier[]): Promise<U
   return new Uint8Array(buf as ArrayBuffer);
 }
 
-
 export async function parseXlsxBuffer(buffer: ArrayBuffer): Promise<ParsedCsvRow[]> {
   const ExcelJS = (await import('exceljs')).default;
   const wb = new ExcelJS.Workbook();
@@ -288,8 +421,17 @@ export async function parseXlsxBuffer(buffer: ArrayBuffer): Promise<ParsedCsvRow
     if (!supplierId && !yearMonth && !sourceType && !quantityRaw) return;
     if (supplierId.startsWith('←') || supplierId.startsWith('Borrar')) return;
 
-    const escape = (v: string) => v.includes(',') ? `"${v.replace(/"/g, '""')}"` : v;
-    const csvLine = [supplierId, yearMonth, sourceType, secondary, quantityRaw, unit, dataQuality, escape(notes)].join(',');
+    const escape = (v: string) => (v.includes(',') ? `"${v.replace(/"/g, '""')}"` : v);
+    const csvLine = [
+      supplierId,
+      yearMonth,
+      sourceType,
+      secondary,
+      quantityRaw,
+      unit,
+      dataQuality,
+      escape(notes),
+    ].join(',');
     const [parsed] = parseCsvText(csvLine);
 
     if (parsed) {

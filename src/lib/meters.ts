@@ -1,7 +1,6 @@
 import type { EmissionSourceType } from '@/types/database';
 import { ETIQUETAS_FUENTE, ETIQUETA_UNIDAD } from './activity-options';
 
-
 export interface EntryWithPeriod {
   source_type: EmissionSourceType;
   secondary: string;
@@ -30,7 +29,6 @@ export interface MeterYearSummary {
   total: number;
   peak: { month: number; value: number } | null;
 }
-
 
 function meterId(e: EntryWithPeriod): string {
   return `${e.source_type}::${e.secondary}::${e.raw_unit}::${e.supplier_id}`;
@@ -79,10 +77,7 @@ export function getAvailableYears(entries: EntryWithPeriod[]): number[] {
   return [...years].sort((a, b) => b - a);
 }
 
-export function aggregateByMonth(
-  entries: EntryWithPeriod[],
-  year: number,
-): MeterYearSummary[] {
+export function aggregateByMonth(entries: EntryWithPeriod[], year: number): MeterYearSummary[] {
   const yearEntries = entries.filter((e) => parsePeriodDate(e.period_start)?.year === year);
 
   const meterMap = new Map<string, MeterYearSummary>();
@@ -125,7 +120,20 @@ export function aggregateByMonth(
   return [...meterMap.values()].sort((a, b) => b.total - a.total);
 }
 
-export const MONTH_LABELS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+export const MONTH_LABELS = [
+  'Ene',
+  'Feb',
+  'Mar',
+  'Abr',
+  'May',
+  'Jun',
+  'Jul',
+  'Ago',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dic',
+];
 
 export function formatQuantity(value: number, unit: string): string {
   if (value === 0) return '—';

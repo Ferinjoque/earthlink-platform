@@ -10,7 +10,20 @@ interface Props {
   supplierId: string;
 }
 
-const MESES_CORTO = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+const MESES_CORTO = [
+  'Ene',
+  'Feb',
+  'Mar',
+  'Abr',
+  'May',
+  'Jun',
+  'Jul',
+  'Ago',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dic',
+];
 
 function finDeMes(year: number, month: number): string {
   const lastDay = new Date(year, month, 0).getDate();
@@ -242,7 +255,8 @@ export function NuevoPeriodoForm({ supplierId }: Props) {
           color: 'var(--color-ink-3)',
         }}
       >
-        Al elegir la fecha de inicio se auto-completan la fecha fin y etiqueta. Puedes ajustarlas manualmente.
+        Al elegir la fecha de inicio se auto-completan la fecha fin y etiqueta. Puedes ajustarlas
+        manualmente.
       </p>
     </form>
   );

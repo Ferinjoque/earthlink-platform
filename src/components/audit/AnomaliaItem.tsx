@@ -3,10 +3,7 @@
 import Link from 'next/link';
 import { useState, useActionState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  resolveAnomaly,
-  type ResolveAnomalyState,
-} from '@/actions/audit';
+import { resolveAnomaly, type ResolveAnomalyState } from '@/actions/audit';
 import { traducirMensajeAnomalia } from '@/lib/anomaly';
 import { useToast } from '@/components/ui/Toast';
 import type { AnomalySeverity } from '@/types/database';

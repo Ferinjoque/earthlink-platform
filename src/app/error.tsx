@@ -12,7 +12,6 @@ export default function Error({ error, reset }: ErrorProps) {
     // Registrar el error en el servidor/monitoreo sería ideal aquí
     // Por ahora solo se manifiesta en desarrollo para no exponer detalles en producción
     if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
       console.error(error);
     }
   }, [error]);

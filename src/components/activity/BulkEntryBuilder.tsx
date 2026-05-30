@@ -78,7 +78,6 @@ function updateSourceType(row: EntryRow, st: EmissionSourceType): EntryRow {
   };
 }
 
-
 function estiloInput(hasError = false): React.CSSProperties {
   return {
     padding: 'var(--space-2) var(--space-3)',
@@ -135,7 +134,6 @@ function FieldLabel({
   );
 }
 
-
 function GresbHint({ sourceType }: { sourceType: EmissionSourceType }) {
   if (sourceType !== 'water_use' && sourceType !== 'waste') return null;
   return (
@@ -155,7 +153,6 @@ function GresbHint({ sourceType }: { sourceType: EmissionSourceType }) {
     </p>
   );
 }
-
 
 function CardMode({
   row,
@@ -187,7 +184,9 @@ function CardMode({
       {/* Proveedor + Mes */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
-          <label htmlFor="card-supplier" style={labelStyle}>Proveedor</label>
+          <label htmlFor="card-supplier" style={labelStyle}>
+            Proveedor
+          </label>
           <select
             id="card-supplier"
             value={row.supplier_id}
@@ -199,7 +198,9 @@ function CardMode({
               <option value="">Sin proveedores disponibles</option>
             ) : (
               suppliers.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
               ))
             )}
           </select>
@@ -230,7 +231,9 @@ function CardMode({
           style={estiloSelect()}
         >
           {(Object.keys(ETIQUETAS_FUENTE) as EmissionSourceType[]).map((t) => (
-            <option key={t} value={t}>{ETIQUETAS_FUENTE[t]}</option>
+            <option key={t} value={t}>
+              {ETIQUETAS_FUENTE[t]}
+            </option>
           ))}
         </select>
         <GresbHint sourceType={row.source_type} />
@@ -253,7 +256,9 @@ function CardMode({
             style={estiloSelect()}
           >
             {secs.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
             ))}
           </select>
         </div>
@@ -264,7 +269,9 @@ function CardMode({
       {/* Cantidad + Unidad */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 'var(--space-3)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
-          <label htmlFor="card-qty" style={labelStyle}>Cantidad</label>
+          <label htmlFor="card-qty" style={labelStyle}>
+            Cantidad
+          </label>
           <input
             id="card-qty"
             type="number"
@@ -335,7 +342,9 @@ function CardMode({
       </div>
 
       {/* Actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+      <div
+        style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}
+      >
         <form
           action={undefined}
           onSubmit={(e) => {
@@ -361,9 +370,7 @@ function CardMode({
               fontSize: 'var(--text-sm)',
               fontWeight: 600,
               cursor:
-                isPending || validCount === 0 || suppliers.length === 0
-                  ? 'not-allowed'
-                  : 'pointer',
+                isPending || validCount === 0 || suppliers.length === 0 ? 'not-allowed' : 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
               gap: 'var(--space-2)',
@@ -412,7 +419,6 @@ function CardMode({
   );
 }
 
-
 function DeleteModal({
   row,
   supplierName,
@@ -438,7 +444,20 @@ function DeleteModal({
   const monthLabel = (() => {
     const parts = row.year_month.split('-');
     const m = Number(parts[1]);
-    const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const MESES = [
+      'Ene',
+      'Feb',
+      'Mar',
+      'Abr',
+      'May',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dic',
+    ];
     return `${MESES[(m - 1) % 12] ?? ''} ${parts[0] ?? ''}`;
   })();
 
@@ -451,10 +470,14 @@ function DeleteModal({
       <div
         onClick={onCancel}
         style={{
-          position: 'fixed', inset: 0, zIndex: 2000,
+          position: 'fixed',
+          inset: 0,
+          zIndex: 2000,
           background: 'oklch(10% 0 0 / 40%)',
           backdropFilter: 'blur(2px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           animation: 'dm-backdrop 180ms ease forwards',
         }}
       >
@@ -543,7 +566,6 @@ function DeleteModal({
   );
 }
 
-
 const SOURCE_TYPES = Object.keys(ETIQUETAS_FUENTE) as EmissionSourceType[];
 
 const tdStyle: React.CSSProperties = {
@@ -579,9 +601,7 @@ function TableMode({
   onConfirmDelete: (idx: number) => void;
   onCancelDelete: () => void;
 }) {
-  const hasGresbRows = rows.some(
-    (r) => r.source_type === 'water_use' || r.source_type === 'waste',
-  );
+  const hasGresbRows = rows.some((r) => r.source_type === 'water_use' || r.source_type === 'waste');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
@@ -642,24 +662,32 @@ function TableMode({
           </colgroup>
           <thead>
             <tr style={{ background: 'var(--color-surface-2)' }}>
-              {['Proveedor', 'Mes', null, 'Secundario', 'Cantidad', 'Unidad', 'Calidad', 'Notas', ''].map(
-                (h, i) => (
-                  <th
-                    key={i}
-                    style={{
-                      padding: '6px 8px',
-                      fontSize: 'var(--text-xs)',
-                      fontWeight: 600,
-                      color: 'var(--color-ink-2)',
-                      textAlign: 'left',
-                      borderBottom: '1px solid var(--color-border)',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {h ?? 'Fuente'}
-                  </th>
-                ),
-              )}
+              {[
+                'Proveedor',
+                'Mes',
+                null,
+                'Secundario',
+                'Cantidad',
+                'Unidad',
+                'Calidad',
+                'Notas',
+                '',
+              ].map((h, i) => (
+                <th
+                  key={i}
+                  style={{
+                    padding: '6px 8px',
+                    fontSize: 'var(--text-xs)',
+                    fontWeight: 600,
+                    color: 'var(--color-ink-2)',
+                    textAlign: 'left',
+                    borderBottom: '1px solid var(--color-border)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {h ?? 'Fuente'}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -681,7 +709,9 @@ function TableMode({
                       aria-label="Proveedor"
                     >
                       {suppliers.map((s) => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
                       ))}
                     </select>
                   </td>
@@ -698,11 +728,15 @@ function TableMode({
                     <select
                       className="builder-select"
                       value={row.source_type}
-                      onChange={(e) => onChangeSourceType(idx, e.target.value as EmissionSourceType)}
+                      onChange={(e) =>
+                        onChangeSourceType(idx, e.target.value as EmissionSourceType)
+                      }
                       aria-label="Fuente"
                     >
                       {SOURCE_TYPES.map((st) => (
-                        <option key={st} value={st}>{ETIQUETAS_FUENTE[st]}</option>
+                        <option key={st} value={st}>
+                          {ETIQUETAS_FUENTE[st]}
+                        </option>
                       ))}
                     </select>
                   </td>
@@ -716,7 +750,9 @@ function TableMode({
                         aria-label={secLabel}
                       >
                         {secs.map((o) => (
-                          <option key={o.value} value={o.value}>{o.label}</option>
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
                         ))}
                       </select>
                     ) : (
@@ -814,7 +850,9 @@ function TableMode({
         </table>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+      <div
+        style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}
+      >
         <button
           type="button"
           onClick={onAddRow}
@@ -832,7 +870,11 @@ function TableMode({
           + Agregar fila
         </button>
 
-        <form id="bulk-form-table" action={undefined} style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
+        <form
+          id="bulk-form-table"
+          action={undefined}
+          style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}
+        >
           <input type="hidden" name="json_entries" value={jsonEntries} form="bulk-form-table" />
           <button
             type="submit"
@@ -896,7 +938,6 @@ function TableMode({
   );
 }
 
-
 interface BulkEntryBuilderProps {
   suppliers: Supplier[];
   defaultSupplierId?: string | undefined;
@@ -937,6 +978,7 @@ export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuil
     } else if (state.error) {
       toast(state.error, 'error');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.submittedAt]);
 
   function handlePendingFileChange(entryId: string, file: File | null) {
@@ -959,7 +1001,10 @@ export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuil
         }),
       );
       const errores = settled
-        .filter((s): s is PromiseFulfilledResult<{ error?: string }> => s.status === 'fulfilled' && Boolean(s.value?.error))
+        .filter(
+          (s): s is PromiseFulfilledResult<{ error?: string }> =>
+            s.status === 'fulfilled' && Boolean(s.value?.error),
+        )
         .map((s) => s.value.error!)
         .concat(
           settled
@@ -967,9 +1012,15 @@ export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuil
             .map(() => 'Error de red al subir archivo'),
         );
       if (errores.length > 0) {
-        toast(`Error al subir ${errores.length} archivo${errores.length !== 1 ? 's' : ''}`, 'error');
+        toast(
+          `Error al subir ${errores.length} archivo${errores.length !== 1 ? 's' : ''}`,
+          'error',
+        );
       } else if (pendingEvidences.size > 0) {
-        toast(`${pendingEvidences.size} evidencia${pendingEvidences.size !== 1 ? 's' : ''} adjuntada${pendingEvidences.size !== 1 ? 's' : ''}`, 'success');
+        toast(
+          `${pendingEvidences.size} evidencia${pendingEvidences.size !== 1 ? 's' : ''} adjuntada${pendingEvidences.size !== 1 ? 's' : ''}`,
+          'success',
+        );
       }
       setPendingEvidences(new Map());
       setEvidenceStep(null);
@@ -1026,16 +1077,27 @@ export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuil
   const jsonEntries = JSON.stringify(
     rows
       .filter((r) => r.supplier_id && r.year_month && r.source_type && r.raw_quantity && r.raw_unit)
-      .map(({ supplier_id, year_month, source_type, secondary, raw_quantity, raw_unit, data_quality, notes }) => ({
-        supplier_id,
-        year_month,
-        source_type,
-        secondary,
-        raw_quantity: Number(raw_quantity),
-        raw_unit,
-        data_quality,
-        notes,
-      })),
+      .map(
+        ({
+          supplier_id,
+          year_month,
+          source_type,
+          secondary,
+          raw_quantity,
+          raw_unit,
+          data_quality,
+          notes,
+        }) => ({
+          supplier_id,
+          year_month,
+          source_type,
+          secondary,
+          raw_quantity: Number(raw_quantity),
+          raw_unit,
+          data_quality,
+          notes,
+        }),
+      ),
   );
 
   // Panel de evidencia opcional que aparece después de crear registros
@@ -1083,8 +1145,8 @@ export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuil
               margin: 'var(--space-1) 0 0',
             }}
           >
-            Adjunta capturas de medidores, facturas o PDFs como evidencia de los registros que acabas de crear.
-            Formatos permitidos: JPG, PNG, WebP, PDF · Máximo 10 MB por archivo.
+            Adjunta capturas de medidores, facturas o PDFs como evidencia de los registros que
+            acabas de crear. Formatos permitidos: JPG, PNG, WebP, PDF · Máximo 10 MB por archivo.
           </p>
         </div>
 
@@ -1123,10 +1185,18 @@ export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuil
           ))}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            gap: 'var(--space-3)',
+          }}
+        >
           {pendingEvidences.size > 0 && !isUploadingEvidence && (
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)' }}>
-              {pendingEvidences.size} archivo{pendingEvidences.size !== 1 ? 's' : ''} listo{pendingEvidences.size !== 1 ? 's' : ''} para subir
+              {pendingEvidences.size} archivo{pendingEvidences.size !== 1 ? 's' : ''} listo
+              {pendingEvidences.size !== 1 ? 's' : ''} para subir
             </span>
           )}
           <button
@@ -1163,7 +1233,9 @@ export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuil
                 />
                 Subiendo…
               </>
-            ) : 'Listo'}
+            ) : (
+              'Listo'
+            )}
           </button>
         </div>
       </div>

@@ -2,9 +2,13 @@
 
 import { useRef, useActionState, useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Paperclip, X, FileText, Image } from 'lucide-react';
+import { Paperclip, X, FileText, Image as ImageIcon } from 'lucide-react';
 import { uploadEvidence, deleteEvidence } from '@/actions/evidence';
-import type { EvidenceActionState, EvidenceFileView, DeleteEvidenceState } from '@/actions/evidence';
+import type {
+  EvidenceActionState,
+  EvidenceFileView,
+  DeleteEvidenceState,
+} from '@/actions/evidence';
 import { useToast } from '@/components/ui/Toast';
 
 interface EvidenceUploaderProps {
@@ -21,14 +25,14 @@ interface EvidenceUploaderProps {
 }
 
 function iconoPorMime(mime: string) {
-  if (mime.startsWith('image/')) return <Image size={14} aria-hidden="true" />;
+  if (mime.startsWith('image/')) return <ImageIcon size={14} aria-hidden="true" />;
   return <FileText size={14} aria-hidden="true" />;
 }
 
 function iconoPorNombre(name: string) {
   const ext = name.split('.').pop()?.toLowerCase();
   if (ext === 'jpg' || ext === 'jpeg' || ext === 'png' || ext === 'webp')
-    return <Image size={14} aria-hidden="true" />;
+    return <ImageIcon size={14} aria-hidden="true" />;
   return <FileText size={14} aria-hidden="true" />;
 }
 
@@ -120,7 +124,9 @@ export function EvidenceUploader({
     if (!pendingFile) return;
     const fd = new FormData();
     fd.append('evidence', pendingFile);
-    startTransition(() => { action(fd); });
+    startTransition(() => {
+      action(fd);
+    });
   }
 
   function handleCancel() {
@@ -212,8 +218,8 @@ export function EvidenceUploader({
       )}
 
       {/* Vista: preview del archivo seleccionado o botón para seleccionar */}
-      {!readOnly && (
-        pendingFile ? (
+      {!readOnly &&
+        (pendingFile ? (
           <div
             style={{
               display: 'flex',
@@ -240,7 +246,9 @@ export function EvidenceUploader({
             >
               {pendingFile.name}
             </span>
-            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', flexShrink: 0 }}>
+            <span
+              style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', flexShrink: 0 }}
+            >
               {formatBytes(pendingFile.size)}
             </span>
             {/* En modo standalone: botón Subir explícito */}
@@ -306,8 +314,7 @@ export function EvidenceUploader({
             <Paperclip size={12} aria-hidden="true" />
             Adjuntar evidencia
           </button>
-        )
-      )}
+        ))}
     </div>
   );
 }

@@ -271,7 +271,6 @@ export default async function ConfiguracionPage() {
             </div>
           </div>
         </section>
-
       </main>
     </>
   );

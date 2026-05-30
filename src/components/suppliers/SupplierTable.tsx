@@ -702,7 +702,10 @@ export function SupplierTable({ suppliers, organizationId, organizations }: Prop
                             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
                             style={{ overflow: 'hidden' }}
                           >
-                            <ConfirmacionArchivo supplier={s} onCancel={() => setArchivandoId(null)} />
+                            <ConfirmacionArchivo
+                              supplier={s}
+                              onCancel={() => setArchivandoId(null)}
+                            />
                           </motion.div>
                         </td>
                       </motion.tr>

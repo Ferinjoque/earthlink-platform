@@ -51,8 +51,18 @@ const ESTADO_LABEL: Record<string, string> = {
 };
 
 const MESES_ES = [
-  'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-  'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+  'Ene',
+  'Feb',
+  'Mar',
+  'Abr',
+  'May',
+  'Jun',
+  'Jul',
+  'Ago',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dic',
 ];
 
 interface PageProps {
@@ -78,14 +88,10 @@ export default async function PanelPage({ searchParams }: PageProps) {
   >[];
 
   const orgIds = [
-    ...new Set(
-      memberships.map((m) => m.organization_id).filter((id): id is string => id !== null),
-    ),
+    ...new Set(memberships.map((m) => m.organization_id).filter((id): id is string => id !== null)),
   ];
   const memberSupplierIds = [
-    ...new Set(
-      memberships.map((m) => m.supplier_id).filter((id): id is string => id !== null),
-    ),
+    ...new Set(memberships.map((m) => m.supplier_id).filter((id): id is string => id !== null)),
   ];
 
   const allSupplierIds: string[] = [];
@@ -212,8 +218,6 @@ export default async function PanelPage({ searchParams }: PageProps) {
   }
 
   let totalCo2eKg = 0;
-  let scope1Co2eKg = 0;
-  let scope2Co2eKg = 0;
   let verifiedCo2eKg = 0;
 
   const supplierCo2eMap = new Map<string, { s1: number; s2: number }>();
@@ -221,8 +225,6 @@ export default async function PanelPage({ searchParams }: PageProps) {
 
   for (const r of emissionRows) {
     totalCo2eKg += r.co2e_kg;
-    if (r.scope === 1) scope1Co2eKg += r.co2e_kg;
-    else scope2Co2eKg += r.co2e_kg;
 
     if (periodStatusMap.get(r.reporting_period_id) === 'locked') {
       verifiedCo2eKg += r.co2e_kg;
@@ -546,8 +548,7 @@ export default async function PanelPage({ searchParams }: PageProps) {
               <p
                 className="eyebrow"
                 style={{
-                  color:
-                    totalAnomalias > 0 ? 'var(--color-signal-hi)' : 'var(--color-ink-3)',
+                  color: totalAnomalias > 0 ? 'var(--color-signal-hi)' : 'var(--color-ink-3)',
                   marginBottom: 'var(--space-3)',
                 }}
               >
@@ -566,8 +567,7 @@ export default async function PanelPage({ searchParams }: PageProps) {
                     fontFamily: 'var(--font-mono)',
                     fontSize: 'var(--text-2xl)',
                     fontWeight: 700,
-                    color:
-                      totalAnomalias > 0 ? 'var(--color-signal-hi)' : 'var(--color-ink-1)',
+                    color: totalAnomalias > 0 ? 'var(--color-signal-hi)' : 'var(--color-ink-1)',
                     lineHeight: 1,
                   }}
                 >
@@ -583,9 +583,7 @@ export default async function PanelPage({ searchParams }: PageProps) {
             <div
               style={{
                 background:
-                  periodosEnRevision > 0
-                    ? 'oklch(70% 0.14 85 / 8%)'
-                    : 'var(--color-surface-1)',
+                  periodosEnRevision > 0 ? 'oklch(70% 0.14 85 / 8%)' : 'var(--color-surface-1)',
                 border: `1px solid ${periodosEnRevision > 0 ? 'oklch(70% 0.14 85 / 24%)' : 'var(--color-border)'}`,
                 borderRadius: 'var(--radius-lg)',
                 padding: 'var(--space-5)',
@@ -594,10 +592,7 @@ export default async function PanelPage({ searchParams }: PageProps) {
               <p
                 className="eyebrow"
                 style={{
-                  color:
-                    periodosEnRevision > 0
-                      ? 'var(--color-signal-md)'
-                      : 'var(--color-ink-3)',
+                  color: periodosEnRevision > 0 ? 'var(--color-signal-md)' : 'var(--color-ink-3)',
                   marginBottom: 'var(--space-3)',
                 }}
               >
@@ -838,9 +833,7 @@ export default async function PanelPage({ searchParams }: PageProps) {
                   CO₂e por tipo de fuente · {selectedYear}
                 </p>
                 {sourceMix.length === 0 ? (
-                  <p
-                    style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-3)', margin: 0 }}
-                  >
+                  <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-3)', margin: 0 }}>
                     Sin datos.
                   </p>
                 ) : (
@@ -934,9 +927,7 @@ export default async function PanelPage({ searchParams }: PageProps) {
                 </p>
               </div>
               <div style={{ overflowX: 'auto' }}>
-                <table
-                  style={{ width: '100%', borderCollapse: 'collapse', minWidth: '480px' }}
-                >
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '480px' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
                       <th
@@ -983,7 +974,12 @@ export default async function PanelPage({ searchParams }: PageProps) {
                                 : 'none',
                           }}
                         >
-                          <td style={{ padding: 'var(--space-3) var(--space-6)', whiteSpace: 'nowrap' }}>
+                          <td
+                            style={{
+                              padding: 'var(--space-3) var(--space-6)',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
                             <Link
                               href={`/suppliers/${supplierId}`}
                               style={{
@@ -1002,7 +998,10 @@ export default async function PanelPage({ searchParams }: PageProps) {
                               return (
                                 <td
                                   key={label}
-                                  style={{ padding: 'var(--space-3) var(--space-4)', textAlign: 'center' }}
+                                  style={{
+                                    padding: 'var(--space-3) var(--space-4)',
+                                    textAlign: 'center',
+                                  }}
                                 >
                                   <span
                                     style={{
@@ -1021,7 +1020,10 @@ export default async function PanelPage({ searchParams }: PageProps) {
                             return (
                               <td
                                 key={label}
-                                style={{ padding: 'var(--space-3) var(--space-4)', textAlign: 'center' }}
+                                style={{
+                                  padding: 'var(--space-3) var(--space-4)',
+                                  textAlign: 'center',
+                                }}
                               >
                                 <span
                                   className="pipeline-cell"
@@ -1232,7 +1234,11 @@ export default async function PanelPage({ searchParams }: PageProps) {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                  <ShieldAlert size={16} style={{ color: 'var(--color-signal-hi)' }} aria-hidden="true" />
+                  <ShieldAlert
+                    size={16}
+                    style={{ color: 'var(--color-signal-hi)' }}
+                    aria-hidden="true"
+                  />
                   <p className="eyebrow" style={{ color: 'var(--color-signal-hi)' }}>
                     {totalAnomalias} anomalía{totalAnomalias !== 1 ? 's' : ''} pendiente
                     {totalAnomalias !== 1 ? 's' : ''}

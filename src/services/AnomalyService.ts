@@ -92,12 +92,7 @@ export class AnomalyService {
     return anomalies;
   }
 
-
-  private static groupKey(
-    sourceType: EmissionSourceType,
-    secondary: string,
-    unit: Unit,
-  ): string {
+  private static groupKey(sourceType: EmissionSourceType, secondary: string, unit: Unit): string {
     return `${sourceType}:${secondary}:${unit}`;
   }
 

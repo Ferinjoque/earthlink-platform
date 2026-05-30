@@ -6,10 +6,16 @@
  *   - factorKey()   — cada subclase conoce la tupla (activity_type, region) para lookup de factores
  *   - scope()       — devuelve el alcance GHG Protocol de esta fuente
  */
-import type { Unit, GhgScope, ActivityKind, GridRegion, WaterSubtype, WasteSubtype } from '../calc/types';
+import type {
+  Unit,
+  GhgScope,
+  ActivityKind,
+  GridRegion,
+  WaterSubtype,
+  WasteSubtype,
+} from '../calc/types';
 
 export type ValidationResult = { valid: true } | { valid: false; reason: string };
-
 
 export abstract class EmissionSource {
   abstract readonly activityKind: ActivityKind;
@@ -30,7 +36,6 @@ export abstract class EmissionSource {
   }
 }
 
-
 abstract class Scope1Source extends EmissionSource {
   scope(): GhgScope {
     return 'scope1';
@@ -40,15 +45,14 @@ abstract class Scope1Source extends EmissionSource {
 export class StationaryCombustionSource extends Scope1Source {
   readonly activityKind: ActivityKind;
 
-  constructor(
-    readonly fuel: 'natural_gas' | 'diesel' | 'lpg' | 'fuel_oil_no2' | 'propane',
-  ) {
+  constructor(readonly fuel: 'natural_gas' | 'diesel' | 'lpg' | 'fuel_oil_no2' | 'propane') {
     super();
     this.activityKind = { kind: 'stationary_combustion', fuel };
   }
 
   allowedUnits(): readonly Unit[] {
-    if (this.fuel === 'natural_gas') return ['m3_ng', 'ft3_ng', 'kWh', 'GJ', 'therms', 'MMBtu', 'kBtu'];
+    if (this.fuel === 'natural_gas')
+      return ['m3_ng', 'ft3_ng', 'kWh', 'GJ', 'therms', 'MMBtu', 'kBtu'];
     if (this.fuel === 'fuel_oil_no2') return ['L', 'gallon', 'imp_gallon', 'kBtu'];
     if (this.fuel === 'propane') return ['L', 'gallon', 'imp_gallon', 'kBtu'];
     return ['L', 'gallon', 'imp_gallon', 'kBtu'];
@@ -104,7 +108,6 @@ export class FugitiveEmissionSource extends Scope1Source {
     return `fugitive.${this.refrigerant}`;
   }
 }
-
 
 abstract class Scope2Source extends EmissionSource {
   scope(): GhgScope {

@@ -23,10 +23,7 @@ export function HelpTooltip({ content, title }: HelpTooltipProps) {
   }, [open]);
 
   return (
-    <div
-      ref={ref}
-      style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}
-    >
+    <div ref={ref} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
       <style>{`
         .help-btn {
           width: 16px;
