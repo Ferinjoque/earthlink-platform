@@ -1,7 +1,7 @@
 # EarthLink Platform
 
-[![CI](https://github.com/Ferinjoque/earthlink-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/Ferinjoque/earthlink-platform/actions/workflows/ci.yml)
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
+[![Gate · main](https://github.com/Ferinjoque/earthlink-platform/actions/workflows/main-gate.yml/badge.svg)](https://github.com/Ferinjoque/earthlink-platform/actions/workflows/main-gate.yml)
+![Version](https://img.shields.io/badge/version-1.1.0-blue)
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5%20strict-3178C6)
 ![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20RLS-3ECF8E)
@@ -9,197 +9,240 @@
 
 ---
 
-> **Proyecto academico — aviso importante**
+> **Academic project — important notice**
 >
-> EarthLink Platform es un proyecto de portfolio desarrollado exclusivamente con fines de
-> aprendizaje y demostracion tecnica. No representa un producto comercial real ni un sistema
-> en produccion.
+> EarthLink Platform is a portfolio project developed exclusively for learning and technical
+> demonstration purposes. It does not represent a real commercial product or a production system.
 >
-> **Sin afiliacion con marcas existentes.** El nombre "EarthLink" se usa unicamente como
-> nombre ficticio para este proyecto. No existe ninguna relacion, asociacion ni vinculo con
-> ninguna empresa, producto o marca registrada que pueda llevar ese nombre, incluyendo
-> cualquier proveedor de telecomunicaciones u otro servicio.
+> **No affiliation with existing brands.** The name "EarthLink" is used solely as a fictional
+> name for this project. There is no relationship, association, or connection with any company,
+> product, or registered trademark that may carry that name.
 >
-> **Sin vinculacion con ninguna plataforma, empresa o servicio de sostenibilidad.** Este
-> proyecto no representa ni esta afiliado a ninguna organizacion, producto o solucion de
-> sostenibilidad existente. Las funcionalidades, el diseno del dominio y los datos de
-> ejemplo son enteramente ficticios.
+> **No connection to any sustainability platform, company, or service.** This project is not
+> affiliated with any existing sustainability organization, product, or solution. All
+> functionality, domain design, and sample data are entirely fictional.
 >
-> El uso comercial de este proyecto no esta permitido. Ver [LICENSE](LICENSE).
+> Commercial use of this project is not permitted. See [LICENSE](LICENSE).
 
 ---
 
-Plataforma SaaS multi-tenant para contabilidad de gases de efecto invernadero (GEI) de
-Alcance 1 y 2 segun el GHG Protocol. Reemplaza el seguimiento manual en hojas de calculo
-con un ledger auditado e inmutable: cada tCO2e reportada es trazable hasta el dato bruto,
-el factor de emision versionado, la version del motor de calculo y el usuario que lo envio.
+Multi-tenant SaaS platform for Scope 1 and Scope 2 greenhouse gas (GHG) accounting under
+the GHG Protocol. Replaces manual spreadsheet tracking with an audited, immutable ledger:
+every tCO₂e reported is traceable back to the raw input, the versioned emission factor, the
+calculation engine version, and the submitting user.
+
+**Live demo:** [earthlink-rust.vercel.app](https://earthlink-rust.vercel.app)
 
 ---
 
-## Que hace
+## Screenshots
 
-- Los proveedores registran datos de consumo (combustibles, electricidad) a traves de un
-  formulario guiado o importacion CSV/Excel.
-- Un motor de calculo funcional puro convierte los datos brutos a tCO2e usando factores de
-  emision versionados y aritmetica de punto fijo.
-- Los consultores y administradores revisan resultados, gestionan anomalias estadisticas y
-  bloquean periodos para registro inmutable.
-- Los periodos bloqueados generan reportes exportables con hash SHA-256 para trazabilidad.
+### Login
+
+![Login page](docs/screenshots/01-login.png)
 
 ---
 
-## Arquitectura
+### Dashboard
 
-El sistema separa deliberadamente dos paradigmas de programacion:
+![Dashboard — KPIs and emission ranking](docs/screenshots/02-dashboard.png)
+
+---
+
+### Suppliers
+
+![Suppliers — table with search and CRUD](docs/screenshots/03-suppliers.png)
+
+---
+
+### Activity
+
+![Activity — bulk import panel](docs/screenshots/04-activity.png)
+
+---
+
+### Audit Console
+
+![Audit — periods table with status](docs/screenshots/05-audit.png)
+
+---
+
+### Period Detail
+
+![Audit detail — results, anomalies, audit log](docs/screenshots/06-audit-detail.png)
+
+---
+
+### Reports
+
+![Reports — exportable periods and download history](docs/screenshots/07-reports.png)
+
+---
+
+## What it does
+
+- Suppliers submit consumption data (fuels, electricity, water) via a guided form or
+  CSV / Excel bulk import.
+- A pure functional calculation engine converts raw data to tCO₂e using versioned emission
+  factors and fixed-point arithmetic.
+- Consultants and administrators review results, manage statistical anomalies, and lock
+  periods for immutable record-keeping.
+- Locked periods generate exportable reports with SHA-256 hashes for full traceability.
+
+---
+
+## Architecture
+
+The system deliberately separates two programming paradigms:
 
 ```
-src/app/          Next.js App Router (capa delgada)
+src/app/          Next.js App Router (thin layer)
   |
-services/         POO  - servicios de orquestacion
-  +---> repos/    POO  - Repository<T> abstracto + implementaciones Supabase
+services/         OOP  — orchestration services
+  +---> repos/    OOP  — abstract Repository<T> + Supabase implementations
   |      +---> Supabase (Postgres + RLS + Storage)
-  +---> calc/     FP puro - sin efectos secundarios, sin I/O
-domain/           POO  - jerarquia EmissionSource, value objects
+  +---> calc/     Pure FP — no side effects, no I/O
+domain/           OOP  — EmissionSource hierarchy, value objects
 ```
 
-### Capa POO (`domain/`, `repos/`, `services/`)
+### OOP layer (`domain/`, `repos/`, `services/`)
 
-- `abstract EmissionSource` con implementaciones concretas: `StationaryCombustionSource`,
-  `MobileCombustionSource`, `PurchasedElectricitySource`, `PurchasedSteamSource`,
-  `FugitiveEmissionSource`.
-- `abstract Repository<TEntity>` con `SupabaseRepository<T>` e `InMemoryRepository<T>`
-  (para tests).
-- Polimorfismo: `source.validate(raw)` y `source.factorKey()` sin type switching.
+- `abstract EmissionSource` with concrete implementations:
+  `StationaryCombustionSource`, `MobileCombustionSource`,
+  `PurchasedElectricitySource`, `PurchasedSteamSource`, `FugitiveEmissionSource`.
+- `abstract Repository<TEntity>` with `SupabaseRepository<T>` and `InMemoryRepository<T>`
+  (used in tests).
+- Polymorphism: `source.validate(raw)` and `source.factorKey()` without type switching.
 
-### Motor FP (`calc/`)
+### FP engine (`calc/`)
 
-- Union discriminada `ActivityKind` cubre todos los tipos de actividad de Alcance 1 y 2.
-- Pipeline puro: `validateActivity -> normalizeUnit -> resolveFactor -> applyFactor -> stampProvenance`.
-- Determinismo: aritmetica de punto fijo con `big.js`, redondeo unico al final, hash de
-  calculo `sha256(canonical(inputs))`.
+- Discriminated union `ActivityKind` covers all Scope 1 and 2 activity types.
+- Pure pipeline: `validateActivity → normalizeUnit → resolveFactor → applyFactor → stampProvenance`.
+- Determinism: fixed-point arithmetic with `big.js`, single rounding at the end,
+  calculation hash `sha256(canonical(inputs))`.
 
 ---
 
-## Base de datos
+## Database
 
-15 tablas organizadas en 4 grupos:
+15 tables in 4 groups:
 
-| Grupo | Tablas |
+| Group | Tables |
 |---|---|
-| Referencia (5) | fuel_types, refrigerants, grid_regions, emission_factors, unit_conversions |
-| Acceso (3) | organizations, suppliers, memberships |
-| Transaccional (5) | reporting_periods, activity_entries, emission_results\*, evidence_files, anomaly_flags |
-| Auditoria (2) | audit_log\*, report_exports\* |
+| Reference (5) | `fuel_types`, `refrigerants`, `grid_regions`, `emission_factors`, `unit_conversions` |
+| Access (3) | `organizations`, `suppliers`, `memberships` |
+| Transactional (5) | `reporting_periods`, `activity_entries`, `emission_results`*, `evidence_files`, `anomaly_flags` |
+| Audit (2) | `audit_log`*, `report_exports`* |
 
-\* Append-only: triggers de base de datos bloquean UPDATE y DELETE para garantizar la
-inmutabilidad del registro auditado.
+\* Append-only: database triggers block `UPDATE` and `DELETE` to guarantee immutability of
+the audited record.
 
 ---
 
-## Stack tecnico
+## Tech stack
 
-| Componente | Tecnologia |
+| Component | Technology |
 |---|---|
 | Framework | Next.js 16 (App Router) + React 19 |
-| Lenguaje | TypeScript 5 (strict + noUncheckedIndexedAccess) |
-| Base de datos | Supabase (Postgres + Auth + RLS) |
-| Estilos | CSS custom properties con tokens OKLCH |
-| Animaciones | Framer Motion + canvas requestAnimationFrame |
-| Validacion | Zod (en Server Actions) |
-| Aritmetica | big.js (punto fijo, 6 decimales) |
-| Tests unitarios | Vitest |
-| Tests E2E | Playwright (chromium + firefox + webkit) |
+| Language | TypeScript 5 (strict + `noUncheckedIndexedAccess`) |
+| Database | Supabase (Postgres + Auth + RLS) |
+| Styles | CSS custom properties with OKLCH tokens |
+| Animations | Framer Motion + canvas `requestAnimationFrame` |
+| Validation | Zod (inside Server Actions) |
+| Arithmetic | `big.js` (fixed-point, 6 decimal places) |
+| Unit tests | Vitest |
+| E2E tests | Playwright (Chromium + Firefox + WebKit) |
 | CI | GitHub Actions |
 | Deploy | Vercel + Supabase |
 
 ---
 
-## Configuracion rapida
+## Quick start
 
 ```bash
-# Requisitos: Node 20+, pnpm 9+
+# Requirements: Node 20+, npm or pnpm
 
-pnpm install
+npm install
 cp .env.example .env.local
-# Completar NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
+# Fill in NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
 
-# Aplicar migraciones
+# Apply migrations
 npx supabase db push
 
-# Cargar datos de demostracion
-npx tsx scripts/seed-demo.ts
-
-# Servidor de desarrollo
-pnpm dev   # http://localhost:3002
+# Dev server
+npm run dev   # http://localhost:3000
 ```
 
-### Credenciales de demo
+### Demo credentials
 
 ```
-email:      admin@earthlink.test
-contrasena: Earthlink2025!
+email:    admin@earthlink.test
+password: Earthlink2025!
 ```
 
-Rol admin en ambas organizaciones de ejemplo (EcoGroup SAC y Andean Mining Corp).
+Admin role in both sample organizations (EcoGroup SAC and Andean Mining Corp).
 
-### Scripts disponibles
+### Available scripts
 
 ```bash
-pnpm dev            # Servidor de desarrollo
-pnpm build          # Build de produccion
-pnpm test           # Tests unitarios
-pnpm test:coverage  # Tests con cobertura
-pnpm test:e2e       # Tests E2E con Playwright
-pnpm typecheck      # Verificacion de tipos
-pnpm lint           # ESLint
+npm run dev            # Dev server
+npm run build          # Production build
+npm test               # Unit tests
+npm run test:coverage  # Tests with coverage report
+npm run test:e2e       # E2E tests with Playwright
+npm run typecheck      # TypeScript check
+npm run lint           # ESLint
 ```
 
 ---
 
-## Estructura del proyecto
+## Project structure
 
 ```
 src/
-  calc/           Motor de calculo GEI - FP puro, sin I/O
-  domain/         Entidades de dominio OOP
-  repos/          Repositorios Supabase e InMemory
+  calc/           GHG calculation engine — pure FP, no I/O
+  domain/         OOP domain entities
+  repos/          Supabase and InMemory repositories
   services/       EvaluationService, AuditService, AnomalyService
-  actions/        Server Actions con validacion Zod
+  actions/        Server Actions with Zod validation
   components/
     shell/        Sidebar, TopBar
-    activity/     Formulario, lista, importador CSV, badge de anomalia
-    audit/        Acciones de periodo, tabla de periodos bloqueados
+    activity/     Form, list, CSV importer, anomaly badge
+    audit/        Period actions, locked periods table
     ui/           Button, Card, Badge, YearSelector
-  lib/            Utilidades (CSV, formato, periodos)
+  lib/            Utilities (CSV, formatting, reporting periods)
   styles/         tokens.css, typography.css, globals.css
-  types/          database.ts (generado por CLI de Supabase)
+  types/          database.ts (generated by Supabase CLI)
 supabase/
-  migrations/     SQL progresivo (20 migraciones)
-scripts/
-  seed-demo.ts    Carga de datos de demostracion
+  migrations/     Progressive SQL (20 migrations)
 ```
 
 ---
 
-## Alcance GHG Protocol
+## GHG Protocol scope
 
-- **Alcance 1**: Combustion estacionaria (gas natural, diesel, GLP), combustion movil
-  (flota), emisiones fugitivas (refrigerantes).
-- **Alcance 2**: Electricidad comprada (base de ubicacion), vapor comprado.
-- **Alcance 3**: Explicitamente fuera del alcance de este proyecto.
-
----
-
-## Despliegue en Vercel
-
-1. Conecta el repositorio en el dashboard de Vercel.
-2. Configura las variables de entorno (las mismas que en `.env.local`).
-3. Vercel detecta Next.js automaticamente. Las cabeceras de seguridad estan definidas en
-   `vercel.json`.
+- **Scope 1:** Stationary combustion (natural gas, diesel, LPG), mobile combustion
+  (fleet), fugitive emissions (refrigerants).
+- **Scope 2:** Purchased electricity (location-based), purchased steam.
+- **Scope 3:** Explicitly out of scope for this project.
 
 ---
 
-## Licencia
+## Deploying to Vercel
 
-[CC BY-NC 4.0](LICENSE) — libre para uso personal y educativo con atribucion al autor.
-Uso comercial requiere permiso expreso.
+1. Connect the repository in the Vercel dashboard.
+2. Set the environment variables (same as in `.env.local`).
+3. Vercel auto-detects Next.js. Security headers are defined in `next.config.ts`.
+
+| Variable | Where to find it |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API (server only) |
+
+---
+
+## License
+
+[CC BY-NC 4.0](LICENSE) — free for personal and educational use with attribution.
+Commercial use requires explicit permission from the author.
