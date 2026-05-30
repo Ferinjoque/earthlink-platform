@@ -650,10 +650,6 @@ export async function closeYear(
     } catch {
       const idx = bloqueados + skipped + 1;
       errores.push(`Periodo ${idx} de ${enRevision.length}: error al bloquear`);
-      if (err instanceof Error) {
-        // Log interno — no exponer al cliente
-        void err;
-      }
       skipped = skipped + 1;
     }
   }
