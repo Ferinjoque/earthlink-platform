@@ -226,7 +226,6 @@ export default function LoginPage() {
                 </li>
               ))}
             </motion.ul>
-
           </div>
         </div>
 

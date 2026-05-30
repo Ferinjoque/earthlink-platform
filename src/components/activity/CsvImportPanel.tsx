@@ -54,6 +54,7 @@ export function CsvImportPanel() {
     } else if (state.error) {
       toast(state.error, 'error');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.submittedAt, router]);
 
   function loadFile(file: File) {
@@ -304,7 +305,9 @@ export function CsvImportPanel() {
                   <tr key={row.rowIndex}>
                     <td style={estiloCeldaPreview}>{row.rowIndex}</td>
                     <td style={estiloCeldaPreview}>
-                      {row.data ? `${row.data.supplier_id.slice(0, 8)}… / ${row.data.year_month}` : '—'}
+                      {row.data
+                        ? `${row.data.supplier_id.slice(0, 8)}… / ${row.data.year_month}`
+                        : '—'}
                     </td>
                     <td style={estiloCeldaPreview}>{row.data?.source_type ?? '?'}</td>
                     <td style={estiloCeldaPreview}>{row.data?.secondary || '—'}</td>

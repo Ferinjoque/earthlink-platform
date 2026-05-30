@@ -43,7 +43,6 @@ function MensajeError({ msg }: { msg: string }) {
   );
 }
 
-
 export function PeriodActions({ periodId, status }: PeriodActionsProps) {
   const { toast } = useToast();
   const router = useRouter();
@@ -62,6 +61,7 @@ export function PeriodActions({ periodId, status }: PeriodActionsProps) {
       toast(`Listo — ${tco2e} tCO₂e calculados. Pendiente de revisión.`, 'success');
       router.refresh();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calcState?.success, toast, router]);
 
   useEffect(() => {

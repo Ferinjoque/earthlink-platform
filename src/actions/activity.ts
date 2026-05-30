@@ -15,7 +15,6 @@ import type { Database } from '@/types/database';
 
 type ActivityEntryInsert = Database['public']['Tables']['activity_entries']['Insert'];
 
-
 const SOURCE_TYPES_ENUM = [
   'stationary_combustion',
   'mobile_combustion',
@@ -34,11 +33,13 @@ const createEntrySchema = z.object({
   source_type: z.enum(SOURCE_TYPES_ENUM),
   secondary: z.string().max(100, 'El subtipo no puede superar 100 caracteres').default(''),
   raw_quantity: z.coerce.number().nonnegative('La cantidad debe ser mayor o igual a cero'),
-  raw_unit: z.string().min(1, 'La unidad es obligatoria').max(50, 'La unidad no puede superar 50 caracteres'),
+  raw_unit: z
+    .string()
+    .min(1, 'La unidad es obligatoria')
+    .max(50, 'La unidad no puede superar 50 caracteres'),
   data_quality: z.enum(DATA_QUALITY_VALUES).default('measured'),
   notes: z.string().max(1000, 'Las notas no pueden superar 1000 caracteres').optional(),
 });
-
 
 export interface ActivityFormState {
   error?: string | undefined;
@@ -56,10 +57,7 @@ export interface CsvImportState {
   entryIds?: string[] | undefined;
 }
 
-
-const STATIONARY_FUELS = [
-  'natural_gas', 'diesel', 'lpg', 'fuel_oil_no2', 'propane',
-] as const;
+const STATIONARY_FUELS = ['natural_gas', 'diesel', 'lpg', 'fuel_oil_no2', 'propane'] as const;
 
 const MOBILE_FUELS = ['diesel', 'gasoline', 'lpg'] as const;
 
@@ -68,7 +66,12 @@ const GRID_REGIONS = ['SEIN_PERU', 'LATAM_AVG', 'US_AVERAGE', 'EU_AVERAGE'] as c
 const REFRIGERANTS = ['R410A', 'R134A', 'R32'] as const;
 
 const WATER_SUBTYPES: WaterSubtype[] = [
-  'all_sources', 'potable_mixed', 'potable_indoor', 'reclaimed_mixed', 'well_outdoor', 'other_mixed',
+  'all_sources',
+  'potable_mixed',
+  'potable_indoor',
+  'reclaimed_mixed',
+  'well_outdoor',
+  'other_mixed',
 ];
 
 const WASTE_SUBTYPES: WasteSubtype[] = ['disposed_trash', 'recycled', 'composted'];
@@ -112,8 +115,20 @@ function buildActivityKind(sourceType: string, secondary: string): ActivityKind 
   }
 }
 
-
-const MESES_CORTO = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'] as const;
+const MESES_CORTO = [
+  'Ene',
+  'Feb',
+  'Mar',
+  'Abr',
+  'May',
+  'Jun',
+  'Jul',
+  'Ago',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dic',
+] as const;
 
 type SupabaseClient = Awaited<ReturnType<typeof createServerClient>>;
 
@@ -198,7 +213,6 @@ async function findOrCreatePeriod(
   return { periodId: (newPeriod as NewPeriodRow).id };
 }
 
-
 interface ImportRowData {
   supplier_id: string;
   year_month: string;
@@ -237,9 +251,15 @@ async function buildBatchEntries(
   for (const row of rows) {
     const key = `${row.supplier_id}|${row.year_month}`;
     const periodId = periodMap.get(key);
-    if (!periodId) { skipped = skipped + 1; continue; }
+    if (!periodId) {
+      skipped = skipped + 1;
+      continue;
+    }
     const activityKind = buildActivityKind(row.source_type, row.secondary);
-    if (!activityKind) { skipped = skipped + 1; continue; }
+    if (!activityKind) {
+      skipped = skipped + 1;
+      continue;
+    }
     entryRows.push({
       id: crypto.randomUUID(),
       reporting_period_id: periodId,
@@ -259,7 +279,6 @@ async function buildBatchEntries(
   return { entryRows, skipped };
 }
 
-
 type SupplierOrg = { organization_id: string; archived_at: string | null };
 type MembershipCheck = { role: string; supplier_id: string | null };
 
@@ -275,7 +294,8 @@ async function verifySupplierAccess(
     .maybeSingle();
   const supplier = supplierRaw as SupplierOrg | null;
   if (!supplier) return { error: 'Proveedor no encontrado' };
-  if (supplier.archived_at) return { error: 'No se puede registrar actividad en un proveedor archivado' };
+  if (supplier.archived_at)
+    return { error: 'No se puede registrar actividad en un proveedor archivado' };
 
   const { data: memRaw } = await supabase
     .from('memberships')
@@ -293,7 +313,6 @@ async function verifySupplierAccess(
 
   return { ok: true };
 }
-
 
 export async function createActivityEntry(
   _prevState: ActivityFormState | null,
@@ -315,7 +334,16 @@ export async function createActivityEntry(
     return { fieldErrors };
   }
 
-  const { supplier_id, year_month, source_type, secondary, raw_quantity, raw_unit, data_quality, notes } = parsed.data;
+  const {
+    supplier_id,
+    year_month,
+    source_type,
+    secondary,
+    raw_quantity,
+    raw_unit,
+    data_quality,
+    notes,
+  } = parsed.data;
 
   const accessCheck = await verifySupplierAccess(supabase, supplier_id, user.id);
   if ('error' in accessCheck) return { error: accessCheck.error, submittedAt: Date.now() };
@@ -370,9 +398,8 @@ export async function createActivityEntry(
       .gte('start_date', `${priorYear}-01-01`)
       .lte('start_date', `${priorYear}-12-31`);
     const priorPeriodIds = (priorPeriodsRaw ?? []).map((p: { id: string }) => p.id);
-    const historical = priorPeriodIds.length > 0
-      ? await entryRepo.findByPeriodIds(priorPeriodIds)
-      : [];
+    const historical =
+      priorPeriodIds.length > 0 ? await entryRepo.findByPeriodIds(priorPeriodIds) : [];
     const svc = new AnomalyService();
     const anomalies = svc.detect([newEntry], historical);
 
@@ -404,7 +431,6 @@ export async function createActivityEntry(
   return { success: true, submittedAt: Date.now() };
 }
 
-
 export async function importActivityCsv(
   _prevState: CsvImportState | null,
   formData: FormData,
@@ -429,7 +455,8 @@ export async function importActivityCsv(
 
   if (validRows.length > 500) {
     return {
-      error: 'El CSV contiene más de 500 filas válidas. Divide el archivo en lotes de máximo 500 filas.',
+      error:
+        'El CSV contiene más de 500 filas válidas. Divide el archivo en lotes de máximo 500 filas.',
       skipped,
       submittedAt: Date.now(),
     };
@@ -468,12 +495,22 @@ export async function importActivityCsv(
       return base;
     });
 
-  const { entryRows, skipped: periodSkipped } = await buildBatchEntries(supabase, rowData, user.id, now);
+  const { entryRows, skipped: periodSkipped } = await buildBatchEntries(
+    supabase,
+    rowData,
+    user.id,
+    now,
+  );
   skipped = skipped + periodSkipped;
 
   if (entryRows.length > 0) {
     const { error: insertError } = await supabase.from('activity_entries').insert(entryRows);
-    if (insertError) return { error: 'Error al guardar registros. Intenta nuevamente.', skipped, submittedAt: Date.now() };
+    if (insertError)
+      return {
+        error: 'Error al guardar registros. Intenta nuevamente.',
+        skipped,
+        submittedAt: Date.now(),
+      };
   }
 
   revalidatePath('/activity');
@@ -483,26 +520,33 @@ export async function importActivityCsv(
   return { success: true, imported: entryRows.length, skipped, submittedAt: Date.now() };
 }
 
-
-const bulkEntrySchema = z.array(
-  z.object({
-    supplier_id: z.string().uuid('UUID de proveedor inválido'),
-    year_month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Formato YYYY-MM inválido'),
-    source_type: z.enum(SOURCE_TYPES_ENUM),
-    secondary: z.string().max(100, 'El subtipo no puede superar 100 caracteres').default(''),
-    raw_quantity: z.coerce.number().nonnegative('La cantidad debe ser mayor o igual a cero'),
-    raw_unit: z.string().min(1, 'Unidad obligatoria').max(50, 'La unidad no puede superar 50 caracteres'),
-    data_quality: z.enum(DATA_QUALITY_VALUES).default('measured'),
-    notes: z.string().max(1000, 'Las notas no pueden superar 1000 caracteres').optional(),
-  }),
-).min(1, 'Se requiere al menos una fila').max(500, 'No se pueden importar más de 500 filas por lote');
+const bulkEntrySchema = z
+  .array(
+    z.object({
+      supplier_id: z.string().uuid('UUID de proveedor inválido'),
+      year_month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Formato YYYY-MM inválido'),
+      source_type: z.enum(SOURCE_TYPES_ENUM),
+      secondary: z.string().max(100, 'El subtipo no puede superar 100 caracteres').default(''),
+      raw_quantity: z.coerce.number().nonnegative('La cantidad debe ser mayor o igual a cero'),
+      raw_unit: z
+        .string()
+        .min(1, 'Unidad obligatoria')
+        .max(50, 'La unidad no puede superar 50 caracteres'),
+      data_quality: z.enum(DATA_QUALITY_VALUES).default('measured'),
+      notes: z.string().max(1000, 'Las notas no pueden superar 1000 caracteres').optional(),
+    }),
+  )
+  .min(1, 'Se requiere al menos una fila')
+  .max(500, 'No se pueden importar más de 500 filas por lote');
 
 export async function importActivityBulk(
   _prevState: CsvImportState | null,
   formData: FormData,
 ): Promise<CsvImportState> {
   const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return { error: 'No autenticado', submittedAt: Date.now() };
 
   const rawJson = formData.get('json_entries');
@@ -522,7 +566,10 @@ export async function importActivityBulk(
 
   const validation = bulkEntrySchema.safeParse(parsed);
   if (!validation.success) {
-    return { error: validation.error.issues[0]?.message ?? 'Datos inválidos', submittedAt: Date.now() };
+    return {
+      error: validation.error.issues[0]?.message ?? 'Datos inválidos',
+      submittedAt: Date.now(),
+    };
   }
 
   const bulkRows = validation.data;
@@ -553,7 +600,12 @@ export async function importActivityBulk(
 
   if (entryRows.length > 0) {
     const { error: insertError } = await supabase.from('activity_entries').insert(entryRows);
-    if (insertError) return { error: 'Error al guardar registros. Intenta nuevamente.', skipped, submittedAt: Date.now() };
+    if (insertError)
+      return {
+        error: 'Error al guardar registros. Intenta nuevamente.',
+        skipped,
+        submittedAt: Date.now(),
+      };
   }
 
   revalidatePath('/activity');
@@ -568,7 +620,6 @@ export async function importActivityBulk(
     submittedAt: Date.now(),
   };
 }
-
 
 export interface VoidEntryState {
   error?: string | undefined;
@@ -587,7 +638,10 @@ export async function voidActivityEntry(
 
   const entryId = formData.get('entry_id');
   const reason = formData.get('void_reason');
-  if (typeof entryId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entryId))
+  if (
+    typeof entryId !== 'string' ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entryId)
+  )
     return { error: 'ID de registro inválido' };
   if (typeof reason !== 'string' || !reason.trim()) {
     return { error: 'La razón de anulación es obligatoria' };
@@ -662,7 +716,6 @@ export async function voidActivityEntry(
   return { success: true };
 }
 
-
 export interface DeleteEntryState {
   error?: string | undefined;
   success?: boolean | undefined;
@@ -679,7 +732,10 @@ export async function deleteActivityEntry(
   if (!user) return { error: 'No autenticado' };
 
   const entryId = formData.get('entry_id');
-  if (typeof entryId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entryId))
+  if (
+    typeof entryId !== 'string' ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entryId)
+  )
     return { error: 'ID de registro inválido' };
 
   // Obtener estado del periodo y org mediante join
@@ -697,7 +753,10 @@ export async function deleteActivityEntry(
   if (!entryData) return { error: 'Registro no encontrado' };
 
   if (entryData.voided_at !== null) {
-    return { error: 'El registro ya fue anulado y no puede eliminarse. Usa la anulación para mantener la trazabilidad.' };
+    return {
+      error:
+        'El registro ya fue anulado y no puede eliminarse. Usa la anulación para mantener la trazabilidad.',
+    };
   }
 
   const periodStatus = entryData.reporting_periods?.status;
@@ -722,10 +781,7 @@ export async function deleteActivityEntry(
     return { error: 'Periodo bloqueado. Contacta al administrador.' };
   }
 
-  const { error: deleteError } = await supabase
-    .from('activity_entries')
-    .delete()
-    .eq('id', entryId);
+  const { error: deleteError } = await supabase.from('activity_entries').delete().eq('id', entryId);
   if (deleteError) return { error: 'Error al eliminar el registro. Intenta nuevamente.' };
 
   revalidatePath('/activity');
@@ -735,13 +791,14 @@ export async function deleteActivityEntry(
   return { success: true };
 }
 
-
 export async function importActivityXlsx(
   _prevState: CsvImportState | null,
   formData: FormData,
 ): Promise<CsvImportState> {
   const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return { error: 'No autenticado', submittedAt: Date.now() };
 
   const file = formData.get('xlsx_file') as File | null;
@@ -755,7 +812,13 @@ export async function importActivityXlsx(
 
   // Verificar magic bytes de ZIP/XLSX (PK\x03\x04) para rechazar binarios arbitrarios
   const magic = new Uint8Array(buffer.slice(0, 4));
-  if (magic.length < 4 || magic[0] !== 0x50 || magic[1] !== 0x4b || magic[2] !== 0x03 || magic[3] !== 0x04) {
+  if (
+    magic.length < 4 ||
+    magic[0] !== 0x50 ||
+    magic[1] !== 0x4b ||
+    magic[2] !== 0x03 ||
+    magic[3] !== 0x04
+  ) {
     return { error: 'El archivo no es un Excel válido (.xlsx)', submittedAt: Date.now() };
   }
 
@@ -797,12 +860,22 @@ export async function importActivityXlsx(
       return base;
     });
 
-  const { entryRows, skipped: periodSkipped } = await buildBatchEntries(supabase, rowData, user.id, now);
+  const { entryRows, skipped: periodSkipped } = await buildBatchEntries(
+    supabase,
+    rowData,
+    user.id,
+    now,
+  );
   skipped = skipped + periodSkipped;
 
   if (entryRows.length > 0) {
     const { error: insertError } = await supabase.from('activity_entries').insert(entryRows);
-    if (insertError) return { error: 'Error al guardar registros. Intenta nuevamente.', skipped, submittedAt: Date.now() };
+    if (insertError)
+      return {
+        error: 'Error al guardar registros. Intenta nuevamente.',
+        skipped,
+        submittedAt: Date.now(),
+      };
   }
 
   revalidatePath('/activity');

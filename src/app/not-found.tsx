@@ -34,7 +34,6 @@ export default function NotFound() {
       `}</style>
 
       <main className="nf-root">
-
         {/* Ilustración SVG — árbol con hoja caída, paleta forest */}
         <svg
           className="nf-illustration"
@@ -58,11 +57,7 @@ export default function NotFound() {
 
           {/* Hoja caída desconectada */}
           <g transform="translate(158, 120) rotate(-35)">
-            <path
-              d="M0 0 C6 -14 18 -18 22 -8 C26 2 14 14 0 0Z"
-              fill="#1F5C45"
-              opacity="0.45"
-            />
+            <path d="M0 0 C6 -14 18 -18 22 -8 C26 2 14 14 0 0Z" fill="#1F5C45" opacity="0.45" />
             <line x1="0" y1="0" x2="11" y2="-9" stroke="#4A8A6F" strokeWidth="0.8" opacity="0.5" />
           </g>
 
@@ -85,10 +80,7 @@ export default function NotFound() {
         </svg>
 
         {/* Eyebrow */}
-        <p
-          className="eyebrow"
-          style={{ color: 'var(--color-ink-3)', letterSpacing: '0.12em' }}
-        >
+        <p className="eyebrow" style={{ color: 'var(--color-ink-3)', letterSpacing: '0.12em' }}>
           Ruta no encontrada
         </p>
 

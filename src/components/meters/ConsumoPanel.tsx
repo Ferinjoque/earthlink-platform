@@ -10,11 +10,15 @@ import { MonthlyTable } from './MonthlyTable';
 import type { EmissionSourceType } from '@/types/database';
 import { ETIQUETAS_FUENTE } from '@/lib/activity-options';
 
-
 type ConsumoCategory = 'energia' | 'agua' | 'residuos' | 'refrigerantes';
 
 const CATEGORY_TYPES: Record<ConsumoCategory, EmissionSourceType[]> = {
-  energia: ['stationary_combustion', 'mobile_combustion', 'purchased_electricity', 'purchased_steam'],
+  energia: [
+    'stationary_combustion',
+    'mobile_combustion',
+    'purchased_electricity',
+    'purchased_steam',
+  ],
   agua: ['water_use'],
   residuos: ['waste'],
   refrigerantes: ['fugitive'],
@@ -28,28 +32,29 @@ const CATEGORY_LABELS: Record<ConsumoCategory, string> = {
 };
 
 function categorize(source: EmissionSourceType): ConsumoCategory | null {
-  for (const [cat, types] of Object.entries(CATEGORY_TYPES) as [ConsumoCategory, EmissionSourceType[]][]) {
+  for (const [cat, types] of Object.entries(CATEGORY_TYPES) as [
+    ConsumoCategory,
+    EmissionSourceType[],
+  ][]) {
     if (types.includes(source)) return cat;
   }
   return null;
 }
 
-
 const PALETTE = [
-  'oklch(58% 0.16 155)',  // green
-  'oklch(55% 0.18 222)',  // blue
-  'oklch(62% 0.15 62)',   // amber
-  'oklch(56% 0.16 300)',  // purple
-  'oklch(60% 0.18 185)',  // teal
-  'oklch(62% 0.18 340)',  // pink
-  'oklch(60% 0.14 25)',   // orange
-  'oklch(55% 0.14 260)',  // indigo
+  'oklch(58% 0.16 155)', // green
+  'oklch(55% 0.18 222)', // blue
+  'oklch(62% 0.15 62)', // amber
+  'oklch(56% 0.16 300)', // purple
+  'oklch(60% 0.18 185)', // teal
+  'oklch(62% 0.18 340)', // pink
+  'oklch(60% 0.14 25)', // orange
+  'oklch(55% 0.14 260)', // indigo
 ];
 
 function meterColor(index: number): string {
   return PALETTE[index % PALETTE.length] ?? PALETTE[0]!;
 }
-
 
 const CANONICAL_UNIT: Record<ConsumoCategory, string> = {
   energia: 'kWh',
@@ -61,22 +66,39 @@ const CANONICAL_UNIT: Record<ConsumoCategory, string> = {
 // Constantes de respaldo — usadas cuando la BD no tiene conversión para la unidad.
 // Constantes físicas (MWh→kWh etc.) son exactas; el contenido energético de combustibles es aproximado.
 const FALLBACK_TO_KWH: Record<string, number> = {
-  kWh: 1, MWh: 1000, GJ: 277.778, MJ: 0.27778,
-  kBtu: 0.29307, MMBtu: 293.07, MBtu: 293.07, therms: 29.307,
-  m3_ng: 10.55, ft3_ng: 0.2988,
+  kWh: 1,
+  MWh: 1000,
+  GJ: 277.778,
+  MJ: 0.27778,
+  kBtu: 0.29307,
+  MMBtu: 293.07,
+  MBtu: 293.07,
+  therms: 29.307,
+  m3_ng: 10.55,
+  ft3_ng: 0.2988,
 };
 
 const FUEL_KWH_PER_L: Record<string, number> = {
-  diesel: 10.7, fuel_oil_no2: 10.7, gasoline: 8.77,
-  lpg: 6.9, propane: 6.9,
+  diesel: 10.7,
+  fuel_oil_no2: 10.7,
+  gasoline: 8.77,
+  lpg: 6.9,
+  propane: 6.9,
 };
 
 const FALLBACK_TO_M3: Record<string, number> = {
-  m3: 1, L: 0.001, kgal_us: 3.785, megaliter: 1000, gallon: 0.003785,
+  m3: 1,
+  L: 0.001,
+  kgal_us: 3.785,
+  megaliter: 1000,
+  gallon: 0.003785,
 };
 
 const FALLBACK_TO_KG: Record<string, number> = {
-  kg: 1, lb: 0.4536, tonne: 1000, ton_us: 907.185,
+  kg: 1,
+  lb: 0.4536,
+  tonne: 1000,
+  ton_us: 907.185,
 };
 
 function makeToCanonical(
@@ -88,7 +110,12 @@ function makeToCanonical(
   const toM3 = { ...FALLBACK_TO_M3, ...dbToM3 };
   const toKg = { ...FALLBACK_TO_KG, ...dbToKg };
 
-  return function toCanonical(qty: number, unit: string, secondary: string, cat: ConsumoCategory): number {
+  return function toCanonical(
+    qty: number,
+    unit: string,
+    secondary: string,
+    cat: ConsumoCategory,
+  ): number {
     if (cat === 'energia') {
       if (toKwh[unit] !== undefined) return qty * toKwh[unit]!;
       const kwhPerL = FUEL_KWH_PER_L[secondary] ?? 9.5;
@@ -163,7 +190,6 @@ function aggregateStandardized(
   return [...meterMap.values()].sort((a, b) => b.total - a.total);
 }
 
-
 const SVG_W = 640;
 const CHART_H = 190;
 const TOP_PAD = 20;
@@ -186,13 +212,25 @@ interface OverviewChartProps {
   svgRef: React.RefObject<SVGSVGElement | null>;
 }
 
-function OverviewChart({ summaries, year, suppliers, filteredSupplierIds, svgRef }: OverviewChartProps) {
+function OverviewChart({
+  summaries,
+  year,
+  suppliers: _suppliers,
+  filteredSupplierIds: _filteredSupplierIds,
+  svgRef,
+}: OverviewChartProps) {
   if (summaries.length === 0) {
     return (
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        height: '120px', color: 'var(--color-ink-3)', fontSize: 'var(--text-sm)',
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '120px',
+          color: 'var(--color-ink-3)',
+          fontSize: 'var(--text-sm)',
+        }}
+      >
         Sin datos para {year} con los filtros seleccionados.
       </div>
     );
@@ -209,26 +247,39 @@ function OverviewChart({ summaries, year, suppliers, filteredSupplierIds, svgRef
     ? Math.max(...summaries.flatMap((s) => Object.values(s.monthly)), 1)
     : null;
 
-  const gridFracs: [number, string][] = singleUnit && globalMax
-    ? [
-        [1, axisLabel(globalMax)],
-        [0.5, axisLabel(globalMax / 2)],
-        [0, '0'],
-      ]
-    : [
-        [1, 'máx.'],
-        [0.5, '50%'],
-        [0, '0'],
-      ];
+  const gridFracs: [number, string][] =
+    singleUnit && globalMax
+      ? [
+          [1, axisLabel(globalMax)],
+          [0.5, axisLabel(globalMax / 2)],
+          [0, '0'],
+        ]
+      : [
+          [1, 'máx.'],
+          [0.5, '50%'],
+          [0, '0'],
+        ];
 
   return (
     <>
       {/* Etiqueta eje Y */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-1)' }}>
-        <span style={{
-          fontSize: '10px', color: 'var(--color-ink-3)', fontFamily: 'var(--font-mono)',
-          textTransform: 'uppercase', letterSpacing: '0.05em',
-        }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'var(--space-2)',
+          marginBottom: 'var(--space-1)',
+        }}
+      >
+        <span
+          style={{
+            fontSize: '10px',
+            color: 'var(--color-ink-3)',
+            fontFamily: 'var(--font-mono)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+          }}
+        >
           {singleUnit ? `${singleUnit} por mes` : 'Escala relativa por medidor (máx. = 100%)'}
         </span>
       </div>
@@ -248,7 +299,10 @@ function OverviewChart({ summaries, year, suppliers, filteredSupplierIds, svgRef
           return (
             <g key={frac as number}>
               <line
-                x1={LEFT_PAD} y1={y} x2={SVG_W} y2={y}
+                x1={LEFT_PAD}
+                y1={y}
+                x2={SVG_W}
+                y2={y}
                 style={{
                   stroke: frac === 0 ? 'oklch(60% 0 0 / 25%)' : 'oklch(60% 0 0 / 10%)',
                   strokeDasharray: frac === 0 ? undefined : '4 3',
@@ -256,7 +310,9 @@ function OverviewChart({ summaries, year, suppliers, filteredSupplierIds, svgRef
                 }}
               />
               <text
-                x={LEFT_PAD - 5} y={y + 4} textAnchor="end"
+                x={LEFT_PAD - 5}
+                y={y + 4}
+                textAnchor="end"
                 style={{ fontSize: '9px', fill: 'oklch(45% 0 0)', fontFamily: 'var(--font-mono)' }}
               >
                 {label as string}
@@ -297,8 +353,13 @@ function OverviewChart({ summaries, year, suppliers, filteredSupplierIds, svgRef
                 const val = s.monthly[m] ?? 0;
                 if (val === 0) return null;
                 return (
-                  <circle key={i} cx={x} cy={y} r={3.5}
-                    style={{ fill: color, stroke: '#fff', strokeWidth: 1.5 }}>
+                  <circle
+                    key={i}
+                    cx={x}
+                    cy={y}
+                    r={3.5}
+                    style={{ fill: color, stroke: '#fff', strokeWidth: 1.5 }}
+                  >
                     <title>{`${s.meter.label} · ${MONTH_LABELS[i]}: ${formatQuantity(val, s.meter.unit)}`}</title>
                   </circle>
                 );
@@ -311,8 +372,13 @@ function OverviewChart({ summaries, year, suppliers, filteredSupplierIds, svgRef
         {MONTH_LABELS.map((lbl, i) => {
           const x = LEFT_PAD + i * slotW + slotW / 2;
           return (
-            <text key={i} x={x} y={SVG_H - 4} textAnchor="middle"
-              style={{ fontSize: '9px', fill: 'oklch(50% 0 0)', fontFamily: 'var(--font-mono)' }}>
+            <text
+              key={i}
+              x={x}
+              y={SVG_H - 4}
+              textAnchor="middle"
+              style={{ fontSize: '9px', fill: 'oklch(50% 0 0)', fontFamily: 'var(--font-mono)' }}
+            >
               {lbl}
             </text>
           );
@@ -320,26 +386,61 @@ function OverviewChart({ summaries, year, suppliers, filteredSupplierIds, svgRef
       </svg>
 
       {/* Leyenda */}
-      <div style={{
-        display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3) var(--space-5)',
-        marginTop: 'var(--space-4)',
-        paddingTop: 'var(--space-3)',
-        borderTop: '1px solid var(--color-border)',
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 'var(--space-3) var(--space-5)',
+          marginTop: 'var(--space-4)',
+          paddingTop: 'var(--space-3)',
+          borderTop: '1px solid var(--color-border)',
+        }}
+      >
         {summaries.map((s, idx) => {
           const color = meterColor(idx);
           return (
-            <div key={s.meter.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', minWidth: '180px' }}>
+            <div
+              key={s.meter.id}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)',
+                minWidth: '180px',
+              }}
+            >
               <svg width="22" height="10" aria-hidden="true" style={{ flexShrink: 0 }}>
-                <line x1="0" y1="5" x2="22" y2="5" strokeWidth="2.5" strokeLinecap="round"
-                  style={{ stroke: color }} />
+                <line
+                  x1="0"
+                  y1="5"
+                  x2="22"
+                  y2="5"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  style={{ stroke: color }}
+                />
                 <circle cx="11" cy="5" r="3" style={{ fill: color }} />
               </svg>
               <div style={{ minWidth: 0 }}>
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-1)', fontWeight: 600, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span
+                  style={{
+                    fontSize: 'var(--text-xs)',
+                    color: 'var(--color-ink-1)',
+                    fontWeight: 600,
+                    display: 'block',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
                   {s.meter.label}
                 </span>
-                <span style={{ fontSize: '10px', color: 'var(--color-ink-3)', fontFamily: 'var(--font-mono)' }}>
+                <span
+                  style={{
+                    fontSize: '10px',
+                    color: 'var(--color-ink-3)',
+                    fontFamily: 'var(--font-mono)',
+                  }}
+                >
                   {s.meter.supplier_label} · {formatQuantity(s.total, s.meter.unit)}
                 </span>
               </div>
@@ -350,7 +451,6 @@ function OverviewChart({ summaries, year, suppliers, filteredSupplierIds, svgRef
     </>
   );
 }
-
 
 function buildLegendedSVG(
   svgEl: SVGSVGElement,
@@ -371,8 +471,10 @@ function buildLegendedSVG(
   clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
 
   const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-  bg.setAttribute('x', '0'); bg.setAttribute('y', String(-TITLE_H));
-  bg.setAttribute('width', String(vb.width)); bg.setAttribute('height', String(newH));
+  bg.setAttribute('x', '0');
+  bg.setAttribute('y', String(-TITLE_H));
+  bg.setAttribute('width', String(vb.width));
+  bg.setAttribute('height', String(newH));
   bg.setAttribute('fill', '#ffffff');
   clone.insertBefore(bg, clone.firstChild);
 
@@ -401,9 +503,12 @@ function buildLegendedSVG(
 
   // Separador antes de la leyenda
   const sep = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-  sep.setAttribute('x1', '8'); sep.setAttribute('y1', String(vb.height + 6));
-  sep.setAttribute('x2', String(vb.width - 8)); sep.setAttribute('y2', String(vb.height + 6));
-  sep.setAttribute('stroke', '#e0e0e0'); sep.setAttribute('stroke-width', '0.5');
+  sep.setAttribute('x1', '8');
+  sep.setAttribute('y1', String(vb.height + 6));
+  sep.setAttribute('x2', String(vb.width - 8));
+  sep.setAttribute('y2', String(vb.height + 6));
+  sep.setAttribute('stroke', '#e0e0e0');
+  sep.setAttribute('stroke-width', '0.5');
   clone.appendChild(sep);
 
   // Línea de pie
@@ -451,7 +556,6 @@ function triggerDownload(href: string, filename: string) {
   setTimeout(() => URL.revokeObjectURL(href), 15_000);
 }
 
-
 function SupplierFilter({
   suppliers,
   selected,
@@ -480,10 +584,16 @@ function SupplierFilter({
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-      <span style={{
-        fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', fontWeight: 600,
-        textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0,
-      }}>
+      <span
+        style={{
+          fontSize: 'var(--text-xs)',
+          color: 'var(--color-ink-3)',
+          fontWeight: 600,
+          textTransform: 'uppercase',
+          letterSpacing: '0.06em',
+          flexShrink: 0,
+        }}
+      >
         Proveedor
       </span>
       <button type="button" onClick={() => onChange(new Set())} style={chipStyle(allSelected)}>
@@ -495,7 +605,8 @@ function SupplierFilter({
           type="button"
           onClick={() => {
             const next = new Set(selected);
-            if (next.has(s.id)) next.delete(s.id); else next.add(s.id);
+            if (next.has(s.id)) next.delete(s.id);
+            else next.add(s.id);
             onChange(next);
           }}
           style={chipStyle(selected.has(s.id))}
@@ -506,7 +617,6 @@ function SupplierFilter({
     </div>
   );
 }
-
 
 function CategoryFilter({
   active,
@@ -539,14 +649,18 @@ function CategoryFilter({
         Todos
       </button>
       {available.map((c) => (
-        <button key={c} type="button" onClick={() => onChange(active === c ? null : c)} style={chipStyle(active === c)}>
+        <button
+          key={c}
+          type="button"
+          onClick={() => onChange(active === c ? null : c)}
+          style={chipStyle(active === c)}
+        >
           {CATEGORY_LABELS[c]}
         </button>
       ))}
     </div>
   );
 }
-
 
 interface ConsumoPanelProps {
   entries: EntryWithPeriod[];
@@ -556,10 +670,18 @@ interface ConsumoPanelProps {
   toKg?: Record<string, number>;
 }
 
-export function ConsumoPanel({ entries, suppliers, toKwh = {}, toM3 = {}, toKg = {} }: ConsumoPanelProps) {
+export function ConsumoPanel({
+  entries,
+  suppliers,
+  toKwh = {},
+  toM3 = {},
+  toKg = {},
+}: ConsumoPanelProps) {
   const availableYears = useMemo(() => getAvailableYears(entries), [entries]);
   const currentYear = new Date().getFullYear();
-  const defaultYear = availableYears.includes(currentYear) ? currentYear : (availableYears[0] ?? currentYear);
+  const defaultYear = availableYears.includes(currentYear)
+    ? currentYear
+    : (availableYears[0] ?? currentYear);
 
   const [selectedYear, setSelectedYear] = useState<number>(defaultYear);
   const [selectedMeterId, setSelectedMeterId] = useState<string | null>(null);
@@ -592,7 +714,12 @@ export function ConsumoPanel({ entries, suppliers, toKwh = {}, toM3 = {}, toKg =
 
   const chartSummaries = useMemo(() => {
     if (!effectiveCategoryFilter) return allSummaries;
-    return aggregateStandardized(filteredEntries, selectedYear, effectiveCategoryFilter, toCanonical);
+    return aggregateStandardized(
+      filteredEntries,
+      selectedYear,
+      effectiveCategoryFilter,
+      toCanonical,
+    );
   }, [filteredEntries, selectedYear, effectiveCategoryFilter, allSummaries, toCanonical]);
 
   const effectiveMeterId =
@@ -616,17 +743,25 @@ export function ConsumoPanel({ entries, suppliers, toKwh = {}, toM3 = {}, toKg =
     const catLabel = effectiveCategoryFilter ? CATEGORY_LABELS[effectiveCategoryFilter] : '';
     const unitLabel = effectiveCategoryFilter ? CANONICAL_UNIT[effectiveCategoryFilter] : '';
 
-    const svgStr = buildLegendedSVG(svgEl, chartSummaries, selectedYear, supplierLabel, catLabel, unitLabel);
+    const svgStr = buildLegendedSVG(
+      svgEl,
+      chartSummaries,
+      selectedYear,
+      supplierLabel,
+      catLabel,
+      unitLabel,
+    );
 
-    const supplierSlug = selectedSuppliers.size === 0
-      ? 'todos'
-      : [...selectedSuppliers]
-          .map((id) => suppliers.find((s) => s.id === id)?.name ?? id)
-          .join('-')
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-|-$/g, '')
-          .slice(0, 40);
+    const supplierSlug =
+      selectedSuppliers.size === 0
+        ? 'todos'
+        : [...selectedSuppliers]
+            .map((id) => suppliers.find((s) => s.id === id)?.name ?? id)
+            .join('-')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '')
+            .slice(0, 40);
     const catSlug = effectiveCategoryFilter ?? 'consumo';
     const filename = `earthlink_${catSlug}_${selectedYear}_${supplierSlug}`;
 
@@ -664,18 +799,32 @@ export function ConsumoPanel({ entries, suppliers, toKwh = {}, toM3 = {}, toKg =
 
   if (entries.length === 0) {
     return (
-      <div style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        gap: 'var(--space-4)', padding: 'var(--space-16) var(--space-8)', textAlign: 'center',
-      }}>
-        <span style={{
-          width: '48px', height: '48px', borderRadius: 'var(--radius-lg)',
-          background: 'var(--color-surface-2)', display: 'grid', placeItems: 'center', color: 'var(--color-ink-3)',
-        }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 'var(--space-4)',
+          padding: 'var(--space-16) var(--space-8)',
+          textAlign: 'center',
+        }}
+      >
+        <span
+          style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: 'var(--radius-lg)',
+            background: 'var(--color-surface-2)',
+            display: 'grid',
+            placeItems: 'center',
+            color: 'var(--color-ink-3)',
+          }}
+        >
           <BarChart2 size={22} />
         </span>
         <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-3)', margin: 0 }}>
-          Sin registros de actividad. Agrega consumos en la sección Actividad para visualizarlos aquí.
+          Sin registros de actividad. Agrega consumos en la sección Actividad para visualizarlos
+          aquí.
         </p>
       </div>
     );
@@ -683,34 +832,60 @@ export function ConsumoPanel({ entries, suppliers, toKwh = {}, toM3 = {}, toKg =
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-8)' }}>
-
       {/* Controls: supplier chips + year tabs */}
-      <div style={{
-        display: 'flex', alignItems: 'flex-start',
-        justifyContent: 'space-between', gap: 'var(--space-4)', flexWrap: 'wrap',
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: 'var(--space-4)',
+          flexWrap: 'wrap',
+        }}
+      >
         <SupplierFilter
           suppliers={suppliers}
           selected={selectedSuppliers}
-          onChange={(s) => { setSelectedSuppliers(s); setSelectedMeterId(null); }}
+          onChange={(s) => {
+            setSelectedSuppliers(s);
+            setSelectedMeterId(null);
+          }}
         />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexShrink: 0 }}>
-          <span style={{
-            fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', fontWeight: 600,
-            textTransform: 'uppercase', letterSpacing: '0.06em',
-          }}>Año</span>
+        <div
+          style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexShrink: 0 }}
+        >
+          <span
+            style={{
+              fontSize: 'var(--text-xs)',
+              color: 'var(--color-ink-3)',
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+            }}
+          >
+            Año
+          </span>
           {availableYears.map((y) => (
             <button
-              key={y} type="button"
-              onClick={() => { setSelectedYear(y); setSelectedMeterId(null); }}
+              key={y}
+              type="button"
+              onClick={() => {
+                setSelectedYear(y);
+                setSelectedMeterId(null);
+              }}
               style={{
-                padding: '4px var(--space-3)', borderRadius: 'var(--radius-md)',
-                fontSize: 'var(--text-sm)', fontWeight: y === selectedYear ? 600 : 400,
+                padding: '4px var(--space-3)',
+                borderRadius: 'var(--radius-md)',
+                fontSize: 'var(--text-sm)',
+                fontWeight: y === selectedYear ? 600 : 400,
                 fontFamily: 'var(--font-mono)',
-                border: y === selectedYear ? '1px solid var(--color-accent)' : '1px solid var(--color-border)',
+                border:
+                  y === selectedYear
+                    ? '1px solid var(--color-accent)'
+                    : '1px solid var(--color-border)',
                 background: y === selectedYear ? 'var(--color-accent-soft)' : 'transparent',
                 color: y === selectedYear ? 'var(--color-accent)' : 'var(--color-ink-2)',
-                cursor: 'pointer', transition: 'all 120ms',
+                cursor: 'pointer',
+                transition: 'all 120ms',
               }}
             >
               {y}
@@ -721,12 +896,33 @@ export function ConsumoPanel({ entries, suppliers, toKwh = {}, toM3 = {}, toKg =
 
       {/* Overview section */}
       <section>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', marginBottom: 'var(--space-4)', flexWrap: 'wrap' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-4)',
+            marginBottom: 'var(--space-4)',
+            flexWrap: 'wrap',
+          }}
+        >
           <div style={{ flex: 1, minWidth: '200px' }}>
-            <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--color-ink-1)', margin: 0 }}>
+            <h2
+              style={{
+                fontSize: 'var(--text-base)',
+                fontWeight: 600,
+                color: 'var(--color-ink-1)',
+                margin: 0,
+              }}
+            >
               Tendencia mensual por medidor
             </h2>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-3)', margin: 'var(--space-1) 0 0' }}>
+            <p
+              style={{
+                fontSize: 'var(--text-sm)',
+                color: 'var(--color-ink-3)',
+                margin: 'var(--space-1) 0 0',
+              }}
+            >
               {selectedYear}
               {selectedSuppliers.size > 0
                 ? ` · ${selectedSuppliers.size} proveedor${selectedSuppliers.size !== 1 ? 'es' : ''}`
@@ -735,7 +931,14 @@ export function ConsumoPanel({ entries, suppliers, toKwh = {}, toM3 = {}, toKg =
             </p>
           </div>
           {/* Category filter + download */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-3)',
+              flexWrap: 'wrap',
+            }}
+          >
             <CategoryFilter
               active={effectiveCategoryFilter}
               onChange={setCategoryFilter}
@@ -772,8 +975,10 @@ export function ConsumoPanel({ entries, suppliers, toKwh = {}, toM3 = {}, toKg =
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
             style={{
-              background: 'var(--color-surface-1)', border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-lg)', padding: 'var(--space-5)',
+              background: 'var(--color-surface-1)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-lg)',
+              padding: 'var(--space-5)',
             }}
           >
             <OverviewChart
@@ -790,10 +995,23 @@ export function ConsumoPanel({ entries, suppliers, toKwh = {}, toM3 = {}, toKg =
       {/* Meter detail section */}
       <section>
         <div style={{ marginBottom: 'var(--space-4)' }}>
-          <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--color-ink-1)', margin: 0 }}>
+          <h2
+            style={{
+              fontSize: 'var(--text-base)',
+              fontWeight: 600,
+              color: 'var(--color-ink-1)',
+              margin: 0,
+            }}
+          >
             Detalle por medidor
           </h2>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-3)', margin: 'var(--space-1) 0 0' }}>
+          <p
+            style={{
+              fontSize: 'var(--text-sm)',
+              color: 'var(--color-ink-3)',
+              margin: 'var(--space-1) 0 0',
+            }}
+          >
             {allSummaries.length === 0
               ? 'Sin medidores para la selección actual.'
               : `${allSummaries.length} medidor${allSummaries.length !== 1 ? 'es' : ''} — cada combinación de fuente + tipo + unidad + proveedor.`}
@@ -801,12 +1019,17 @@ export function ConsumoPanel({ entries, suppliers, toKwh = {}, toM3 = {}, toKg =
         </div>
 
         {allSummaries.length === 0 ? (
-          <div style={{
-            padding: 'var(--space-12) var(--space-8)', textAlign: 'center',
-            color: 'var(--color-ink-3)', fontSize: 'var(--text-sm)',
-            background: 'var(--color-surface-1)', border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-lg)',
-          }}>
+          <div
+            style={{
+              padding: 'var(--space-12) var(--space-8)',
+              textAlign: 'center',
+              color: 'var(--color-ink-3)',
+              fontSize: 'var(--text-sm)',
+              background: 'var(--color-surface-1)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-lg)',
+            }}
+          >
             Sin registros para {selectedYear} con los filtros seleccionados.
           </div>
         ) : (
@@ -836,8 +1059,12 @@ export function ConsumoPanel({ entries, suppliers, toKwh = {}, toM3 = {}, toKg =
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.14 }}
                   style={{
-                    flex: 1, display: 'grid', placeItems: 'center',
-                    minHeight: '300px', color: 'var(--color-ink-3)', fontSize: 'var(--text-sm)',
+                    flex: 1,
+                    display: 'grid',
+                    placeItems: 'center',
+                    minHeight: '300px',
+                    color: 'var(--color-ink-3)',
+                    fontSize: 'var(--text-sm)',
                   }}
                 >
                   Selecciona un medidor
@@ -851,19 +1078,20 @@ export function ConsumoPanel({ entries, suppliers, toKwh = {}, toM3 = {}, toKg =
   );
 }
 
-
 const downloadBtnStyle: React.CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', gap: '4px',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '4px',
   padding: '4px var(--space-3)',
   border: '1px solid var(--color-border)',
   borderRadius: 'var(--radius-md)',
   background: 'transparent',
-  fontSize: '11px', fontFamily: 'var(--font-mono)',
+  fontSize: '11px',
+  fontFamily: 'var(--font-mono)',
   color: 'var(--color-ink-2)',
   cursor: 'pointer',
   transition: 'border-color 120ms, color 120ms',
 };
-
 
 function MeterList({
   summaries,
@@ -875,12 +1103,25 @@ function MeterList({
   onSelect: (id: string) => void;
 }) {
   return (
-    <div style={{ width: '240px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
-      <div style={{
-        fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', fontWeight: 600,
-        textTransform: 'uppercase', letterSpacing: '0.06em',
-        padding: '0 var(--space-3) var(--space-2)',
-      }}>
+    <div
+      style={{
+        width: '240px',
+        flexShrink: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '2px',
+      }}
+    >
+      <div
+        style={{
+          fontSize: 'var(--text-xs)',
+          color: 'var(--color-ink-3)',
+          fontWeight: 600,
+          textTransform: 'uppercase',
+          letterSpacing: '0.06em',
+          padding: '0 var(--space-3) var(--space-2)',
+        }}
+      >
         Medidores
       </div>
       {summaries.map((s, idx) => {
@@ -888,31 +1129,74 @@ function MeterList({
         const color = meterColor(idx);
         return (
           <button
-            key={s.meter.id} type="button"
+            key={s.meter.id}
+            type="button"
             onClick={() => onSelect(s.meter.id)}
             style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '3px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: '3px',
               padding: 'var(--space-3)',
               borderRadius: 'var(--radius-md)',
               border: isActive ? '1px solid var(--color-accent)' : '1px solid var(--color-border)',
               background: isActive ? 'var(--color-accent-soft)' : 'var(--color-surface-1)',
-              cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 120ms',
+              cursor: 'pointer',
+              textAlign: 'left',
+              width: '100%',
+              transition: 'all 120ms',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', width: '100%' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: color, flexShrink: 0 }} />
-              <span style={{
-                fontSize: 'var(--text-xs)', fontWeight: 600,
-                color: isActive ? 'var(--color-accent)' : 'var(--color-ink-1)',
-                lineHeight: 1.3, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)',
+                width: '100%',
+              }}
+            >
+              <div
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: color,
+                  flexShrink: 0,
+                }}
+              />
+              <span
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  fontWeight: 600,
+                  color: isActive ? 'var(--color-accent)' : 'var(--color-ink-1)',
+                  lineHeight: 1.3,
+                  flex: 1,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 {s.meter.label}
               </span>
             </div>
-            <span style={{ fontSize: '10px', color: isActive ? 'var(--color-accent)' : 'var(--color-ink-3)', fontFamily: 'var(--font-mono)', paddingLeft: '16px' }}>
+            <span
+              style={{
+                fontSize: '10px',
+                color: isActive ? 'var(--color-accent)' : 'var(--color-ink-3)',
+                fontFamily: 'var(--font-mono)',
+                paddingLeft: '16px',
+              }}
+            >
               {s.meter.supplier_label}
             </span>
-            <span style={{ fontSize: 'var(--text-xs)', color: isActive ? 'var(--color-accent)' : 'var(--color-ink-2)', fontFamily: 'var(--font-mono)', paddingLeft: '16px' }}>
+            <span
+              style={{
+                fontSize: 'var(--text-xs)',
+                color: isActive ? 'var(--color-accent)' : 'var(--color-ink-2)',
+                fontFamily: 'var(--font-mono)',
+                paddingLeft: '16px',
+              }}
+            >
               {formatQuantity(s.total, s.meter.unit)}
             </span>
           </button>
@@ -926,9 +1210,26 @@ function MeterDetail({ summary, year }: { summary: MeterYearSummary; year: numbe
   const dataMonths = Object.keys(summary.monthly).length;
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 'var(--space-5)', minWidth: 0 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
-        <h3 style={{ margin: 0, fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--color-ink-1)' }}>
+    <div
+      style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'var(--space-5)',
+        minWidth: 0,
+      }}
+    >
+      <div
+        style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--space-4)', flexWrap: 'wrap' }}
+      >
+        <h3
+          style={{
+            margin: 0,
+            fontSize: 'var(--text-base)',
+            fontWeight: 600,
+            color: 'var(--color-ink-1)',
+          }}
+        >
           {summary.meter.label}
         </h3>
         <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-3)' }}>
@@ -947,17 +1248,25 @@ function MeterDetail({ summary, year }: { summary: MeterYearSummary; year: numbe
         <Kpi label="Meses con dato" value={`${dataMonths} / 12`} />
       </div>
 
-      <div style={{
-        background: 'var(--color-surface-1)', border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius-lg)', padding: 'var(--space-5)',
-      }}>
+      <div
+        style={{
+          background: 'var(--color-surface-1)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-lg)',
+          padding: 'var(--space-5)',
+        }}
+      >
         <MonthlyChart summary={summary} />
       </div>
 
-      <div style={{
-        background: 'var(--color-surface-1)', border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius-lg)', overflow: 'hidden',
-      }}>
+      <div
+        style={{
+          background: 'var(--color-surface-1)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-lg)',
+          overflow: 'hidden',
+        }}
+      >
         <MonthlyTable summary={summary} />
       </div>
     </div>
@@ -967,10 +1276,25 @@ function MeterDetail({ summary, year }: { summary: MeterYearSummary; year: numbe
 function Kpi({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-      <span style={{ fontSize: '10px', color: 'var(--color-ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
+      <span
+        style={{
+          fontSize: '10px',
+          color: 'var(--color-ink-3)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.06em',
+          fontWeight: 600,
+        }}
+      >
         {label}
       </span>
-      <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, fontFamily: 'var(--font-mono)', color: 'var(--color-ink-1)' }}>
+      <span
+        style={{
+          fontSize: 'var(--text-sm)',
+          fontWeight: 600,
+          fontFamily: 'var(--font-mono)',
+          color: 'var(--color-ink-1)',
+        }}
+      >
         {value}
       </span>
     </div>

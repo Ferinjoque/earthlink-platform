@@ -49,7 +49,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         .order('name'),
       supabase
         .from('anomaly_flags')
-        .select('id, activity_entries!inner(reporting_periods!inner(suppliers!inner(organization_id)))', { count: 'exact', head: true })
+        .select(
+          'id, activity_entries!inner(reporting_periods!inner(suppliers!inner(organization_id)))',
+          { count: 'exact', head: true },
+        )
         .eq('is_resolved', false)
         .in('activity_entries.reporting_periods.suppliers.organization_id', orgIds),
     ]);
@@ -62,7 +65,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <ToastProvider>
         <div data-app-root style={{ display: 'flex', height: '100dvh', overflow: 'hidden' }}>
           <Sidebar anomaliaCount={anomaliaCount} />
-          <div data-app-main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
+          <div
+            data-app-main
+            style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}
+          >
             <PageTransition>{children}</PageTransition>
           </div>
         </div>

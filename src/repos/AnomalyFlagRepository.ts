@@ -42,7 +42,9 @@ export class AnomalyFlagRepository extends SupabaseRepository<AnomalyFlag> {
       .from(this.tableName)
       .update({ is_resolved: true, resolved_by: resolvedBy, resolved_at: new Date().toISOString() })
       .eq('id', id)
-      .select('id, activity_entry_id, detector, severity, z_score, threshold_used, message, is_resolved, resolved_by, resolved_at, flagged_at')
+      .select(
+        'id, activity_entry_id, detector, severity, z_score, threshold_used, message, is_resolved, resolved_by, resolved_at, flagged_at',
+      )
       .single();
     if (error ?? !data)
       throw new Error(`Error al resolver anomalía: ${error?.message ?? 'sin datos'}`);

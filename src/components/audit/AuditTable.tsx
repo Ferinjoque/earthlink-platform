@@ -23,12 +23,10 @@ import type { AnomalySeverity } from '@/types/database';
 import {
   AnomaliaItem,
   COLOR_SEVERIDAD,
-  ETIQUETAS_SEVERIDAD,
   type AnomaliaDetalle,
 } from '@/components/audit/AnomaliaItem';
 
 export type { AnomaliaDetalle };
-
 
 export interface ResultadoDetalle {
   id: string;
@@ -69,10 +67,19 @@ interface AuditTableProps {
   isAdmin: boolean;
 }
 
-
 const MESES_CORTO = [
-  'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-  'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+  'Ene',
+  'Feb',
+  'Mar',
+  'Abr',
+  'May',
+  'Jun',
+  'Jul',
+  'Ago',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dic',
 ] as const;
 
 const FUENTE_CORTA: Record<string, string> = {
@@ -146,7 +153,12 @@ function mesesFaltantes(periodos: PeriodoFila[], year: number): number[] {
 }
 
 function resumenEstados(periodos: PeriodoFila[]): Record<PeriodStatus, number> {
-  const counts: Record<PeriodStatus, number> = { open: 0, calculating: 0, under_review: 0, locked: 0 };
+  const counts: Record<PeriodStatus, number> = {
+    open: 0,
+    calculating: 0,
+    under_review: 0,
+    locked: 0,
+  };
   for (const p of periodos) counts[p.status] = (counts[p.status] ?? 0) + 1;
   return counts;
 }
@@ -163,10 +175,11 @@ function puedeCalcularAnio(periodos: PeriodoFila[], year: number): boolean {
 function puedeCerrarAnio(periodos: PeriodoFila[], year: number): boolean {
   if (periodos.length === 0) return false;
   if (mesesFaltantes(periodos, year).length > 0) return false;
-  return periodos.every((p) => p.status === 'under_review' || p.status === 'locked') &&
-    periodos.some((p) => p.status === 'under_review');
+  return (
+    periodos.every((p) => p.status === 'under_review' || p.status === 'locked') &&
+    periodos.some((p) => p.status === 'under_review')
+  );
 }
-
 
 function VoidResultButton({ activityEntryId }: { activityEntryId: string }) {
   const { toast } = useToast();
@@ -223,7 +236,10 @@ function VoidResultButton({ activityEntryId }: { activityEntryId: string }) {
             minWidth: '200px',
           }}
         >
-          <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <form
+            action={formAction}
+            style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}
+          >
             <input type="hidden" name="entry_id" value={activityEntryId} />
             <input
               name="void_reason"
@@ -286,7 +302,6 @@ function VoidResultButton({ activityEntryId }: { activityEntryId: string }) {
     </div>
   );
 }
-
 
 function UnlockButton({ periodId }: { periodId: string }) {
   const { toast } = useToast();
@@ -394,7 +409,6 @@ function UnlockButton({ periodId }: { periodId: string }) {
   );
 }
 
-
 function ScopeTable({
   rows,
   accentColor,
@@ -441,16 +455,40 @@ function ScopeTable({
           {rows.map((r) => (
             <tr key={r.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
               <td style={estiloCeldaMini}>{FUENTE_CORTA[r.source_type] ?? r.source_type}</td>
-              <td style={{ ...estiloCeldaMini, fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>
+              <td
+                style={{ ...estiloCeldaMini, fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}
+              >
                 {r.raw_quantity.toLocaleString('es')} {r.raw_unit}
               </td>
-              <td style={{ ...estiloCeldaMini, fontFamily: 'var(--font-mono)', fontWeight: 700, color: accentColor, whiteSpace: 'nowrap' }}>
+              <td
+                style={{
+                  ...estiloCeldaMini,
+                  fontFamily: 'var(--font-mono)',
+                  fontWeight: 700,
+                  color: accentColor,
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 {formatearKg(r.co2e_kg)}
               </td>
-              <td style={{ ...estiloCeldaMini, fontFamily: 'var(--font-mono)', color: 'var(--color-ink-3)', whiteSpace: 'nowrap' }}>
+              <td
+                style={{
+                  ...estiloCeldaMini,
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--color-ink-3)',
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 {r.factor_used.toFixed(4)} {r.factor_unit}
               </td>
-              <td style={{ ...estiloCeldaMini, color: 'var(--color-ink-3)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>
+              <td
+                style={{
+                  ...estiloCeldaMini,
+                  color: 'var(--color-ink-3)',
+                  fontFamily: 'var(--font-mono)',
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 {new Date(r.calculated_at).toLocaleDateString('es')}
               </td>
               {showVoid && (
@@ -461,12 +499,28 @@ function ScopeTable({
             </tr>
           ))}
           <tr>
-            <td colSpan={2} style={{ ...estiloCeldaMini, fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-ink-2)', paddingTop: 'var(--space-2)' }}>
+            <td
+              colSpan={2}
+              style={{
+                ...estiloCeldaMini,
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 700,
+                color: 'var(--color-ink-2)',
+                paddingTop: 'var(--space-2)',
+              }}
+            >
               Subtotal
             </td>
             <td
               colSpan={showVoid ? 4 : 3}
-              style={{ ...estiloCeldaMini, fontFamily: 'var(--font-mono)', fontWeight: 700, color: accentColor, paddingTop: 'var(--space-2)', whiteSpace: 'nowrap' }}
+              style={{
+                ...estiloCeldaMini,
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 700,
+                color: accentColor,
+                paddingTop: 'var(--space-2)',
+                whiteSpace: 'nowrap',
+              }}
             >
               {formatearKg(total)}
             </td>
@@ -486,7 +540,14 @@ function ResultadosPanel({
 }) {
   if (results.length === 0) {
     return (
-      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', fontFamily: 'var(--font-mono)', margin: 0 }}>
+      <p
+        style={{
+          fontSize: 'var(--text-xs)',
+          color: 'var(--color-ink-3)',
+          fontFamily: 'var(--font-mono)',
+          margin: 0,
+        }}
+      >
         Sin resultados calculados para este periodo.
       </p>
     );
@@ -499,8 +560,24 @@ function ResultadosPanel({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
       {scope1.length > 0 && (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 'var(--space-2)' }}>
-            <span style={{ fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-accent)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'baseline',
+              marginBottom: 'var(--space-2)',
+            }}
+          >
+            <span
+              style={{
+                fontSize: 'var(--text-xs)',
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 700,
+                color: 'var(--color-accent)',
+                textTransform: 'uppercase',
+                letterSpacing: 'var(--tracking-wide)',
+              }}
+            >
               Alcance 1
             </span>
           </div>
@@ -509,8 +586,24 @@ function ResultadosPanel({
       )}
       {scope2.length > 0 && (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 'var(--space-2)' }}>
-            <span style={{ fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-scope2)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'baseline',
+              marginBottom: 'var(--space-2)',
+            }}
+          >
+            <span
+              style={{
+                fontSize: 'var(--text-xs)',
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 700,
+                color: 'var(--color-scope2)',
+                textTransform: 'uppercase',
+                letterSpacing: 'var(--tracking-wide)',
+              }}
+            >
               Alcance 2
             </span>
           </div>
@@ -520,8 +613,6 @@ function ResultadosPanel({
     </div>
   );
 }
-
-
 
 function RecalculateButton({ periodId }: { periodId: string }) {
   const { toast } = useToast();
@@ -608,7 +699,6 @@ function RecalculateButton({ periodId }: { periodId: string }) {
   );
 }
 
-
 function BatchYearControls({
   supplierId,
   supplierName,
@@ -631,10 +721,10 @@ function BatchYearControls({
     calculateYear,
     null,
   );
-  const [closeState, closeFormAction, closePending] = useActionState<BatchYearState | null, FormData>(
-    closeYear,
-    null,
-  );
+  const [closeState, closeFormAction, closePending] = useActionState<
+    BatchYearState | null,
+    FormData
+  >(closeYear, null);
 
   useEffect(() => {
     if (calcState?.success) {
@@ -642,22 +732,34 @@ function BatchYearControls({
       toast(msg, 'success');
     }
     if (calcState?.error) toast(calcState.error, 'error');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calcState?.success, calcState?.error, toast]);
 
   useEffect(() => {
     if (closeState?.success) {
       const n = closeState.calculated ?? 0;
-      toast(`Año ${year} cerrado — ${n} periodo${n === 1 ? '' : 's'} bloqueado${n === 1 ? '' : 's'}`, 'success');
+      toast(
+        `Año ${year} cerrado — ${n} periodo${n === 1 ? '' : 's'} bloqueado${n === 1 ? '' : 's'}`,
+        'success',
+      );
       setCloseConfirm(false);
     }
     if (closeState?.error) {
       toast(closeState.error, 'error');
       setCloseConfirm(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [closeState?.success, closeState?.error, year, toast]);
 
   return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+    <div
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 'var(--space-3)',
+        flexWrap: 'wrap',
+      }}
+    >
       {canCalculate && (
         <form action={calcFormAction}>
           <input type="hidden" name="supplier_id" value={supplierId} />
@@ -727,7 +829,8 @@ function BatchYearControls({
               fontFamily: 'var(--font-mono)',
             }}
           >
-            Cerrar año {year} de {supplierName} — {periodCount} periodo{periodCount === 1 ? '' : 's'}. Irreversible.
+            Cerrar año {year} de {supplierName} — {periodCount} periodo
+            {periodCount === 1 ? '' : 's'}. Irreversible.
           </span>
           <form action={closeFormAction} style={{ display: 'inline-flex', gap: 'var(--space-2)' }}>
             <input type="hidden" name="supplier_id" value={supplierId} />
@@ -773,7 +876,6 @@ function BatchYearControls({
   );
 }
 
-
 function YearGroupRow({
   grupo,
   collapsed,
@@ -793,7 +895,8 @@ function YearGroupRow({
   if (counts.open > 0) statusParts.push(`${counts.open} abierto${counts.open > 1 ? 's' : ''}`);
   if (counts.calculating > 0) statusParts.push(`${counts.calculating} calculando`);
   if (counts.under_review > 0) statusParts.push(`${counts.under_review} en revisión`);
-  if (counts.locked > 0) statusParts.push(`${counts.locked} bloqueado${counts.locked > 1 ? 's' : ''}`);
+  if (counts.locked > 0)
+    statusParts.push(`${counts.locked} bloqueado${counts.locked > 1 ? 's' : ''}`);
 
   return (
     <tr
@@ -911,7 +1014,14 @@ function YearGroupRow({
         }}
       >
         {faltantes.length > 0 && (
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 'var(--space-2)',
+              flexWrap: 'wrap',
+            }}
+          >
             <span
               style={{
                 fontSize: 'var(--text-xs)',
@@ -963,7 +1073,6 @@ function YearGroupRow({
     </tr>
   );
 }
-
 
 const ESTADOS_FILTRO: { valor: PeriodStatus | 'todos'; etiqueta: string }[] = [
   { valor: 'todos', etiqueta: 'Todos' },
@@ -1239,7 +1348,6 @@ export function AuditTable({ periodos, isAdmin }: AuditTableProps) {
   );
 }
 
-
 function PeriodoRow({
   p,
   isAdmin,
@@ -1276,9 +1384,7 @@ function PeriodoRow({
         className="audit-row"
         style={{
           borderBottom:
-            resultadosAbiertos || anomaliasAbiertas
-              ? 'none'
-              : '1px solid var(--color-border)',
+            resultadosAbiertos || anomaliasAbiertas ? 'none' : '1px solid var(--color-border)',
         }}
       >
         <td
@@ -1372,9 +1478,7 @@ function PeriodoRow({
           {hasResults ? (
             <button
               type="button"
-              onClick={() =>
-                setExpandidoResultados((prev) => (prev === p.id ? null : p.id))
-              }
+              onClick={() => setExpandidoResultados((prev) => (prev === p.id ? null : p.id))}
               style={{
                 fontSize: 'var(--text-xs)',
                 fontFamily: 'var(--font-mono)',
@@ -1412,9 +1516,7 @@ function PeriodoRow({
               return (
                 <button
                   type="button"
-                  onClick={() =>
-                    setExpandidoAnomalias((prev) => (prev === p.id ? null : p.id))
-                  }
+                  onClick={() => setExpandidoAnomalias((prev) => (prev === p.id ? null : p.id))}
                   style={{
                     fontSize: 'var(--text-xs)',
                     fontFamily: 'var(--font-mono)',
@@ -1447,7 +1549,14 @@ function PeriodoRow({
           )}
         </td>
         <td style={{ padding: 'var(--space-3) var(--space-4)', minWidth: '160px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-2)',
+              flexWrap: 'wrap',
+            }}
+          >
             <PeriodActions periodId={p.id} status={p.status} />
             {p.status === 'locked' && <RecalculateButton periodId={p.id} />}
             {p.status === 'locked' && isAdmin && <UnlockButton periodId={p.id} />}

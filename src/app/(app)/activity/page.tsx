@@ -7,7 +7,7 @@ import { TopBar } from '@/components/shell/TopBar';
 import { ActivityList } from '@/components/activity/ActivityList';
 import { BulkImportPanel } from '@/components/activity/BulkImportPanel';
 import { ClipboardList } from 'lucide-react';
-import type { ActivityEntryView, PaginationInfo } from '@/components/activity/ActivityList';
+import type { ActivityEntryView } from '@/components/activity/ActivityList';
 import type {
   MembershipRow,
   SupplierRow,
@@ -78,7 +78,10 @@ export default async function ActividadPage({ searchParams }: PageProps) {
   // Solo proveedores activos para el panel de importación y la lista de actividad
   const activeSuppliersForImport = suppliersData.filter((s) => s.archived_at === null);
   const activeSupplierIds = activeSuppliersForImport.map((s) => s.id);
-  const periodsData: Pick<ReportingPeriodRow, 'id' | 'label' | 'supplier_id' | 'status' | 'start_date'>[] = [];
+  const periodsData: Pick<
+    ReportingPeriodRow,
+    'id' | 'label' | 'supplier_id' | 'status' | 'start_date'
+  >[] = [];
   if (activeSupplierIds.length) {
     const { data } = await supabase
       .from('reporting_periods')
@@ -288,7 +291,10 @@ export default async function ActividadPage({ searchParams }: PageProps) {
               maxWidth: '960px',
             }}
           >
-            <BulkImportPanel suppliers={activeSuppliersForImport} defaultSupplierId={activeSuppliersForImport[0]?.id} />
+            <BulkImportPanel
+              suppliers={activeSuppliersForImport}
+              defaultSupplierId={activeSuppliersForImport[0]?.id}
+            />
           </div>
         </section>
 
@@ -341,7 +347,12 @@ export default async function ActividadPage({ searchParams }: PageProps) {
               <ActivityList
                 entries={entries}
                 periodos={periods}
-                pagination={{ page, pageSize: PAGE_SIZE, total: totalEntries, basePath: '/activity' }}
+                pagination={{
+                  page,
+                  pageSize: PAGE_SIZE,
+                  total: totalEntries,
+                  basePath: '/activity',
+                }}
               />
             )}
           </div>

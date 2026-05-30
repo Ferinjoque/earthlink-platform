@@ -1,5 +1,11 @@
 import { calculate, aggregate, _internals } from '../calc/pipeline';
-import type { EmissionFactor, EmissionResult, EvaluationTotals, FactorTable, ConversionTable } from '../calc/types';
+import type {
+  EmissionFactor,
+  EmissionResult,
+  EvaluationTotals,
+  FactorTable,
+  ConversionTable,
+} from '../calc/types';
 import type { ReportingPeriod } from '../domain/ReportingPeriod';
 import type { ActivityEntry } from '../domain/ActivityEntry';
 
@@ -61,7 +67,8 @@ export class EvaluationService {
     conversions: ConversionTable,
     periodId: string,
   ): Promise<EvaluationOutcome> {
-    const successes: Array<{ result: EmissionResult; periodId: string; factor: EmissionFactor }> = [];
+    const successes: Array<{ result: EmissionResult; periodId: string; factor: EmissionFactor }> =
+      [];
     const errors: EvaluationError[] = [];
     const noGhgResults: EmissionResult[] = [];
 
@@ -72,7 +79,8 @@ export class EvaluationService {
       if (NO_GHG_KINDS.has(record.activity.kind)) {
         const calcResult = calculate(record, factors, conversions);
         if (calcResult.ok) noGhgResults.push(calcResult.value);
-        else errors.push({ entryId: entry.id, message: `Error de cálculo: ${calcResult.error.type}` });
+        else
+          errors.push({ entryId: entry.id, message: `Error de cálculo: ${calcResult.error.type}` });
         continue;
       }
 

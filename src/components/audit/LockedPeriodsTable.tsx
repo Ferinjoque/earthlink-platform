@@ -107,8 +107,7 @@ export function LockedPeriodsTable({ rows }: { rows: LockedPeriodRow[] }) {
                 key={row.id}
                 className="locked-row"
                 style={{
-                  borderBottom:
-                    i < visible.length - 1 ? '1px solid var(--color-border)' : 'none',
+                  borderBottom: i < visible.length - 1 ? '1px solid var(--color-border)' : 'none',
                 }}
               >
                 <td
@@ -209,9 +208,7 @@ export function LockedPeriodsTable({ rows }: { rows: LockedPeriodRow[] }) {
               cursor: 'pointer',
             }}
           >
-            {showAll
-              ? 'Mostrar menos'
-              : `Ver todos (${rows.length - PAGE_VISIBLE} más)`}
+            {showAll ? 'Mostrar menos' : `Ver todos (${rows.length - PAGE_VISIBLE} más)`}
           </button>
         </div>
       )}

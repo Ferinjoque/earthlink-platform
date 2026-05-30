@@ -3,24 +3,20 @@
  * Todos los tipos son readonly — la mutación nunca está permitida dentro de calc/.
  */
 
-
 export type GridRegion = 'SEIN_PERU' | 'LATAM_AVG' | 'US_AVERAGE' | 'EU_AVERAGE';
 
-
 export type WaterSubtype =
-  | 'all_sources'    // Total de todas las fuentes
-  | 'potable_mixed'  // Potable mixto (interior/exterior)
+  | 'all_sources' // Total de todas las fuentes
+  | 'potable_mixed' // Potable mixto (interior/exterior)
   | 'potable_indoor' // Potable solo interior
-  | 'reclaimed_mixed'// Recuperada mixta
-  | 'well_outdoor'   // Pozo — exterior
-  | 'other_mixed';   // Otra fuente mixta
-
+  | 'reclaimed_mixed' // Recuperada mixta
+  | 'well_outdoor' // Pozo — exterior
+  | 'other_mixed'; // Otra fuente mixta
 
 export type WasteSubtype =
   | 'disposed_trash' // Basura dispuesta (vertedero)
-  | 'recycled'       // Materiales reciclados
-  | 'composted';     // Materiales compostados
-
+  | 'recycled' // Materiales reciclados
+  | 'composted'; // Materiales compostados
 
 export type ActivityKind =
   | {
@@ -37,7 +33,6 @@ export type ActivityKind =
 // Alcance 'none' = consumo rastreado pero sin emisión GHG directa (agua, residuos reciclados/compostados)
 export type GhgScope = 'scope1' | 'scope2' | 'none';
 
-
 export type Unit =
   // Energía — estándar para gas y electricidad
   | 'kWh'
@@ -49,7 +44,7 @@ export type Unit =
   | 'MMBtu'
   | 'MBtu'
   | 'BTU'
-  | 'kBtu'       // Mil BTU — gas natural / combustibles en EE.UU. (GRESB)
+  | 'kBtu' // Mil BTU — gas natural / combustibles en EE.UU. (GRESB)
   // Volumen de gas natural
   | 'm3_ng'
   | 'ft3_ng'
@@ -62,11 +57,11 @@ export type Unit =
   | 'tonne'
   | 'lb'
   // Agua
-  | 'kgal_us'    // Mil galones US (estándar GRESB agua)
-  | 'megaliter'  // Megalitros (estándar GRESB internacional)
-  | 'm3'         // Metros cúbicos (agua)
+  | 'kgal_us' // Mil galones US (estándar GRESB agua)
+  | 'megaliter' // Megalitros (estándar GRESB internacional)
+  | 'm3' // Metros cúbicos (agua)
   // Residuos
-  | 'ton_us';    // Tonelada corta US (estándar GRESB residuos)
+  | 'ton_us'; // Tonelada corta US (estándar GRESB residuos)
 
 export const STANDARD_UNITS: Record<ActivityKind['kind'], Unit> = {
   stationary_combustion: 'L',
@@ -77,7 +72,6 @@ export const STANDARD_UNITS: Record<ActivityKind['kind'], Unit> = {
   water_use: 'kgal_us',
   waste: 'ton_us',
 };
-
 
 export type ActivityRecord = Readonly<{
   id: string;
@@ -129,7 +123,6 @@ export type RiskScore = Readonly<{
   anomalyCount: number;
   trend: 'up' | 'down' | 'stable';
 }>;
-
 
 export type CalcError =
   | { readonly type: 'UNKNOWN_UNIT'; readonly unit: string }

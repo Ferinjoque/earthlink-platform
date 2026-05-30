@@ -14,7 +14,9 @@ const DATA_QUALITY_VALUES = ['measured', 'estimated', 'calculated'] as const;
 
 const csvRowSchema = z.object({
   supplier_id: z.string().uuid('Debe ser un UUID de proveedor válido'),
-  year_month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Formato mes inválido (YYYY-MM, ej: 2026-01)'),
+  year_month: z
+    .string()
+    .regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Formato mes inválido (YYYY-MM, ej: 2026-01)'),
   source_type: z.enum(SOURCE_TYPES, { message: 'Tipo de fuente inválido' }),
   secondary: z.string().default(''),
   raw_quantity: z.coerce.number().nonnegative('Debe ser un número mayor o igual a cero'),
@@ -33,13 +35,7 @@ export interface ParsedCsvRow {
 
 // Campo canónico → aliases aceptados de columna (en minúsculas, espacios normalizados)
 const COL_ALIASES: Record<string, string[]> = {
-  supplier_id: [
-    'supplier_id',
-    'id_proveedor',
-    'proveedor_id',
-    'id proveedor',
-    'proveedor',
-  ],
+  supplier_id: ['supplier_id', 'id_proveedor', 'proveedor_id', 'id proveedor', 'proveedor'],
   year_month: [
     'year_month',
     'mes',
@@ -210,7 +206,16 @@ function parseRow(
       notes: get('notes') || '',
     };
   } else if (cols.length >= 8) {
-    const [supplier_id, year_month, source_type, secondary, raw_quantity, raw_unit, data_quality, notes] = cols;
+    const [
+      supplier_id,
+      year_month,
+      source_type,
+      secondary,
+      raw_quantity,
+      raw_unit,
+      data_quality,
+      notes,
+    ] = cols;
     raw = {
       supplier_id: supplier_id ?? '',
       year_month: year_month ?? '',

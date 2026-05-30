@@ -22,7 +22,6 @@ interface BulkImportPanelProps {
 
 type Tab = 'manual' | 'archivo';
 
-
 function downloadCsvTemplate(suppliers: Supplier[]) {
   const blob = new Blob([getCsvTemplate(suppliers)], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -32,7 +31,6 @@ function downloadCsvTemplate(suppliers: Supplier[]) {
   a.click();
   URL.revokeObjectURL(url);
 }
-
 
 const CABECERAS_PREVIEW = ['Fila', 'Proveedor', 'Mes', 'Fuente', 'Cant.', 'Unidad', 'Estado'];
 
@@ -48,8 +46,7 @@ function CsvPreview({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
       <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-2)', margin: 0 }}>
-        Vista previa:{' '}
-        <strong style={{ color: 'var(--color-accent)' }}>{validas} válidas</strong>
+        Vista previa: <strong style={{ color: 'var(--color-accent)' }}>{validas} válidas</strong>
         {conError > 0 && (
           <>
             {', '}
@@ -103,10 +100,7 @@ function CsvPreview({
                   {row.errors.length === 0 ? (
                     <span style={{ color: 'var(--color-accent)' }}>✓</span>
                   ) : (
-                    <span
-                      style={{ color: 'var(--color-signal-hi)' }}
-                      title={row.errors.join('; ')}
-                    >
+                    <span style={{ color: 'var(--color-signal-hi)' }} title={row.errors.join('; ')}>
                       ✗ {row.errors[0]}
                     </span>
                   )}
@@ -129,7 +123,6 @@ const tdPrev: React.CSSProperties = {
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
 };
-
 
 function ArchivoTab({ suppliers }: { suppliers: Supplier[] }) {
   const supplierMap = new Map(suppliers.map((s) => [s.id, s.name]));
@@ -163,6 +156,7 @@ function ArchivoTab({ suppliers }: { suppliers: Supplier[] }) {
     } else if (csvState.error) {
       toast(csvState.error, 'error');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [csvState?.submittedAt]);
 
   useEffect(() => {
@@ -179,6 +173,7 @@ function ArchivoTab({ suppliers }: { suppliers: Supplier[] }) {
     } else if (xlsxState.error) {
       toast(xlsxState.error, 'error');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [xlsxState?.submittedAt]);
 
   function handleFile(file: File) {
@@ -289,7 +284,12 @@ function ArchivoTab({ suppliers }: { suppliers: Supplier[] }) {
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)' }}>
               Plantillas:
             </span>
-            <button type="button" className="tmpl-btn" onClick={() => downloadCsvTemplate(suppliers)} style={btnTmpl}>
+            <button
+              type="button"
+              className="tmpl-btn"
+              onClick={() => downloadCsvTemplate(suppliers)}
+              style={btnTmpl}
+            >
               <Download size={11} /> CSV
             </button>
             <button
@@ -443,7 +443,13 @@ function ArchivoTab({ suppliers }: { suppliers: Supplier[] }) {
         noValidate
         style={{ display: fileType === 'xlsx' ? 'block' : 'none' }}
       >
-        <input ref={xlsxInputRef} type="file" name="xlsx_file" accept=".xlsx" style={{ display: 'none' }} />
+        <input
+          ref={xlsxInputRef}
+          type="file"
+          name="xlsx_file"
+          accept=".xlsx"
+          style={{ display: 'none' }}
+        />
         <SubmitBtn disabled={xlsxPending} pending={xlsxPending} label="Importar desde Excel" />
       </form>
 
@@ -578,7 +584,14 @@ function ArchivoTab({ suppliers }: { suppliers: Supplier[] }) {
           <span style={{ fontSize: '10px' }}>▶</span>
           Pegar CSV manualmente
         </summary>
-        <div style={{ marginTop: 'var(--space-3)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+        <div
+          style={{
+            marginTop: 'var(--space-3)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--space-2)',
+          }}
+        >
           <textarea
             id="bulk-csv-area"
             rows={6}
@@ -601,7 +614,6 @@ function ArchivoTab({ suppliers }: { suppliers: Supplier[] }) {
     </div>
   );
 }
-
 
 const TABS: { val: Tab; Icon: React.ElementType; label: string }[] = [
   { val: 'manual', Icon: Table2, label: 'Manual' },
@@ -680,7 +692,6 @@ export function BulkImportPanel({ suppliers, defaultSupplierId }: BulkImportPane
     </div>
   );
 }
-
 
 const btnTmpl: React.CSSProperties = {
   background: 'none',

@@ -16,6 +16,19 @@ const eslintConfig = defineConfig([
     },
   },
 
+  // Permitir parámetros con prefijo _ sin disparar no-unused-vars
+  {
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
+      // El patrón toast(state.error) dentro de useEffect es estándar con Server Actions.
+      // La regla es demasiado estricta para este caso de uso.
+      'react-hooks/set-state-in-effect': 'off',
+    },
+  },
+
   // Module boundary rules — keeps calc/ pure (no I/O imports)
   {
     plugins: { boundaries },

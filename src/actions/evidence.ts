@@ -21,9 +21,21 @@ const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 // Valida los magic bytes del buffer contra el MIME declarado por el cliente
 function validarMagicBytes(buffer: Buffer, mime: MimePermitido): boolean {
   if (mime === 'image/jpeg') return buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
-  if (mime === 'image/png') return buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47;
-  if (mime === 'image/webp') return buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 && buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50;
-  if (mime === 'application/pdf') return buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46;
+  if (mime === 'image/png')
+    return buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47;
+  if (mime === 'image/webp')
+    return (
+      buffer[0] === 0x52 &&
+      buffer[1] === 0x49 &&
+      buffer[2] === 0x46 &&
+      buffer[3] === 0x46 &&
+      buffer[8] === 0x57 &&
+      buffer[9] === 0x45 &&
+      buffer[10] === 0x42 &&
+      buffer[11] === 0x50
+    );
+  if (mime === 'application/pdf')
+    return buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46;
   return false;
 }
 
@@ -60,7 +72,9 @@ export async function uploadEvidence(
   if (!file || file.size === 0) return { error: 'Selecciona un archivo para adjuntar' };
 
   if (file.size > MAX_BYTES) {
-    return { error: `El archivo supera el límite de 10 MB (${(file.size / 1_048_576).toFixed(1)} MB)` };
+    return {
+      error: `El archivo supera el límite de 10 MB (${(file.size / 1_048_576).toFixed(1)} MB)`,
+    };
   }
 
   const mime = file.type as MimePermitido;
@@ -84,7 +98,8 @@ export async function uploadEvidence(
     .maybeSingle();
 
   if (!entryCheck) return { error: 'Entrada no encontrada o sin acceso' };
-  if (entryCheck.voided_at) return { error: 'No se puede adjuntar evidencia a una entrada anulada' };
+  if (entryCheck.voided_at)
+    return { error: 'No se puede adjuntar evidencia a una entrada anulada' };
 
   type PeriodoConSupplier = {
     status: string;
@@ -93,7 +108,8 @@ export async function uploadEvidence(
   };
   const periodo = entryCheck.reporting_periods as PeriodoConSupplier | null;
   if (periodo?.status === 'locked') return { error: 'No se puede modificar un periodo bloqueado' };
-  if (periodo?.status === 'calculating') return { error: 'No se puede adjuntar evidencia mientras el periodo está siendo calculado' };
+  if (periodo?.status === 'calculating')
+    return { error: 'No se puede adjuntar evidencia mientras el periodo está siendo calculado' };
   const orgId = periodo?.suppliers?.organization_id;
   if (!orgId) return { error: 'No se pudo determinar la organización' };
 
@@ -129,21 +145,17 @@ export async function uploadEvidence(
 
   // Subir con service_role para garantizar acceso al bucket privado
   const admin = createAdminClient();
-  const { error: uploadError } = await admin.storage
-    .from('evidence')
-    .upload(storagePath, buffer, {
-      contentType: mime,
-      upsert: false,
-    });
+  const { error: uploadError } = await admin.storage.from('evidence').upload(storagePath, buffer, {
+    contentType: mime,
+    upsert: false,
+  });
 
   if (uploadError) {
     return { error: 'Error al subir el archivo. Intenta nuevamente.' };
   }
 
   // Eliminar control ASCII y Unicode bidi/invisibles que podrían disfrazar el nombre del archivo
-  const originalName = file.name
-    .replace(/[\x00-\x1f\x7f​-‏‪-‮⁦-⁩﻿]/g, '')
-    .slice(0, 255);
+  const originalName = file.name.replace(/[\x00-\x1f\x7f​-‏‪-‮⁦-⁩﻿]/g, '').slice(0, 255);
 
   // Registrar en BD
   const { data: inserted, error: insertError } = await supabase
@@ -292,7 +304,9 @@ export async function getEvidenceFilesBatch(
 
   const { data: rows } = await supabase
     .from('evidence_files')
-    .select('id, original_name, mime_type, file_size_bytes, sha256, uploaded_at, storage_path, activity_entry_id')
+    .select(
+      'id, original_name, mime_type, file_size_bytes, sha256, uploaded_at, storage_path, activity_entry_id',
+    )
     .in('activity_entry_id', authorizedEntryIds)
     .order('uploaded_at', { ascending: true });
 

@@ -1,6 +1,6 @@
 import Big from 'big.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { EvaluationTotals, GhgScope } from '../calc/types';
+import type { EvaluationTotals } from '../calc/types';
 
 export interface PeriodSummary {
   periodId: string;

@@ -86,9 +86,7 @@ export function MonthlyTable({ summary }: MonthlyTableProps) {
                     >
                       <div
                         style={{
-                          background: isPeak
-                            ? 'var(--color-accent)'
-                            : 'oklch(58% 0.16 155 / 55%)',
+                          background: isPeak ? 'var(--color-accent)' : 'oklch(58% 0.16 155 / 55%)',
                           borderRadius: 'var(--radius-pill)',
                           height: '100%',
                           width: `${pct}%`,

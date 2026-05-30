@@ -6,11 +6,7 @@ import { TopBar } from '@/components/shell/TopBar';
 import { Badge } from '@/components/ui/Badge';
 import { AnomalyBadge } from '@/components/activity/AnomalyBadge';
 import { variantEstadoPeriodo, etiquetaEstadoPeriodo } from '@/lib/reporting-period';
-import type {
-  SupplierRow,
-  ReportingPeriodRow,
-  ActivityEntryRow,
-} from '@/types/database';
+import type { SupplierRow, ReportingPeriodRow, ActivityEntryRow } from '@/types/database';
 import type { PeriodStatus } from '@/domain/ReportingPeriod';
 import { ArrowLeft, ClipboardList } from 'lucide-react';
 
@@ -150,7 +146,11 @@ export default async function DetalleProveedorPage({
       z_score: number;
       message: string;
     }[]) {
-      flagMap.set(f.activity_entry_id, { severity: f.severity, z_score: f.z_score, message: f.message });
+      flagMap.set(f.activity_entry_id, {
+        severity: f.severity,
+        z_score: f.z_score,
+        message: f.message,
+      });
     }
   }
 
@@ -228,7 +228,9 @@ export default async function DetalleProveedorPage({
 
         {/* Periodos de reporte */}
         <section className="animate-fade-up stagger-2">
-          <p className="eyebrow" style={{ marginBottom: 'var(--space-4)' }}>Periodos de reporte</p>
+          <p className="eyebrow" style={{ marginBottom: 'var(--space-4)' }}>
+            Periodos de reporte
+          </p>
 
           {periods.length === 0 ? (
             <div

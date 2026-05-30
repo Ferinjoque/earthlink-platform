@@ -218,7 +218,6 @@ export function Sidebar({ anomaliaCount = 0 }: SidebarProps) {
           </button>
         </form>
       </div>
-
     </aside>
   );
 }

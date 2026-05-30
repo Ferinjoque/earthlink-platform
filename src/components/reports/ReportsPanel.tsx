@@ -35,7 +35,6 @@ interface ReportsPanelProps {
   orgName: string;
 }
 
-
 function groupByYear(periodos: PeriodoExportable[]): Map<number, PeriodoExportable[]> {
   const map = new Map<number, PeriodoExportable[]>();
   for (const p of periodos) {
@@ -65,7 +64,6 @@ function sumarPeriodos(periodos: PeriodoExportable[]): {
   }
   return { totalCo2eKg, scope1Kg, scope2Kg, nProveedores: proveedores.size };
 }
-
 
 export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps) {
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set());
@@ -162,7 +160,8 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
       : null;
 
   // sha256 del último export para pie de página en impresión
-  const ultimoSha = state?.success && state.sha256 ? state.sha256 : (historial[0]?.file_sha256 ?? null);
+  const ultimoSha =
+    state?.success && state.sha256 ? state.sha256 : (historial[0]?.file_sha256 ?? null);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-8)' }}>
@@ -255,10 +254,29 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
 
       {/* ── Print-only cover page ── */}
       <div className="reports-print-header" aria-hidden="true">
-        <div style={{ pageBreakAfter: 'always', display: 'flex', flexDirection: 'column', minHeight: '240mm', justifyContent: 'space-between', padding: '0 0 16pt' }}>
+        <div
+          style={{
+            pageBreakAfter: 'always',
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: '240mm',
+            justifyContent: 'space-between',
+            padding: '0 0 16pt',
+          }}
+        >
           {/* Logotipo */}
           <div>
-            <p style={{ fontFamily: 'var(--font-mono)', fontSize: '9pt', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#333', margin: '0 0 6pt', fontWeight: 700 }}>
+            <p
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '9pt',
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                color: '#333',
+                margin: '0 0 6pt',
+                fontWeight: 700,
+              }}
+            >
               EarthLink
             </p>
             <div style={{ width: '32pt', height: '1.5pt', background: '#000', margin: '0 0 0' }} />
@@ -266,19 +284,57 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
 
           {/* Bloque de título principal */}
           <div style={{ padding: '0' }}>
-            <p style={{ fontFamily: 'var(--font-mono)', fontSize: '7pt', color: '#999', margin: '0 0 14pt', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+            <p
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '7pt',
+                color: '#999',
+                margin: '0 0 14pt',
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+              }}
+            >
               Protocolo GHG · Alcances 1 y 2
             </p>
-            <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '34pt', fontWeight: 400, fontStyle: 'italic', margin: '0 0 20pt', letterSpacing: '-0.025em', lineHeight: 1.08, color: '#000' }}>
-              Inventario de Gases<br />de Efecto Invernadero
+            <h1
+              style={{
+                fontFamily: 'var(--font-serif)',
+                fontSize: '34pt',
+                fontWeight: 400,
+                fontStyle: 'italic',
+                margin: '0 0 20pt',
+                letterSpacing: '-0.025em',
+                lineHeight: 1.08,
+                color: '#000',
+              }}
+            >
+              Inventario de Gases
+              <br />
+              de Efecto Invernadero
             </h1>
-            <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13pt', color: '#111', margin: '0 0 3pt', fontWeight: 600, letterSpacing: '-0.01em' }}>
+            <p
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '13pt',
+                color: '#111',
+                margin: '0 0 3pt',
+                fontWeight: 600,
+                letterSpacing: '-0.01em',
+              }}
+            >
               {orgName}
             </p>
-            <p style={{ fontFamily: 'var(--font-mono)', fontSize: '9pt', color: '#666', margin: 0 }}>
+            <p
+              style={{ fontFamily: 'var(--font-mono)', fontSize: '9pt', color: '#666', margin: 0 }}
+            >
               {(() => {
                 const anios = [...new Set(periodos.map((p) => p.year))].sort();
-                const rango = anios.length === 1 ? `Año ${anios[0]}` : anios.length > 1 ? `${anios[0]}–${anios[anios.length - 1]}` : '';
+                const rango =
+                  anios.length === 1
+                    ? `Año ${anios[0]}`
+                    : anios.length > 1
+                      ? `${anios[0]}–${anios[anios.length - 1]}`
+                      : '';
                 return rango ? `${rango} · Generado el ${fechaHoy}` : `Generado el ${fechaHoy}`;
               })()}
             </p>
@@ -290,7 +346,16 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
             const nPeriodos = seleccionados.size > 0 ? seleccionados.size : periodos.length;
             if (statsPortada.totalCo2eKg === 0 && nPeriodos === 0) return null;
             return (
-              <div style={{ borderTop: '1.5pt solid #000', borderBottom: '0.5pt solid #ccc', padding: '12pt 0 10pt', display: 'flex', gap: '0', flexWrap: 'wrap' }}>
+              <div
+                style={{
+                  borderTop: '1.5pt solid #000',
+                  borderBottom: '0.5pt solid #ccc',
+                  padding: '12pt 0 10pt',
+                  display: 'flex',
+                  gap: '0',
+                  flexWrap: 'wrap',
+                }}
+              >
                 {[
                   { label: 'Total CO₂e', value: formatearKg(statsPortada.totalCo2eKg) },
                   { label: 'Alcance 1', value: formatearKg(statsPortada.scope1Kg) },
@@ -299,10 +364,27 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
                   { label: 'Proveedores', value: String(statsPortada.nProveedores) },
                 ].map((kpi) => (
                   <div key={kpi.label} style={{ marginRight: '28pt', marginBottom: '4pt' }}>
-                    <p style={{ fontFamily: 'var(--font-mono)', fontSize: '6.5pt', color: '#999', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 2pt' }}>
+                    <p
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '6.5pt',
+                        color: '#999',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.1em',
+                        margin: '0 0 2pt',
+                      }}
+                    >
                       {kpi.label}
                     </p>
-                    <p style={{ fontFamily: 'var(--font-mono)', fontSize: '13pt', fontWeight: 700, color: '#000', margin: 0 }}>
+                    <p
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '13pt',
+                        fontWeight: 700,
+                        color: '#000',
+                        margin: 0,
+                      }}
+                    >
                       {kpi.value}
                     </p>
                   </div>
@@ -313,7 +395,9 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
 
           {/* Pie de página: integridad */}
           <div style={{ borderTop: '0.5pt solid #e8e8e8', paddingTop: '6pt' }}>
-            <p style={{ fontFamily: 'var(--font-mono)', fontSize: '6pt', color: '#bbb', margin: 0 }}>
+            <p
+              style={{ fontFamily: 'var(--font-mono)', fontSize: '6pt', color: '#bbb', margin: 0 }}
+            >
               Generado por EarthLink · {fechaHoy}
               {ultimoSha ? ` · sha256: ${ultimoSha}` : ''}
             </p>
@@ -368,7 +452,8 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
                   opacity: summaryIn ? 1 : 0,
                   transform: summaryIn ? 'translateY(0)' : 'translateY(-8px)',
                   marginBottom: summaryIn ? 'var(--space-4)' : '0px',
-                  transition: 'max-height 320ms cubic-bezier(0.22,1,0.36,1), opacity 280ms ease, transform 280ms ease, margin-bottom 320ms ease',
+                  transition:
+                    'max-height 320ms cubic-bezier(0.22,1,0.36,1), opacity 280ms ease, transform 280ms ease, margin-bottom 320ms ease',
                 }}
               >
                 <div
@@ -384,27 +469,61 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
                     flexWrap: 'wrap',
                   }}
                 >
-                  <span style={{
-                    fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', fontWeight: 700,
-                    background: 'var(--color-accent-soft)', color: 'var(--color-accent)',
-                    padding: '2px var(--space-2)', borderRadius: 'var(--radius-sm)',
-                    whiteSpace: 'nowrap',
-                  }}>
+                  <span
+                    style={{
+                      fontSize: 'var(--text-xs)',
+                      fontFamily: 'var(--font-mono)',
+                      fontWeight: 700,
+                      background: 'var(--color-accent-soft)',
+                      color: 'var(--color-accent)',
+                      padding: '2px var(--space-2)',
+                      borderRadius: 'var(--radius-sm)',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
                     {seleccionados.size} {seleccionados.size === 1 ? 'periodo' : 'periodos'}
                   </span>
-                  <div style={{ width: '1px', height: '24px', background: 'var(--color-border)', flexShrink: 0 }} />
+                  <div
+                    style={{
+                      width: '1px',
+                      height: '24px',
+                      background: 'var(--color-border)',
+                      flexShrink: 0,
+                    }}
+                  />
                   <SummaryKpi label="Total CO₂e" value={formatearKg(statsSeleccion.totalCo2eKg)} />
-                  <SummaryKpi label="Alcance 1" value={formatearKg(statsSeleccion.scope1Kg)} color="var(--color-accent)" />
-                  <SummaryKpi label="Alcance 2" value={formatearKg(statsSeleccion.scope2Kg)} color="var(--color-scope2)" />
-                  <div style={{ width: '1px', height: '24px', background: 'var(--color-border)', flexShrink: 0 }} />
+                  <SummaryKpi
+                    label="Alcance 1"
+                    value={formatearKg(statsSeleccion.scope1Kg)}
+                    color="var(--color-accent)"
+                  />
+                  <SummaryKpi
+                    label="Alcance 2"
+                    value={formatearKg(statsSeleccion.scope2Kg)}
+                    color="var(--color-scope2)"
+                  />
+                  <div
+                    style={{
+                      width: '1px',
+                      height: '24px',
+                      background: 'var(--color-border)',
+                      flexShrink: 0,
+                    }}
+                  />
                   <SummaryKpi label="Proveedores" value={String(statsSeleccion.nProveedores)} />
                   <button
                     type="button"
                     onClick={limpiarSeleccion}
                     style={{
-                      marginLeft: 'auto', fontSize: '10px', fontFamily: 'var(--font-mono)',
-                      color: 'var(--color-ink-3)', background: 'transparent', border: 'none',
-                      cursor: 'pointer', padding: '2px var(--space-2)', flexShrink: 0,
+                      marginLeft: 'auto',
+                      fontSize: '10px',
+                      fontFamily: 'var(--font-mono)',
+                      color: 'var(--color-ink-3)',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '2px var(--space-2)',
+                      flexShrink: 0,
                     }}
                   >
                     Limpiar ×
@@ -419,7 +538,13 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
               data-no-print
               style={{ marginBottom: 'var(--space-3)' }}
             >
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)', fontFamily: 'var(--font-mono)' }}>
+              <span
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--color-ink-3)',
+                  fontFamily: 'var(--font-mono)',
+                }}
+              >
                 {seleccionados.size} de {periodos.length} periodos seleccionados
               </span>
             </div>
@@ -467,8 +592,7 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
                           color: 'var(--color-ink-3)',
                         }}
                       >
-                        {formatearKg(resumenAnio.totalCo2eKg)} ·{' '}
-                        {periodosAnio.length}{' '}
+                        {formatearKg(resumenAnio.totalCo2eKg)} · {periodosAnio.length}{' '}
                         {periodosAnio.length === 1 ? 'periodo' : 'periodos'} ·{' '}
                         {resumenAnio.nProveedores}{' '}
                         {resumenAnio.nProveedores === 1 ? 'proveedor' : 'proveedores'}
@@ -484,9 +608,7 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
                           marginLeft: 'auto',
                           fontSize: 'var(--text-xs)',
                           fontFamily: 'var(--font-mono)',
-                          color: algunoSeleccionado
-                            ? 'var(--color-accent)'
-                            : 'var(--color-ink-3)',
+                          color: algunoSeleccionado ? 'var(--color-accent)' : 'var(--color-ink-3)',
                           background: 'transparent',
                           border: 'none',
                           cursor: 'pointer',
@@ -520,7 +642,9 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
                     </div>
 
                     {/* Tabla de periodos del año — siempre montada, colapsada via CSS */}
-                    <div className={`rp-year-content${colapsado ? ' rp-year-content--collapsed' : ''}`}>
+                    <div
+                      className={`rp-year-content${colapsado ? ' rp-year-content--collapsed' : ''}`}
+                    >
                       <div className="rp-year-inner">
                         <div
                           className="reports-table-wrap"
@@ -546,7 +670,15 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
                                   data-no-print
                                   style={estiloTh}
                                 />
-                                {['Proveedor', 'Periodo', 'Estado', 'Alcance 1', 'Alcance 2', 'CO₂e total', 'Registros'].map((h) => (
+                                {[
+                                  'Proveedor',
+                                  'Periodo',
+                                  'Estado',
+                                  'Alcance 1',
+                                  'Alcance 2',
+                                  'CO₂e total',
+                                  'Registros',
+                                ].map((h) => (
                                   <th key={h} style={estiloTh}>
                                     {h}
                                   </th>
@@ -568,14 +700,20 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
                                   <td
                                     className="reports-checkbox-col"
                                     data-no-print
-                                    style={{ padding: 'var(--space-3) var(--space-4)', width: '40px' }}
+                                    style={{
+                                      padding: 'var(--space-3) var(--space-4)',
+                                      width: '40px',
+                                    }}
                                   >
                                     <input
                                       type="checkbox"
                                       checked={seleccionados.has(p.id)}
                                       onChange={() => toggleSeleccion(p.id)}
                                       onClick={(e) => e.stopPropagation()}
-                                      style={{ cursor: 'pointer', accentColor: 'var(--color-accent)' }}
+                                      style={{
+                                        cursor: 'pointer',
+                                        accentColor: 'var(--color-accent)',
+                                      }}
                                       aria-label={`Seleccionar ${p.label}`}
                                     />
                                   </td>
@@ -899,20 +1037,33 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
   );
 }
 
-
 function SummaryKpi({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', flexShrink: 0 }}>
-      <span style={{ fontSize: '9px', color: 'var(--color-ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'var(--font-mono)' }}>
+      <span
+        style={{
+          fontSize: '9px',
+          color: 'var(--color-ink-3)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.06em',
+          fontFamily: 'var(--font-mono)',
+        }}
+      >
         {label}
       </span>
-      <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, fontFamily: 'var(--font-mono)', color: color ?? 'var(--color-ink-1)' }}>
+      <span
+        style={{
+          fontSize: 'var(--text-sm)',
+          fontWeight: 600,
+          fontFamily: 'var(--font-mono)',
+          color: color ?? 'var(--color-ink-1)',
+        }}
+      >
         {value}
       </span>
     </div>
   );
 }
-
 
 const estiloTh: React.CSSProperties = {
   textAlign: 'left',
@@ -923,15 +1074,4 @@ const estiloTh: React.CSSProperties = {
   fontFamily: 'var(--font-mono)',
   borderBottom: '1px solid var(--color-border)',
   whiteSpace: 'nowrap',
-};
-
-const estiloBotonSecundario: React.CSSProperties = {
-  fontSize: 'var(--text-xs)',
-  fontFamily: 'var(--font-mono)',
-  color: 'var(--color-ink-2)',
-  background: 'transparent',
-  border: '1px solid var(--color-border)',
-  borderRadius: 'var(--radius-md)',
-  padding: '4px var(--space-3)',
-  cursor: 'pointer',
 };

@@ -1,13 +1,33 @@
 'use client';
 
 const MESES_ES = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
 ];
 
 const MESES_ABREV = [
-  'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-  'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+  'Ene',
+  'Feb',
+  'Mar',
+  'Abr',
+  'May',
+  'Jun',
+  'Jul',
+  'Ago',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dic',
 ];
 
 interface MonthYearSelectProps {
@@ -53,7 +73,8 @@ export function MonthYearSelect({
     fontFamily: 'var(--font-sans)',
     boxSizing: 'border-box' as const,
     appearance: 'none' as const,
-    backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")",
+    backgroundImage:
+      "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")",
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'right 6px center',
     paddingRight: '20px',
@@ -61,10 +82,7 @@ export function MonthYearSelect({
   };
 
   return (
-    <div
-      style={{ display: 'flex', gap: '4px', ...style }}
-      className={className}
-    >
+    <div style={{ display: 'flex', gap: '4px', ...style }} className={className}>
       {name && <input type="hidden" name={name} value={value} />}
       <select
         value={month}
