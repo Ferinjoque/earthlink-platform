@@ -386,7 +386,7 @@ export async function createActivityEntry(
     return { error: 'Error al guardar el registro. Intenta nuevamente.', submittedAt: Date.now() };
   }
 
-  // Detección de anomalías — no crítica, no bloquea si falla
+  // La detección de anomalías no es crítica y no bloquea si falla
   // Línea base: entradas del año anterior del mismo proveedor (igual que calculatePeriod)
   try {
     const entryYear = Number(year_month.split('-')[0]);
@@ -421,7 +421,7 @@ export async function createActivityEntry(
       await anomalyRepo.save(flag);
     }
   } catch {
-    // Entrada guardada — la detección de anomalías es opcional
+    // La entrada ya quedó guardada y la detección de anomalías es opcional
   }
 
   revalidatePath('/activity');
@@ -698,7 +698,7 @@ export async function voidActivityEntry(
     .eq('id', entryId);
   if (updateError) return { error: 'Error al anular el registro. Intenta nuevamente.' };
 
-  // Resolver anomalías activas de la entrada anulada — ya no son relevantes para cálculos
+  // Resolver anomalías activas de la entrada anulada, que ya no son relevantes para cálculos
   try {
     await supabase
       .from('anomaly_flags')
@@ -706,7 +706,7 @@ export async function voidActivityEntry(
       .eq('activity_entry_id', entryId)
       .eq('is_resolved', false);
   } catch {
-    // No-crítico — la anulación ya fue aplicada en DB
+    // No es crítico: la anulación ya fue aplicada en DB
   }
 
   revalidatePath('/activity');

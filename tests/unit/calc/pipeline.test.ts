@@ -47,9 +47,9 @@ function makeConversions(pairs: Array<[string, number]> = []): ConversionTable {
   return new Map(pairs);
 }
 
-// ── calculate — happy path ────────────────────────────────────────────────────
+// ── calculate - happy path ────────────────────────────────────────────────────
 
-describe('calculate — happy path', () => {
+describe('calculate - happy path', () => {
   it('computes correct co2eKg for diesel stationary combustion', () => {
     const record = makeRecord({ rawValue: 850, rawUnit: 'L' });
     const factor = makeFactor();
@@ -144,9 +144,9 @@ describe('calculate — happy path', () => {
   });
 });
 
-// ── calculate — error paths ───────────────────────────────────────────────────
+// ── calculate - error paths ───────────────────────────────────────────────────
 
-describe('calculate — error paths', () => {
+describe('calculate - error paths', () => {
   it('returns INVALID_VALUE for negative rawValue', () => {
     const result = calculate(makeRecord({ rawValue: -1 }), makeFactorTable(makeFactor()));
     expect(result.ok).toBe(false);
@@ -427,7 +427,7 @@ describe('score', () => {
 
 // ── GRESB: ruta CO2e cero para water_use / waste ─────────────────────────────
 
-describe('calculate — water_use zero-CO2e path', () => {
+describe('calculate - water_use zero-CO2e path', () => {
   it('returns ok with co2eKg = 0 for potable_mixed water', () => {
     const record = makeRecord({
       activity: { kind: 'water_use', subtype: 'potable_mixed' },
@@ -472,7 +472,7 @@ describe('calculate — water_use zero-CO2e path', () => {
     expect(r1.value.calcHash).toHaveLength(64);
   });
 
-  it('still validates rawValue — rejects negative water quantity', () => {
+  it('still validates rawValue - rejects negative water quantity', () => {
     const record = makeRecord({
       activity: { kind: 'water_use', subtype: 'potable_mixed' },
       rawValue: -5,
@@ -485,7 +485,7 @@ describe('calculate — water_use zero-CO2e path', () => {
   });
 });
 
-describe('calculate — waste zero-CO2e path', () => {
+describe('calculate - waste zero-CO2e path', () => {
   it('returns ok with co2eKg = 0 for disposed_trash', () => {
     const record = makeRecord({
       activity: { kind: 'waste', subtype: 'disposed_trash' },
@@ -529,7 +529,7 @@ describe('calculate — waste zero-CO2e path', () => {
 
 // ── GRESB: claves de factor para fuel_oil_no2 / propane ──────────────────────
 
-describe('_internals.resolveFactorKey — new fuels', () => {
+describe('_internals.resolveFactorKey - new fuels', () => {
   it('fuel_oil_no2 produces correct key', () => {
     expect(
       _internals.resolveFactorKey({ kind: 'stationary_combustion', fuel: 'fuel_oil_no2' }),
@@ -564,7 +564,7 @@ describe('_internals.resolveFactorKey — new fuels', () => {
   });
 });
 
-describe('_internals.resolveScope — none for water/waste', () => {
+describe('_internals.resolveScope - none for water/waste', () => {
   it('returns none for water_use', () => {
     expect(_internals.resolveScope({ kind: 'water_use', subtype: 'potable_mixed' })).toBe('none');
     expect(_internals.resolveScope({ kind: 'water_use', subtype: 'reclaimed_mixed' })).toBe('none');
@@ -578,7 +578,7 @@ describe('_internals.resolveScope — none for water/waste', () => {
 
 // ── GRESB: conversión de unidad kBtu ─────────────────────────────────────────
 
-describe('_internals.normalizeUnit — GRESB units', () => {
+describe('_internals.normalizeUnit - GRESB units', () => {
   it('converts kBtu → kWh', () => {
     const conversions = makeConversions([['kBtu->kWh', 0.29307100]]);
     const result = _internals.normalizeUnit(1000, 'kBtu', 'kWh', conversions);
@@ -620,9 +620,9 @@ describe('_internals.normalizeUnit — GRESB units', () => {
   });
 });
 
-// ── aggregate — handles none scope ───────────────────────────────────────────
+// ── aggregate - handles none scope ───────────────────────────────────────────
 
-describe('aggregate — none scope', () => {
+describe('aggregate - none scope', () => {
   function makeNoneResult(id: string, normalizedValue: number): EmissionResult {
     return {
       activityRecordId: id,
@@ -670,9 +670,9 @@ describe('aggregate — none scope', () => {
   });
 });
 
-// ── calculate — fuel_oil_no2 / propane with factor ───────────────────────────
+// ── calculate - fuel_oil_no2 / propane with factor ───────────────────────────
 
-describe('calculate — new GRESB fuels', () => {
+describe('calculate - new GRESB fuels', () => {
   it('computes CO2e for fuel_oil_no2 with DEFRA factor', () => {
     const record = makeRecord({
       activity: { kind: 'stationary_combustion', fuel: 'fuel_oil_no2' },

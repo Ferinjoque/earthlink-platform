@@ -314,7 +314,7 @@ function UnlockButton({ periodId }: { periodId: string }) {
 
   useEffect(() => {
     if (state?.success) {
-      toast('Periodo desbloqueado — ahora en revisión', 'success');
+      toast('Periodo desbloqueado, ahora en revisión', 'success');
       router.refresh();
     }
     if (state?.error) {
@@ -728,7 +728,7 @@ function BatchYearControls({
 
   useEffect(() => {
     if (calcState?.success) {
-      const msg = `Año calculado — ${calcState.calculated ?? 0} periodos procesados${calcState.skipped ? `, ${calcState.skipped} omitidos` : ''}`;
+      const msg = `Año calculado: ${calcState.calculated ?? 0} periodos procesados${calcState.skipped ? `, ${calcState.skipped} omitidos` : ''}`;
       toast(msg, 'success');
     }
     if (calcState?.error) toast(calcState.error, 'error');
@@ -739,7 +739,7 @@ function BatchYearControls({
     if (closeState?.success) {
       const n = closeState.calculated ?? 0;
       toast(
-        `Año ${year} cerrado — ${n} periodo${n === 1 ? '' : 's'} bloqueado${n === 1 ? '' : 's'}`,
+        `Año ${year} cerrado: ${n} periodo${n === 1 ? '' : 's'} bloqueado${n === 1 ? '' : 's'}`,
         'success',
       );
       setCloseConfirm(false);
@@ -829,7 +829,7 @@ function BatchYearControls({
               fontFamily: 'var(--font-mono)',
             }}
           >
-            Cerrar año {year} de {supplierName} — {periodCount} periodo
+            Cerrar año {year} de {supplierName}: {periodCount} periodo
             {periodCount === 1 ? '' : 's'}. Irreversible.
           </span>
           <form action={closeFormAction} style={{ display: 'inline-flex', gap: 'var(--space-2)' }}>
@@ -1003,7 +1003,7 @@ function YearGroupRow({
           whiteSpace: 'nowrap',
         }}
       >
-        {total > 0 ? formatearKg(total) : '—'}
+        {total > 0 ? formatearKg(total) : '-'}
       </td>
 
       <td
@@ -1164,7 +1164,7 @@ export function AuditTable({ periodos, isAdmin }: AuditTableProps) {
             transition: 'color 120ms, border-color 120ms',
           }}
         >
-          Ir a proveedores →
+          Ir a proveedores
         </Link>
         <style>{`.audit-suppliers-link:hover { color: var(--color-accent) !important; border-color: var(--color-accent) !important; }`}</style>
       </div>
@@ -1471,7 +1471,7 @@ function PeriodoRow({
               {formatearKg(p.resumen.totalCo2eKg)}
             </span>
           ) : (
-            '—'
+            '-'
           )}
         </td>
         <td style={{ padding: 'var(--space-3) var(--space-4)' }}>
@@ -1504,7 +1504,7 @@ function PeriodoRow({
                 fontFamily: 'var(--font-mono)',
               }}
             >
-              —
+              -
             </span>
           )}
         </td>
@@ -1544,7 +1544,7 @@ function PeriodoRow({
                 fontFamily: 'var(--font-mono)',
               }}
             >
-              —
+              -
             </span>
           )}
         </td>
@@ -1587,7 +1587,7 @@ function PeriodoRow({
               }}
             >
               <p className="eyebrow" style={{ margin: 0, color: 'var(--color-accent)' }}>
-                Resultados de emisiones — {p.label}
+                Resultados de emisiones - {p.label}
               </p>
               <button
                 type="button"
@@ -1631,7 +1631,7 @@ function PeriodoRow({
               }}
             >
               <p className="eyebrow" style={{ margin: 0, color: 'var(--color-signal-md)' }}>
-                Anomalías pendientes — {p.label}
+                Anomalías pendientes - {p.label}
               </p>
               <button
                 type="button"

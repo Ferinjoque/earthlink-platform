@@ -142,7 +142,7 @@ export function AmbientBackground() {
         <circle cx="25%" cy="85%" r="2" fill="oklch(58% 0.12 155)" opacity="0.35" />
       </svg>
 
-      {/* Orbe 1 — verde musgo grande */}
+      {/* Orbe 1: verde musgo grande */}
       <div
         style={{
           position: 'absolute',
@@ -158,7 +158,7 @@ export function AmbientBackground() {
         }}
       />
 
-      {/* Orbe 2 — terracota medio */}
+      {/* Orbe 2: terracota medio */}
       <div
         style={{
           position: 'absolute',
@@ -175,7 +175,7 @@ export function AmbientBackground() {
         }}
       />
 
-      {/* Orbe 3 — mostaza pequeño */}
+      {/* Orbe 3: mostaza pequeño */}
       <div
         style={{
           position: 'absolute',

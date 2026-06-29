@@ -73,10 +73,10 @@ export class EmissionResultRepository {
   }
 
   update(): never {
-    throw new Error('EmissionResultRepository es solo escritura — update no permitido');
+    throw new Error('EmissionResultRepository es solo escritura: update no permitido');
   }
 
   delete(): never {
-    throw new Error('EmissionResultRepository es solo escritura — delete no permitido');
+    throw new Error('EmissionResultRepository es solo escritura: delete no permitido');
   }
 }

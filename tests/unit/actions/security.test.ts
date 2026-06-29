@@ -107,7 +107,7 @@ function mockAuthClient() {
 
 // ── UUID validation en audit actions ─────────────────────────────────────────
 
-describe('UUID validation — audit actions', () => {
+describe('UUID validation - audit actions', () => {
   beforeEach(() => { mockAuthClient(); vi.clearAllMocks(); mockAuthClient(); });
 
   const INVALID_IDS = [
@@ -182,7 +182,7 @@ describe('UUID validation — audit actions', () => {
 describe('Límites de longitud', () => {
   beforeEach(() => { vi.clearAllMocks(); mockAuthClient(); });
 
-  describe('voidActivityEntry — void_reason', () => {
+  describe('voidActivityEntry - void_reason', () => {
     it('rechaza void_reason con más de 1000 caracteres', async () => {
       const longReason = 'a'.repeat(1001);
       const result = await voidActivityEntry(null, fd({
@@ -202,7 +202,7 @@ describe('Límites de longitud', () => {
     });
   });
 
-  describe('unlockPeriod — unlock_reason', () => {
+  describe('unlockPeriod - unlock_reason', () => {
     it('rechaza unlock_reason con más de 1000 caracteres', async () => {
       const longReason = 'b'.repeat(1001);
       const result = await unlockPeriod(null, fd({
@@ -221,10 +221,10 @@ describe('Límites de longitud', () => {
     });
   });
 
-  describe('resolveAnomaly — resolution_note truncada', () => {
+  describe('resolveAnomaly - resolution_note truncada', () => {
     it('trunca resolution_note a 1000 chars sin error', async () => {
       const longNote = 'c'.repeat(2000);
-      // No debe lanzar — se trunca silenciosamente
+      // No debe lanzar - se trunca silenciosamente
       const result = await resolveAnomaly(null, fd({
         flag_id: VALID_UUID,
         resolution_note: longNote,
@@ -237,7 +237,7 @@ describe('Límites de longitud', () => {
 
 // ── Validación de fechas en createPeriod ──────────────────────────────────────
 
-describe('createPeriod — validación de fechas', () => {
+describe('createPeriod - validación de fechas', () => {
   beforeEach(() => { vi.clearAllMocks(); mockAuthClient(); });
 
   const INVALID_DATES = [
@@ -286,7 +286,7 @@ describe('createPeriod — validación de fechas', () => {
 
 // ── XLSX magic bytes ──────────────────────────────────────────────────────────
 
-describe('importActivityXlsx — validación de magic bytes', () => {
+describe('importActivityXlsx - validación de magic bytes', () => {
   beforeEach(() => { vi.clearAllMocks(); mockAuthClient(); });
 
   function makeXlsxFile(bytes: number[]): File {
@@ -332,7 +332,7 @@ describe('importActivityXlsx — validación de magic bytes', () => {
 
 // ── UUID batch validation en getEvidenceFilesBatch ────────────────────────────
 
-describe('getEvidenceFilesBatch — filtro de UUIDs inválidos', () => {
+describe('getEvidenceFilesBatch - filtro de UUIDs inválidos', () => {
   beforeEach(() => { vi.clearAllMocks(); mockAuthClient(); });
 
   it('devuelve mapa vacío si todos los IDs son inválidos', async () => {
@@ -390,9 +390,9 @@ describe('getEvidenceFilesBatch — filtro de UUIDs inválidos', () => {
   });
 });
 
-// ── Errores genéricos — no filtran info interna ───────────────────────────────
+// ── Errores genéricos - no filtran info interna ───────────────────────────────
 
-describe('Errores genéricos — sin leakage de mensajes de BD', () => {
+describe('Errores genéricos - sin leakage de mensajes de BD', () => {
   it('voidActivityEntry no expone mensaje de BD en error de update', async () => {
     let callCount = 0;
     const dbError = { message: 'ERROR: duplicate key violates unique constraint "pk_internal_table_xyz"' };
@@ -427,7 +427,7 @@ describe('Errores genéricos — sin leakage de mensajes de BD', () => {
             maybeSingle: vi.fn().mockResolvedValue({ data: { role: 'admin' } }),
           };
         }
-        // activity_entries UPDATE — simula error de BD
+        // activity_entries UPDATE - simula error de BD
         const updateChain = {
           update: vi.fn().mockReturnThis(),
           eq: vi.fn().mockResolvedValue({ error: dbError }),
@@ -448,9 +448,9 @@ describe('Errores genéricos — sin leakage de mensajes de BD', () => {
   });
 });
 
-// ── uploadEvidence — magic bytes validation ───────────────────────────────────
+// ── uploadEvidence - magic bytes validation ───────────────────────────────────
 
-describe('uploadEvidence — validación de magic bytes', () => {
+describe('uploadEvidence - validación de magic bytes', () => {
   function makeFile(bytes: number[], mime: string, name: string): File {
     const buf = new Uint8Array(bytes.concat(new Array(100).fill(0)));
     return new File([buf], name, { type: mime });
@@ -519,7 +519,7 @@ describe('uploadEvidence — validación de magic bytes', () => {
   });
 
   it('rechaza archivo con formato MIME no permitido (antes de magic bytes)', async () => {
-    mockAuthClient(); // Mock simple — la validación MIME ocurre antes que la autenticación
+    mockAuthClient(); // Mock simple - la validación MIME ocurre antes que la autenticación
     const badMime = makeFile([0x00, 0x00], 'text/html', 'evil.html');
     const formData = new FormData();
     formData.append('evidence', badMime);
@@ -541,9 +541,9 @@ describe('uploadEvidence — validación de magic bytes', () => {
   });
 });
 
-// ── deleteEvidence — solo admin puede borrar archivos ajenos ──────────────────
+// ── deleteEvidence - solo admin puede borrar archivos ajenos ──────────────────
 
-describe('deleteEvidence — solo admin puede eliminar archivos ajenos', () => {
+describe('deleteEvidence - solo admin puede eliminar archivos ajenos', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   function makeDeleteMock(uploaderRole: string, uploaderId: string, callerId: string) {
@@ -651,9 +651,9 @@ describe('deleteEvidence — solo admin puede eliminar archivos ajenos', () => {
   });
 });
 
-// ── importActivityXlsx — flujo de importación exitoso ────────────────────────
+// ── importActivityXlsx - flujo de importación exitoso ────────────────────────
 
-describe('importActivityXlsx — flujo de importación', () => {
+describe('importActivityXlsx - flujo de importación', () => {
   beforeEach(() => { vi.clearAllMocks(); mockAuthClient(); });
 
   function makeXlsxFormData(bytes = [0x50, 0x4b, 0x03, 0x04]): FormData {

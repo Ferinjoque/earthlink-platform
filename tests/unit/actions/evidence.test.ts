@@ -435,9 +435,9 @@ function buildDeleteFromMock(opts: {
   });
 }
 
-// ── uploadEvidence — guards de periodo y entrada ──────────────────────────────
+// ── uploadEvidence - guards de periodo y entrada ──────────────────────────────
 
-describe('uploadEvidence — guards de periodo y entrada', () => {
+describe('uploadEvidence - guards de periodo y entrada', () => {
   beforeEach(() => vi.clearAllMocks());
 
   function buildUploadClient(entryData: {
@@ -500,9 +500,9 @@ describe('uploadEvidence — guards de periodo y entrada', () => {
   });
 });
 
-// ── deleteEvidence — autorización ─────────────────────────────────────────────
+// ── deleteEvidence - autorización ─────────────────────────────────────────────
 
-describe('deleteEvidence — autorización', () => {
+describe('deleteEvidence - autorización', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.storageRemove.mockResolvedValue({ data: null, error: null });

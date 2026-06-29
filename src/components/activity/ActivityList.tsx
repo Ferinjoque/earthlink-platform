@@ -353,7 +353,7 @@ function EntradaFila({
                 : entry.void_reason}
             </span>
           ) : (
-            <span style={{ color: 'var(--color-ink-3)', fontSize: 'var(--text-xs)' }}>—</span>
+            <span style={{ color: 'var(--color-ink-3)', fontSize: 'var(--text-xs)' }}>-</span>
           )}
         </td>
         <td
@@ -365,7 +365,7 @@ function EntradaFila({
             whiteSpace: 'nowrap',
           }}
         >
-          {entry.submitted_at ? new Date(entry.submitted_at).toLocaleDateString('es') : '—'}
+          {entry.submitted_at ? new Date(entry.submitted_at).toLocaleDateString('es') : '-'}
         </td>
         <td
           style={{
@@ -386,7 +386,7 @@ function EntradaFila({
           >
             {evidenceFiles.length > 0 &&
               (singleFile ? (
-                /* 1 archivo: enlace directo → abre en pestaña nueva */
+                /* 1 archivo: enlace directo que abre en pestaña nueva */
                 <a
                   href={singleFile.signedUrl ?? '#'}
                   target="_blank"

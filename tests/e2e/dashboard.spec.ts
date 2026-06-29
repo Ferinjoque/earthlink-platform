@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.use({ storageState: 'tests/e2e/.auth/user.json' });
 
-test.describe('Dashboard — estructura y datos', () => {
+test.describe('Dashboard - estructura y datos', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
@@ -13,24 +13,28 @@ test.describe('Dashboard — estructura y datos', () => {
   });
 
   test('muestra el TopBar con título Panel', async ({ page }) => {
-    await expect(page.getByText('Panel')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Panel', level: 1 })).toBeVisible();
   });
 
   test('muestra al menos 4 tarjetas KPI', async ({ page }) => {
     const eyebrows = page.locator('.eyebrow');
-    await expect(eyebrows).toHaveCount(await eyebrows.count());
-    // Mínimo: CO₂e verificado, Cobertura, Anomalías activas, En revisión
-    await expect(page.getByText('CO₂e verificado')).toBeVisible();
-    await expect(page.getByText('Cobertura')).toBeVisible();
-    await expect(page.getByText('Anomalías activas')).toBeVisible();
-    await expect(page.getByText('En revisión')).toBeVisible();
+    const count = await eyebrows.count();
+    expect(count).toBeGreaterThanOrEqual(4);
+    // Usar clase .eyebrow para evitar strict mode con texto duplicado en página
+    await expect(page.locator('.eyebrow').filter({ hasText: /^CO₂e verificado$/ })).toBeVisible();
+    await expect(page.locator('.eyebrow').filter({ hasText: /^Cobertura$/ })).toBeVisible();
+    await expect(page.locator('.eyebrow').filter({ hasText: /^Anomalías activas$/ })).toBeVisible();
+    await expect(page.locator('.eyebrow').filter({ hasText: /^En revisión$/ })).toBeVisible();
   });
 
   test('el selector de año está visible y funcional', async ({ page }) => {
-    const yearSelector = page.getByRole('combobox').or(page.locator('select'));
+    // El selector puede ser select, link con ?year=, o botones con año en main
     const yearLinks = page.locator('a[href*="year="]');
-    // Ya sea un select o enlaces de navegación para filtrar por año
-    const yearEl = await yearLinks.count() > 0 ? yearLinks.first() : yearSelector.first();
+    const yearButtons = page.locator('main').locator('button').filter({ hasText: /^\d{4}$/ });
+    const yearSelect = page.getByRole('combobox').or(page.locator('select'));
+    const hasLinks = await yearLinks.count() > 0;
+    const hasButtons = await yearButtons.count() > 0;
+    const yearEl = hasLinks ? yearLinks.first() : hasButtons ? yearButtons.first() : yearSelect.first();
     await expect(yearEl).toBeVisible();
   });
 

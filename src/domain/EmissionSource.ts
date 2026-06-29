@@ -1,10 +1,10 @@
 /**
  * Jerarquía POO para fuentes de emisión GHG.
  *
- * El polimorfismo es funcional, no decorativo:
- *   - validate(raw) — cada subclase aplica su propia lista blanca de unidades + reglas de evidencia
- *   - factorKey()   — cada subclase conoce la tupla (activity_type, region) para lookup de factores
- *   - scope()       — devuelve el alcance GHG Protocol de esta fuente
+ * Cada subclase implementa:
+ *   - validate(raw): aplica su lista blanca de unidades y reglas de evidencia
+ *   - factorKey(): construye la tupla (activity_type, region) para buscar factores
+ *   - scope(): devuelve el alcance GHG Protocol de esta fuente
  */
 import type {
   Unit,

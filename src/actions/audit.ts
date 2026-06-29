@@ -70,7 +70,7 @@ export async function calculatePeriod(
 
   if (period.status !== 'open') {
     return {
-      error: `El periodo está en estado "${period.status}" — solo los periodos abiertos pueden calcularse`,
+      error: `El periodo está en estado "${period.status}". Solo los periodos abiertos pueden calcularse`,
     };
   }
 
@@ -95,7 +95,7 @@ export async function calculatePeriod(
   try {
     outcome = await evalSvc.evaluate(periodId);
   } catch {
-    // Restablecer a 'open' para que el periodo pueda reintentarse — no dejarlo en 'calculating'
+    // Restablecer a 'open' para que el periodo pueda reintentarse y no quede en 'calculating'
     const adminClient = createAdminClient();
     const { error: recoveryError } = await adminClient
       .from('reporting_periods')
@@ -114,15 +114,13 @@ export async function calculatePeriod(
     return { error: 'Error al calcular las emisiones del periodo. Intenta nuevamente.' };
   }
 
-  // Detección de anomalías usando entradas del año anterior como línea base
+  // Detección de anomalías usando todos los demás periodos del proveedor como línea base
   try {
-    const priorYear = period.startDate.getUTCFullYear() - 1;
     const { data: priorPeriodsRaw } = await supabase
       .from('reporting_periods')
       .select('id')
       .eq('supplier_id', period.supplierId)
-      .gte('start_date', `${priorYear}-01-01`)
-      .lte('start_date', `${priorYear}-12-31`);
+      .neq('id', periodId);
     const priorPeriodIds = (priorPeriodsRaw ?? []).map((p: { id: string }) => p.id);
 
     const [currentEntries, historicalEntries] = await Promise.all([
@@ -156,7 +154,7 @@ export async function calculatePeriod(
       );
     }
   } catch {
-    // Detección de anomalías no crítica — no bloquear la transición
+    // La detección de anomalías no es crítica y no debe bloquear la transición
   }
 
   try {
@@ -223,7 +221,7 @@ export async function lockPeriod(
 
   if (period.status !== 'under_review') {
     return {
-      error: `El periodo está en estado "${period.status}" — solo los periodos en revisión pueden bloquearse`,
+      error: `El periodo está en estado "${period.status}". Solo los periodos en revisión pueden bloquearse`,
     };
   }
 
@@ -296,7 +294,7 @@ export async function recalculatePeriod(
   // Solo periodos bloqueados o en revisión pueden recalcularse
   if (period.status !== 'locked' && period.status !== 'under_review') {
     return {
-      error: `El periodo está en estado "${period.status}" — solo los periodos bloqueados o en revisión pueden recalcularse`,
+      error: `El periodo está en estado "${period.status}". Solo los periodos bloqueados o en revisión pueden recalcularse`,
     };
   }
 
@@ -322,9 +320,9 @@ export async function recalculatePeriod(
   try {
     outcome = await evalSvc.evaluate(periodId);
   } catch {
-    // Los resultados ya fueron eliminados — restablecer a under_review para que
+    // Los resultados ya fueron eliminados: restablecer a under_review para que
     // el periodo no quede bloqueado sin resultados y pueda recalcularse.
-    // Usar supabase (server client con RLS) — no se necesita admin para actualizar estado.
+    // Usar supabase (server client con RLS); no se necesita admin para actualizar estado.
     const { error: recoveryError } = await supabase
       .from('reporting_periods')
       .update({ status: 'under_review' })
@@ -344,13 +342,11 @@ export async function recalculatePeriod(
 
   // Re-ejecutar detección de anomalías con los resultados actualizados
   try {
-    const priorYear = period.startDate.getUTCFullYear() - 1;
     const { data: priorPeriodsRaw } = await supabase
       .from('reporting_periods')
       .select('id')
       .eq('supplier_id', period.supplierId)
-      .gte('start_date', `${priorYear}-01-01`)
-      .lte('start_date', `${priorYear}-12-31`);
+      .neq('id', periodId);
     const priorPeriodIds = (priorPeriodsRaw ?? []).map((p: { id: string }) => p.id);
 
     const [currentEntries, historicalEntries] = await Promise.all([
@@ -382,7 +378,7 @@ export async function recalculatePeriod(
       );
     }
   } catch {
-    // Detección de anomalías no crítica — no bloquear el recálculo
+    // La detección de anomalías no es crítica y no debe bloquear el recálculo
   }
 
   try {
@@ -391,7 +387,7 @@ export async function recalculatePeriod(
       newValues: { recalculated_at: new Date().toISOString() },
     });
   } catch {
-    // El log de auditoría es no-crítico — no bloquear el recálculo exitoso
+    // El log de auditoría no es crítico y no debe bloquear el recálculo exitoso
   }
 
   revalidatePath('/audit');
@@ -485,22 +481,17 @@ export async function calculateYear(
     periodRepo,
   );
 
-  // Pre-cargar tablas de referencia una sola vez para todo el lote (K periodos → 1 fetch cada una)
-  const priorYear = year - 1;
-  const [factorTable, conversionTable, priorPeriodsYearRaw] = await Promise.all([
+  // Pre-cargar tablas de referencia una sola vez para todo el lote (K periodos con 1 fetch cada una).
+  // Línea base de anomalías: todas las entradas del proveedor; por candidato se excluye su propio periodo.
+  const [factorTable, conversionTable, allPeriodsRaw] = await Promise.all([
     emissionFactorRepoYear.buildFactorTable(),
     unitConversionRepoYear.buildConversionTable(),
-    supabase
-      .from('reporting_periods')
-      .select('id')
-      .eq('supplier_id', supplier_id)
-      .gte('start_date', `${priorYear}-01-01`)
-      .lte('start_date', `${priorYear}-12-31`),
+    supabase.from('reporting_periods').select('id').eq('supplier_id', supplier_id),
   ]);
-  const priorPeriodIdsYear = (
-    (priorPeriodsYearRaw as { data: Array<{ id: string }> | null }).data ?? []
+  const allPeriodIdsYear = (
+    (allPeriodsRaw as { data: Array<{ id: string }> | null }).data ?? []
   ).map((p) => p.id);
-  const historicalEntriesYear = await activityEntryRepoYear.findByPeriodIds(priorPeriodIdsYear);
+  const allSupplierEntries = await activityEntryRepoYear.findByPeriodIds(allPeriodIdsYear);
 
   const adminClientYear = createAdminClient();
   let calculated = 0;
@@ -518,10 +509,13 @@ export async function calculateYear(
     try {
       await evalSvc.evaluateWithCache(p.id, factorTable, conversionTable);
 
-      // Detección de anomalías contra línea base del año anterior (no crítica)
+      // Detección de anomalías contra el resto de periodos del proveedor (no crítica)
       try {
-        const currentEntries = await activityEntryRepoYear.findByPeriodId(p.id);
-        const anomalies = new AnomalyService().detect(currentEntries, historicalEntriesYear);
+        const currentEntries = allSupplierEntries.filter((e) => e.reportingPeriodId === p.id);
+        const historicalForCandidate = allSupplierEntries.filter(
+          (e) => e.reportingPeriodId !== p.id,
+        );
+        const anomalies = new AnomalyService().detect(currentEntries, historicalForCandidate);
         if (currentEntries.length > 0) {
           await supabase
             .from('anomaly_flags')
@@ -545,7 +539,7 @@ export async function calculateYear(
           );
         }
       } catch {
-        // Detección de anomalías no crítica — no bloquear el cálculo del lote
+        // La detección de anomalías no es crítica y no debe bloquear el cálculo del lote
       }
 
       await auditSvc.transitionStatus(p.id, 'under_review', user.id);
@@ -604,7 +598,7 @@ export async function closeYear(
     .maybeSingle();
   if (!memRaw) return { error: 'Sin permisos para gestionar este proveedor' };
 
-  // Solo periodos en revisión — los abiertos deben calcularse primero
+  // Solo periodos en revisión; los abiertos deben calcularse primero
   type FilaPeriodo = { id: string; status: string };
   const startOfYear = `${year}-01-01`;
   const endOfYear = `${year}-12-31`;
@@ -794,7 +788,7 @@ export async function unlockPeriod(
       newValues: { status: 'under_review' },
     });
   } catch {
-    // El log de auditoría es no-crítico — no bloquear el desbloqueo exitoso
+    // El log de auditoría no es crítico y no debe bloquear el desbloqueo exitoso
   }
 
   revalidatePath('/audit');

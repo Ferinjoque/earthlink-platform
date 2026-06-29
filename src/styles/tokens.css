@@ -1,10 +1,10 @@
 /* ============================================================
    EarthLink Design Tokens
-   Dirección: Editorial Climate Tech — Persefoni × Perplexity Hub
+   Dirección: Editorial Climate Tech
    ============================================================ */
 
 :root {
-  /* ── Paleta base — claro cálido editorial ── */
+  /* ── Paleta base: claro cálido editorial ── */
   --color-surface-0: #FAF7F0;        /* papel crema */
   --color-surface-1: #FFFFFF;        /* tarjeta elevada */
   --color-surface-2: #F2EDE2;        /* hundido / input */
@@ -18,18 +18,18 @@
   --color-ink-inverse: #FAF7F0;      /* texto sobre fondos oscuros */
 
   /* ── Acentos ── */
-  --color-accent:        #1F5C45;    /* verde musgo profundo — primario */
+  --color-accent:        #1F5C45;    /* verde musgo profundo, primario */
   --color-accent-2:      #2E7D5B;    /* verde medio */
   --color-accent-soft:   #E3EBE5;    /* fondo acento sutil */
   --color-accent-dim:    #4A8A6F;    /* hover/inactivo */
 
-  --color-warm:          #D97757;    /* terracota — pop cálido */
+  --color-warm:          #D97757;    /* terracota, pop cálido */
   --color-warm-soft:     #F8E8DD;    /* fondo terracota sutil */
 
-  --color-gold:          #C9A14A;    /* mostaza editorial — destacar */
+  --color-gold:          #C9A14A;    /* mostaza editorial, destacar */
   --color-gold-soft:     #F5EBD3;
 
-  --color-scope2:        oklch(56% 0.19 295);   /* violeta editorial — Alcance 2 */
+  --color-scope2:        oklch(56% 0.19 295);   /* violeta editorial, Alcance 2 */
   --color-scope2-soft:   oklch(95% 0.04 295);   /* fondo Alcance 2 sutil */
 
   /* ── Señales ── */
@@ -136,7 +136,7 @@
   --z-toast:   400;
 }
 
-/* ── Modo oscuro — Persefoni dusk ── */
+/* ── Modo oscuro ── */
 [data-theme='dark'] {
   --color-surface-0: #0E1916;
   --color-surface-1: #15211D;

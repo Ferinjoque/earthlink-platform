@@ -37,7 +37,7 @@ export async function createServerClient() {
               cookieStore.set(name, value, options);
             });
           } catch {
-            // Llamado desde un Server Component — las cookies son de solo lectura aquí.
+            // Llamado desde un Server Component: las cookies son de solo lectura aquí.
             // El middleware maneja las escrituras de refresco de sesión.
           }
         },

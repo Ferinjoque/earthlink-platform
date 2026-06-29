@@ -60,7 +60,7 @@ function safeNextPath(raw: string): string | null {
   }
 }
 
-describe('safeNextPath — prevención de open redirect', () => {
+describe('safeNextPath - prevención de open redirect', () => {
   it('acepta ruta absoluta normal', () => {
     expect(safeNextPath('/dashboard')).toBe('/dashboard');
   });
@@ -194,7 +194,7 @@ describe('proxy()', () => {
 
   it('does not set ?next= for unsafe redirect paths', async () => {
     mockSupabaseWithUser(null);
-    // '//evil.com' is not a safe path — safeNextPath returns null
+    // '//evil.com' is not a safe path - safeNextPath returns null
     const req = makeRequest('//evil.com');
     await proxy(req as never);
     if (vi.mocked(NextResponse.redirect).mock.calls.length > 0) {

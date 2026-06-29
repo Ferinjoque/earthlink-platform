@@ -354,7 +354,7 @@ describe('lockPeriod', () => {
 
 // ── calculatePeriod error paths ───────────────────────────────────────────────
 
-describe('calculatePeriod — error paths', () => {
+describe('calculatePeriod - error paths', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('returns error when transitionStatus (calculating) throws', async () => {
@@ -679,7 +679,7 @@ describe('recalculatePeriod', () => {
     const result = await recalculatePeriod(null, makeFormData({ period_id: VALID_UUID }));
 
     expect(result.error).toBeDefined();
-    // El recovery usa supabase (server client con RLS), no adminClient — verificar llamada al client
+    // El recovery usa supabase (server client con RLS), no adminClient - verificar llamada al client
     expect(client.from).toHaveBeenCalledWith('reporting_periods');
   });
 
@@ -696,9 +696,9 @@ describe('recalculatePeriod', () => {
   });
 });
 
-// ── resolveAnomaly — resolution_note ─────────────────────────────────────────
+// ── resolveAnomaly - resolution_note ─────────────────────────────────────────
 
-describe('resolveAnomaly — resolution_note', () => {
+describe('resolveAnomaly - resolution_note', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('passes resolution_note to DB update when provided', async () => {
@@ -782,9 +782,9 @@ describe('resolveAnomaly — resolution_note', () => {
   });
 });
 
-// ── recalculatePeriod — validación de estado ──────────────────────────────────
+// ── recalculatePeriod - validación de estado ──────────────────────────────────
 
-describe('recalculatePeriod — validación de estado', () => {
+describe('recalculatePeriod - validación de estado', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('returns error when period status is open', async () => {
@@ -1127,7 +1127,7 @@ describe('unlockPeriod', () => {
   });
 });
 
-// ── closeYear — guard contra periodos en cálculo ──────────────────────────────
+// ── closeYear - guard contra periodos en cálculo ──────────────────────────────
 
 const CLOSE_YEAR_SUPPLIER_ID = '40000000-0000-4000-8000-000000000040';
 
@@ -1149,7 +1149,7 @@ function mockCloseYearClient(periodsData: Array<{ id: string; status: string }>)
   return client;
 }
 
-describe('closeYear — validación de estado', () => {
+describe('closeYear - validación de estado', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('returns error when any period is open', async () => {

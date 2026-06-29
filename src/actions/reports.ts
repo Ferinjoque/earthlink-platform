@@ -55,7 +55,7 @@ export async function exportCsv(
     return { error: 'ID de periodo inválido' };
   }
 
-  // Verificar membresía del usuario — solo admin y consultant pueden exportar
+  // Verificar membresía del usuario; solo admin y consultant pueden exportar
   const { data: rawMemberships } = await supabase
     .from('memberships')
     .select('organization_id, role')
@@ -67,7 +67,7 @@ export async function exportCsv(
     .map((m) => m.organization_id)
     .filter((id): id is string => id !== null);
 
-  // Cargar periodos exportables — solo estados auditados (under_review o locked)
+  // Cargar periodos exportables; solo estados auditados (under_review o locked)
   type FilaPeriodo = Pick<ReportingPeriodRow, 'id' | 'label' | 'supplier_id'>;
   const { data: periodsRaw } = await supabase
     .from('reporting_periods')

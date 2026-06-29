@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.use({ storageState: 'tests/e2e/.auth/user.json' });
 
-test.describe('Auditoría — consola principal', () => {
+test.describe('Auditoría - consola principal', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/audit');
     await page.waitForLoadState('networkidle');
@@ -13,14 +13,16 @@ test.describe('Auditoría — consola principal', () => {
   });
 
   test('muestra chips de estado con conteos', async ({ page }) => {
-    await expect(page.getByText('Abierto')).toBeVisible();
-    await expect(page.getByText('En revisión')).toBeVisible();
-    await expect(page.getByText('Bloqueado')).toBeVisible();
+    // Usar botón exacto para evitar strict mode con celdas de tabla
+    await expect(page.getByRole('button', { name: 'Abierto', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'En revisión', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Bloqueado', exact: true })).toBeVisible();
   });
 
   test('muestra filtros de año navegables', async ({ page }) => {
     const currentYear = new Date().getFullYear();
-    await expect(page.getByText(String(currentYear))).toBeVisible();
+    // Usar link exacto para evitar strict mode con spans de año en filas de tabla
+    await expect(page.getByRole('link', { name: String(currentYear), exact: true })).toBeVisible();
   });
 
   test('muestra tabla de periodos o estado vacío', async ({ page }) => {
@@ -42,7 +44,7 @@ test.describe('Auditoría — consola principal', () => {
   });
 });
 
-test.describe('Auditoría — detalle de periodo', () => {
+test.describe('Auditoría - detalle de periodo', () => {
   test('navegar al detalle de un periodo desde la consola', async ({ page }) => {
     await page.goto('/audit');
     await page.waitForLoadState('networkidle');

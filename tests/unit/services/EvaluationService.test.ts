@@ -439,7 +439,7 @@ describe('EvaluationService.evaluateWithCache()', () => {
     expect(totals.totalCo2eKg).toBe(0);
   });
 
-  it('uses the passed tables — different factor value yields different result', async () => {
+  it('uses the passed tables - different factor value yields different result', async () => {
     const lowFactor: EmissionFactor = { ...dieselFactor, factorKgCo2ePerUnit: 1.0 };
     const altTable: FactorTable = new Map([['stationary_combustion.diesel', lowFactor]]);
     const { service } = makeService();

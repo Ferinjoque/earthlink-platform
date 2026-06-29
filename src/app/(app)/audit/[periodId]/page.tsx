@@ -32,7 +32,7 @@ const FUENTE_LABELS: Record<string, string> = {
 };
 
 function formatearKg(kg: number): string {
-  if (kg === 0) return '—';
+  if (kg === 0) return '-';
   if (kg >= 1_000_000) return `${(kg / 1_000_000).toFixed(3)} ktCO₂e`;
   if (kg >= 1_000) return `${(kg / 1_000).toFixed(3)} tCO₂e`;
   return `${kg.toFixed(2)} kg CO₂e`;
@@ -148,7 +148,7 @@ export default async function DetallePeriodoPage({
   // IDs de entradas con resultados (para tabla de emisiones)
   const resultEntryIds = [...new Set(results.map((r) => r.activity_entry_id))];
 
-  // Todas las entradas del periodo (para sección de evidencias — incluye no calculadas)
+  // Todas las entradas del periodo (para sección de evidencias, incluye no calculadas)
   const { data: allEntriesRaw } = await supabase
     .from('activity_entries')
     .select('id, source_type, raw_quantity, raw_unit')
@@ -306,7 +306,7 @@ export default async function DetallePeriodoPage({
                 lineHeight: 1.1,
               }}
             >
-              {supplier.name} — {period.label}
+              {supplier.name} - {period.label}
             </h2>
             <Badge variant={variantEstadoPeriodo(period.status as PeriodStatus)}>
               {etiquetaEstadoPeriodo(period.status as PeriodStatus)}
@@ -320,7 +320,7 @@ export default async function DetallePeriodoPage({
               fontFamily: 'var(--font-mono)',
             }}
           >
-            {inicioFmt} — {finFmt}
+            {inicioFmt} - {finFmt}
           </p>
         </section>
 
@@ -480,7 +480,7 @@ export default async function DetallePeriodoPage({
                         style={{ borderBottom: '1px solid var(--color-border)' }}
                       >
                         <td style={estiloCelda}>
-                          {FUENTE_LABELS[entrada?.source_type ?? ''] ?? entrada?.source_type ?? '—'}
+                          {FUENTE_LABELS[entrada?.source_type ?? ''] ?? entrada?.source_type ?? '-'}
                         </td>
                         <td
                           style={{
@@ -491,7 +491,7 @@ export default async function DetallePeriodoPage({
                         >
                           {entrada
                             ? `${entrada.raw_quantity.toLocaleString('es')} ${entrada.raw_unit}`
-                            : '—'}
+                            : '-'}
                         </td>
                         <td
                           style={{

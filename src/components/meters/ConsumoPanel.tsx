@@ -63,8 +63,8 @@ const CANONICAL_UNIT: Record<ConsumoCategory, string> = {
   refrigerantes: 'kg',
 };
 
-// Constantes de respaldo — usadas cuando la BD no tiene conversión para la unidad.
-// Constantes físicas (MWh→kWh etc.) son exactas; el contenido energético de combustibles es aproximado.
+// Constantes de respaldo usadas cuando la BD no tiene conversión para la unidad.
+// Constantes físicas (MWh a kWh etc.) son exactas; el contenido energético de combustibles es aproximado.
 const FALLBACK_TO_KWH: Record<string, number> = {
   kWh: 1,
   MWh: 1000,
@@ -157,7 +157,7 @@ function aggregateStandardized(
 
     if (!meterMap.has(id)) {
       const fuente = ETIQUETAS_FUENTE[e.source_type] ?? e.source_type;
-      const sec = e.secondary ? ` — ${e.secondary}` : '';
+      const sec = e.secondary ? ` - ${e.secondary}` : '';
       meterMap.set(id, {
         meter: {
           id,
@@ -238,7 +238,7 @@ function OverviewChart({
 
   const slotW = (SVG_W - LEFT_PAD) / 12;
 
-  // Si todas las series comparten unidad → mostrar valores reales en el eje
+  // Si todas las series comparten unidad, mostrar valores reales en el eje
   const units = [...new Set(summaries.map((s) => s.meter.unit))];
   const singleUnit = units.length === 1 ? units[0] : null;
 
@@ -290,7 +290,7 @@ function OverviewChart({
         viewBox={`0 0 ${SVG_W} ${SVG_H}`}
         preserveAspectRatio="xMidYMid meet"
         role="img"
-        aria-label={`Tendencia mensual de consumo — ${year}`}
+        aria-label={`Tendencia mensual de consumo - ${year}`}
         style={{ maxHeight: '260px', display: 'block', overflow: 'visible' }}
       >
         {/* Líneas de cuadrícula + etiquetas eje Y */}
@@ -1014,7 +1014,7 @@ export function ConsumoPanel({
           >
             {allSummaries.length === 0
               ? 'Sin medidores para la selección actual.'
-              : `${allSummaries.length} medidor${allSummaries.length !== 1 ? 'es' : ''} — cada combinación de fuente + tipo + unidad + proveedor.`}
+              : `${allSummaries.length} medidor${allSummaries.length !== 1 ? 'es' : ''}, uno por cada combinación de fuente, tipo, unidad y proveedor.`}
           </p>
         </div>
 
@@ -1242,7 +1242,7 @@ function MeterDetail({ summary, year }: { summary: MeterYearSummary; year: numbe
         {summary.peak !== null && (
           <Kpi
             label="Mes pico"
-            value={`${MONTH_LABELS[summary.peak.month - 1]} — ${formatQuantity(summary.peak.value, summary.meter.unit)}`}
+            value={`${MONTH_LABELS[summary.peak.month - 1]}: ${formatQuantity(summary.peak.value, summary.meter.unit)}`}
           />
         )}
         <Kpi label="Meses con dato" value={`${dataMonths} / 12`} />

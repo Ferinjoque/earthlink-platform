@@ -106,7 +106,7 @@ function FormProveedor({
     >
       {mode === 'edit' && <input type="hidden" name="id" value={initial?.id} />}
 
-      {/* Organización — selector solo si hay varias y estamos creando */}
+      {/* Organización: selector solo si hay varias y estamos creando */}
       {mode === 'create' && organizations && organizations.length > 1 ? (
         <div style={{ gridColumn: '1 / -1' }}>
           <label
@@ -164,7 +164,7 @@ function FormProveedor({
         {fe.nombre && <p style={estiloError}>{fe.nombre}</p>}
       </div>
 
-      {/* Categoría — dropdown predefinido */}
+      {/* Categoría: dropdown predefinido */}
       <div>
         <label
           htmlFor={`categoria-${mode}`}
@@ -355,7 +355,7 @@ function ConfirmacionArchivo({
     >
       <input type="hidden" name="id" value={supplier.id} />
       <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-signal-hi)', flex: 1 }}>
-        Archivar <strong>{supplier.name}</strong> — esta acción oculta al proveedor del listado.
+        Archivar <strong>{supplier.name}</strong>. Esta acción oculta al proveedor del listado.
         {state?.error && <span style={{ marginLeft: 'var(--space-3)' }}>{state.error}</span>}
       </span>
       <button
@@ -590,7 +590,7 @@ export function SupplierTable({ suppliers, organizationId, organizations }: Prop
                         fontSize: 'var(--text-xs)',
                       }}
                     >
-                      {s.ruc ?? '—'}
+                      {s.ruc ?? '-'}
                     </td>
                     <td
                       style={{
@@ -599,7 +599,7 @@ export function SupplierTable({ suppliers, organizationId, organizations }: Prop
                         fontSize: 'var(--text-xs)',
                       }}
                     >
-                      {s.contact_email ?? '—'}
+                      {s.contact_email ?? '-'}
                     </td>
                     <td
                       style={{ padding: 'var(--space-3) var(--space-4)' }}

@@ -82,7 +82,7 @@ function makeInsertChain(data: unknown, error: unknown = null) {
   return c;
 }
 
-/** Chain for: .select(...).eq(...).gte(...).lte(...) — awaited directly (no terminal method) */
+/** Chain for: .select(...).eq(...).gte(...).lte(...) - awaited directly (no terminal method) */
 function makeArrayChain(data: unknown) {
   const p = Promise.resolve({ data, error: null });
   const c: Record<string, unknown> = {};
@@ -95,7 +95,7 @@ function makeArrayChain(data: unknown) {
   return c;
 }
 
-/** Chain for: .insert([...]) — awaited directly (batch insert) */
+/** Chain for: .insert([...]) - awaited directly (batch insert) */
 function makeBatchInsertChain(error: unknown = null) {
   const c: Record<string, unknown> = {};
   c['insert'] = () => Promise.resolve({ error });
@@ -200,7 +200,7 @@ describe('createActivityEntry', () => {
     expect(result.fieldErrors?.raw_quantity).toBeDefined();
   });
 
-  it('accepts zero quantity (nonnegative — ESG period with no consumption)', async () => {
+  it('accepts zero quantity (nonnegative - ESG period with no consumption)', async () => {
     mockAuthenticatedClient();
     const fd = makeFormData({
       supplier_id: VALID_UUID,
@@ -567,7 +567,7 @@ describe('importActivityCsv', () => {
         .mockReturnValueOnce(makeInsertChain({ id: PERIOD_ID }))                   // findOrCreate row1 insert
         .mockReturnValueOnce(makeMaybySingleChain(null))                            // findOrCreate row2
         .mockReturnValueOnce(makeInsertChain({ id: '00000000-0000-4000-8000-000000000003' })) // row2 insert
-        .mockReturnValueOnce(makeBatchInsertChain()),                                          // activity_entries batch insert (1 entry — hydrogen row skipped)
+        .mockReturnValueOnce(makeBatchInsertChain()),                                          // activity_entries batch insert (1 entry - hydrogen row skipped)
     };
     vi.mocked(createServerClient).mockResolvedValue(mockSupabase as unknown as MockClient);
     const csv = [
@@ -582,9 +582,9 @@ describe('importActivityCsv', () => {
   });
 });
 
-// ── createActivityEntry — mobile_combustion ───────────────────────────────────
+// ── createActivityEntry - mobile_combustion ───────────────────────────────────
 
-describe('createActivityEntry — mobile_combustion', () => {
+describe('createActivityEntry - mobile_combustion', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('returns success for valid mobile_combustion entry', async () => {
@@ -658,9 +658,9 @@ describe('createActivityEntry — mobile_combustion', () => {
   });
 });
 
-// ── createActivityEntry — save error + history filter ────────────────────────
+// ── createActivityEntry - save error + history filter ────────────────────────
 
-describe('createActivityEntry — save + history', () => {
+describe('createActivityEntry - save + history', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('returns error when entryRepo.save throws', async () => {
@@ -697,9 +697,9 @@ describe('createActivityEntry — save + history', () => {
   });
 });
 
-// ── createActivityEntry — anomaly detection ───────────────────────────────────
+// ── createActivityEntry - anomaly detection ───────────────────────────────────
 
-describe('createActivityEntry — anomaly detection', () => {
+describe('createActivityEntry - anomaly detection', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('saves anomaly flags when detector returns anomalies', async () => {
@@ -745,9 +745,9 @@ describe('createActivityEntry — anomaly detection', () => {
   });
 });
 
-// ── importActivityCsv — ownership check ──────────────────────────────────────
+// ── importActivityCsv - ownership check ──────────────────────────────────────
 
-describe('importActivityCsv — ownership check', () => {
+describe('importActivityCsv - ownership check', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('returns error when all rows are invalid (no valid rows to process)', async () => {
@@ -840,9 +840,9 @@ function mockBulkImportClient() {
   return mockSupabase;
 }
 
-// ── importActivityBulk — validación de tamaño ────────────────────────────────
+// ── importActivityBulk - validación de tamaño ────────────────────────────────
 
-describe('importActivityBulk — límite de tamaño', () => {
+describe('importActivityBulk - límite de tamaño', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('returns error when not authenticated', async () => {
@@ -918,9 +918,9 @@ describe('importActivityBulk — límite de tamaño', () => {
   });
 });
 
-// ── voidActivityEntry — validación UUID ───────────────────────────────────────
+// ── voidActivityEntry - validación UUID ───────────────────────────────────────
 
-describe('voidActivityEntry — validación de ID', () => {
+describe('voidActivityEntry - validación de ID', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('returns error when not authenticated', async () => {
@@ -971,9 +971,9 @@ describe('voidActivityEntry — validación de ID', () => {
   });
 });
 
-// ── deleteActivityEntry — validación UUID ─────────────────────────────────────
+// ── deleteActivityEntry - validación UUID ─────────────────────────────────────
 
-describe('deleteActivityEntry — validación de ID', () => {
+describe('deleteActivityEntry - validación de ID', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('returns error when not authenticated', async () => {
@@ -998,7 +998,7 @@ describe('deleteActivityEntry — validación de ID', () => {
   });
 });
 
-// ── deleteActivityEntry — control de roles ────────────────────────────────────
+// ── deleteActivityEntry - control de roles ────────────────────────────────────
 
 const ENTRY_ID = '00000000-0000-4000-8000-000000000099';
 
@@ -1045,7 +1045,7 @@ function mockDeleteClient({
   return client;
 }
 
-describe('deleteActivityEntry — control de roles', () => {
+describe('deleteActivityEntry - control de roles', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('returns error when user has supplier role (not admin/consultant)', async () => {
@@ -1104,9 +1104,9 @@ describe('deleteActivityEntry — control de roles', () => {
   });
 });
 
-// ── voidActivityEntry — success path ─────────────────────────────────────────
+// ── voidActivityEntry - success path ─────────────────────────────────────────
 
-describe('voidActivityEntry — success', () => {
+describe('voidActivityEntry - success', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('returns success for open period with valid reason', async () => {
@@ -1133,7 +1133,7 @@ describe('voidActivityEntry — success', () => {
   });
 });
 
-// ── voidActivityEntry — control de roles ──────────────────────────────────────
+// ── voidActivityEntry - control de roles ──────────────────────────────────────
 
 function mockVoidClient({
   memberRole = 'admin' as string | null,
@@ -1162,7 +1162,7 @@ function mockVoidClient({
   return client;
 }
 
-describe('voidActivityEntry — control de roles', () => {
+describe('voidActivityEntry - control de roles', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('returns error when user has supplier role (not admin/consultant)', async () => {
@@ -1220,9 +1220,9 @@ describe('voidActivityEntry — control de roles', () => {
   });
 });
 
-// ── findOrCreatePeriod — TOCTOU 23505 retry ───────────────────────────────────
+// ── findOrCreatePeriod - TOCTOU 23505 retry ───────────────────────────────────
 
-describe('createActivityEntry — findOrCreatePeriod 23505 retry', () => {
+describe('createActivityEntry - findOrCreatePeriod 23505 retry', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('recovers from unique constraint violation by retrying select', async () => {
@@ -1290,9 +1290,9 @@ function makeMaybySingleChain(data: unknown) {
   return makeMaybeSingleChain(data);
 }
 
-// ── importActivityCsv — límite de filas ───────────────────────────────────────
+// ── importActivityCsv - límite de filas ───────────────────────────────────────
 
-describe('importActivityCsv — límite de filas', () => {
+describe('importActivityCsv - límite de filas', () => {
   beforeEach(() => vi.clearAllMocks());
 
   function mockAuthOnly() {
@@ -1336,9 +1336,9 @@ describe('importActivityCsv — límite de filas', () => {
   });
 });
 
-// ── voidActivityEntry — estado under_review ───────────────────────────────────
+// ── voidActivityEntry - estado under_review ───────────────────────────────────
 
-describe('voidActivityEntry — estado under_review', () => {
+describe('voidActivityEntry - estado under_review', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('bloquea a consultores cuando el periodo está bajo revisión', async () => {
@@ -1360,9 +1360,9 @@ describe('voidActivityEntry — estado under_review', () => {
   });
 });
 
-// ── voidActivityEntry — revalidatePath ────────────────────────────────────────
+// ── voidActivityEntry - revalidatePath ────────────────────────────────────────
 
-describe('voidActivityEntry — revalidatePath', () => {
+describe('voidActivityEntry - revalidatePath', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('invalida /dashboard y /suppliers al anular con éxito', async () => {
@@ -1378,7 +1378,7 @@ describe('voidActivityEntry — revalidatePath', () => {
   });
 });
 
-// ── voidActivityEntry — resolución automática de anomalías ────────────────────
+// ── voidActivityEntry - resolución automática de anomalías ────────────────────
 
 const ENTRY_ID_FLAGS = '00000000-0000-4000-8000-000000000099';
 
@@ -1426,7 +1426,7 @@ function makeMaybySingleChainById(data: unknown) {
   return c;
 }
 
-describe('voidActivityEntry — resolución automática de anomalías', () => {
+describe('voidActivityEntry - resolución automática de anomalías', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('llama a anomaly_flags.update tras anular correctamente', async () => {
@@ -1441,7 +1441,7 @@ describe('voidActivityEntry — resolución automática de anomalías', () => {
     expect(client.from).toHaveBeenNthCalledWith(4, 'anomaly_flags');
   });
 
-  it('no lanza si la resolución de flags falla — la anulación ya fue aplicada', async () => {
+  it('no lanza si la resolución de flags falla - la anulación ya fue aplicada', async () => {
     mockVoidClientWithFlags({ flagsFail: true });
     const result = await voidActivityEntry(
       null,

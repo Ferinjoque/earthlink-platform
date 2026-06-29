@@ -224,7 +224,7 @@ export function CsvImportPanel() {
                 fontFamily: 'var(--font-mono)',
               }}
             >
-              .csv — hasta 5 MB
+              .csv - hasta 5 MB
             </span>
           </div>
         )}
@@ -307,10 +307,10 @@ export function CsvImportPanel() {
                     <td style={estiloCeldaPreview}>
                       {row.data
                         ? `${row.data.supplier_id.slice(0, 8)}… / ${row.data.year_month}`
-                        : '—'}
+                        : '-'}
                     </td>
                     <td style={estiloCeldaPreview}>{row.data?.source_type ?? '?'}</td>
-                    <td style={estiloCeldaPreview}>{row.data?.secondary || '—'}</td>
+                    <td style={estiloCeldaPreview}>{row.data?.secondary || '-'}</td>
                     <td style={estiloCeldaPreview}>{row.data?.raw_quantity ?? '?'}</td>
                     <td style={estiloCeldaPreview}>{row.data?.raw_unit ?? '?'}</td>
                     <td style={estiloCeldaPreview}>

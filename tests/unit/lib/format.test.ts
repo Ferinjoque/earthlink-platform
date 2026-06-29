@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { formatearKg } from '@/lib/format';
 
 describe('formatearKg', () => {
-  it('returns em-dash for zero', () => {
-    expect(formatearKg(0)).toBe('—');
+  it('returns hyphen for zero', () => {
+    expect(formatearKg(0)).toBe('-');
   });
 
   it('returns kg with 2 decimals for values under 1 000', () => {
@@ -26,17 +26,17 @@ describe('formatearKg', () => {
     expect(formatearKg(1_000)).toMatch(/tCO₂e$/);
   });
 
-  it('returns em-dash for NaN', () => {
-    expect(formatearKg(NaN)).toBe('—');
+  it('returns hyphen for NaN', () => {
+    expect(formatearKg(NaN)).toBe('-');
   });
 
-  it('returns em-dash for Infinity', () => {
-    expect(formatearKg(Infinity)).toBe('—');
-    expect(formatearKg(-Infinity)).toBe('—');
+  it('returns hyphen for Infinity', () => {
+    expect(formatearKg(Infinity)).toBe('-');
+    expect(formatearKg(-Infinity)).toBe('-');
   });
 
-  it('returns em-dash for negative values', () => {
-    expect(formatearKg(-1)).toBe('—');
-    expect(formatearKg(-0.001)).toBe('—');
+  it('returns hyphen for negative values', () => {
+    expect(formatearKg(-1)).toBe('-');
+    expect(formatearKg(-0.001)).toBe('-');
   });
 });

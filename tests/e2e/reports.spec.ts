@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.use({ storageState: 'tests/e2e/.auth/user.json' });
 
-test.describe('Reportes — exportación', () => {
+test.describe('Reportes - exportación', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/reports');
     await page.waitForLoadState('networkidle');
@@ -13,7 +13,8 @@ test.describe('Reportes — exportación', () => {
   });
 
   test('muestra el TopBar con título Reportes', async ({ page }) => {
-    await expect(page.getByText('Reportes')).toBeVisible();
+    // Usar heading h1 exacto para evitar strict mode con sidebar + párrafos
+    await expect(page.getByRole('heading', { name: 'Reportes', level: 1 })).toBeVisible();
   });
 
   test('tiene sección de periodos exportables o estado vacío descriptivo', async ({ page }) => {

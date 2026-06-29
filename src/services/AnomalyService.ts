@@ -22,12 +22,12 @@ export class AnomalyService {
   static readonly MIN_BASELINE = 3;
 
   /**
-   * Detección pura — sin I/O.
+   * Detección pura, sin I/O.
    *
-   * Compara cada entrada actual contra las históricas del MISMO grupo
-   * (sourceType × secondary × rawUnit). Nunca se mezclan tipos de combustible,
-   * refrigerantes, regiones eléctricas ni unidades distintas en la misma línea base
-   * — mezclar unidades (kWh vs MWh) produce z-scores sin sentido, y mezclar
+   * Compara cada entrada actual contra las históricas del mismo grupo
+   * (sourceType, secondary y rawUnit). Nunca se mezclan tipos de combustible,
+   * refrigerantes, regiones eléctricas ni unidades distintas en la misma línea base.
+   * Mezclar unidades (kWh vs MWh) produce z-scores sin sentido, y mezclar
    * combustibles (diesel vs LPG) confunde patrones de consumo no relacionados.
    *
    * Usa desviación estándar muestral (ddof = 1) para estimación sin sesgo.

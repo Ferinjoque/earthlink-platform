@@ -36,7 +36,7 @@ export async function signIn(
         destination = url.pathname + url.search;
       }
     } catch {
-      // ruta inválida — usar destino por defecto
+      // ruta inválida: usar destino por defecto
     }
   }
   redirect(destination);

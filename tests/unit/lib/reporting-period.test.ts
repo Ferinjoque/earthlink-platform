@@ -60,7 +60,7 @@ describe('etiquetaEstadoPeriodo', () => {
 });
 
 // Tests para ramas de fallback en variantEstadoPeriodo
-describe('variantEstadoPeriodo — fallback', () => {
+describe('variantEstadoPeriodo - fallback', () => {
   it('returns neutral for unknown status values', () => {
     const unknown = 'archived' as unknown as PeriodStatus;
     expect(variantEstadoPeriodo(unknown)).toBe('neutral');

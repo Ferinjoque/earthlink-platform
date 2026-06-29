@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.use({ storageState: 'tests/e2e/.auth/user.json' });
 
-test.describe('Proveedores — lista y detalle', () => {
+test.describe('Proveedores - lista y detalle', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/suppliers');
     await page.waitForLoadState('networkidle');
@@ -13,7 +13,8 @@ test.describe('Proveedores — lista y detalle', () => {
   });
 
   test('muestra el TopBar con título Proveedores', async ({ page }) => {
-    await expect(page.getByText('Proveedores')).toBeVisible();
+    // Usar h1 exacto para evitar strict mode con sidebar nav + subtítulos
+    await expect(page.getByRole('heading', { name: 'Proveedores', level: 1 })).toBeVisible();
   });
 
   test('muestra al menos un proveedor en la lista', async ({ page }) => {

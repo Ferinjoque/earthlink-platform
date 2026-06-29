@@ -1,10 +1,10 @@
 /**
- * Pipeline de cálculo FP puro — sin I/O, sin efectos secundarios, sin mutación.
+ * Pipeline de cálculo FP puro: sin I/O ni efectos secundarios ni mutación.
  * Todas las entradas son inyectadas; las salidas son deterministas para las mismas entradas.
  *
- * Pasos: validateActivity → normalizeUnit → resolveFactor → applyFactor → stampProvenance
+ * Pasos: validateActivity, normalizeUnit, resolveFactor, applyFactor, stampProvenance.
  *
- * Caso especial: water_use y waste → scope 'none', CO2e = 0 (se registra consumo
+ * Caso especial: water_use y waste usan scope 'none', CO2e = 0 (se registra consumo
  * pero el Protocolo GHG no exige factor de emisión para estas categorías).
  */
 import { createHash } from 'node:crypto';
@@ -33,7 +33,7 @@ function err<T>(error: CalcError): CalcResult<T> {
   return { ok: false, error };
 }
 
-// Categorías sin emisiones GHG directas — CO2e = 0, scope = 'none'
+// Categorías sin emisiones GHG directas: CO2e = 0, scope = 'none'
 const NO_GHG_KINDS: ReadonlySet<ActivityKind['kind']> = new Set(['water_use', 'waste']);
 
 function validateActivity(record: ActivityRecord): CalcResult<ActivityRecord> {
@@ -136,7 +136,7 @@ function stampProvenance(
   return createHash('sha256').update(canonical, 'utf8').digest('hex');
 }
 
-// Hash de proveniencia para registros con CO2e = 0 (agua, residuos) — sin factor de emisión
+// Hash de proveniencia para registros con CO2e = 0 (agua, residuos), sin factor de emisión
 function stampProvenanceZero(record: ActivityRecord): string {
   const canonical = JSON.stringify({
     id: record.id,
@@ -251,8 +251,8 @@ export function score(totals: EvaluationTotals, history: readonly EvaluationTota
     }
   }
 
-  // Score normalizado: 0 tCO2e → 0, ≥1083 tCO2e → 65 (tope antes del ajuste por tendencia)
-  // Con tendencia 'up' +10 → máx 75 → nivel 'critical'. Se topa en 65 para que 'critical' sea alcanzable.
+  // Score normalizado: 0 tCO2e da 0; ≥1083 tCO2e da 65 (tope antes del ajuste por tendencia).
+  // Con tendencia 'up' se suma 10, hasta un máximo de 75 (nivel 'critical'). Se topa en 65 para que 'critical' sea alcanzable.
   const tCo2e = totals.totalCo2eKg / 1000;
   let rawScore = Math.round(Math.min(65, tCo2e * 0.06));
 

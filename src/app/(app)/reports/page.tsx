@@ -125,7 +125,7 @@ export default async function ReportesPage() {
     return {
       id: p.id,
       label: p.label,
-      supplier_name: supplierMap.get(p.supplier_id) ?? '—',
+      supplier_name: supplierMap.get(p.supplier_id) ?? '-',
       status: p.status as 'under_review' | 'locked',
       totalCo2eKg: resumen?.totalCo2eKg ?? 0,
       scope1Kg: resumen?.scope1Kg ?? 0,
@@ -178,7 +178,7 @@ export default async function ReportesPage() {
           maxWidth: 'var(--max-w-content)',
         }}
       >
-        {/* Cabecera editorial — oculta en impresión (reemplazada por portada dentro de ReportsPanel) */}
+        {/* Cabecera editorial: oculta en impresión (reemplazada por portada dentro de ReportsPanel) */}
         <div
           data-no-print
           className="animate-fade-up stagger-1"

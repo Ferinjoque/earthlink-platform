@@ -69,7 +69,7 @@ describe('AnomalyService.detect()', () => {
   });
 
   it('detects anomaly when z-score exceeds low threshold', () => {
-    // 4750 L vs baseline mean ~850 — z-score >> Z_THRESHOLD_LOW
+    // 4750 L vs baseline mean ~850 - z-score >> Z_THRESHOLD_LOW
     const result = svc.detect([makeEntry(4750)], historicalBaseline);
     expect(result).toHaveLength(1);
     expect(result[0]!.zScore).toBeGreaterThan(AnomalyService.Z_THRESHOLD_LOW);
@@ -119,7 +119,7 @@ describe('AnomalyService.detect()', () => {
 
 // ── Agrupación secundaria y por unidad (corrección crítica) ──────────────────
 
-describe('AnomalyService.detect() — secondary grouping', () => {
+describe('AnomalyService.detect() - secondary grouping', () => {
   const svc = new AnomalyService();
 
   it('does NOT flag diesel outlier when baseline is gasoline (different secondary)', () => {
@@ -134,7 +134,7 @@ describe('AnomalyService.detect() — secondary grouping', () => {
       sourceType: 'mobile_combustion',
     });
     const result = svc.detect([dieselEntry], gasolineHistory);
-    // Línea base gasolina, actual diesel — diferente clave de grupo → sin anomalía
+    // Línea base gasolina, actual diesel - diferente clave de grupo → sin anomalía
     expect(result).toHaveLength(0);
   });
 
@@ -204,11 +204,11 @@ describe('AnomalyService.detect() — secondary grouping', () => {
 
 // ── Agrupación por unidad ─────────────────────────────────────────────────────
 
-describe('AnomalyService.detect() — unit grouping', () => {
+describe('AnomalyService.detect() - unit grouping', () => {
   const svc = new AnomalyService();
 
   it('does NOT compare kWh entries against MWh baseline', () => {
-    // Histórico: 850 MWh/trimestre; actual: 850 kWh — parecería anomalía si se mezclan
+    // Histórico: 850 MWh/trimestre; actual: 850 kWh - parecería anomalía si se mezclan
     const mwhHistory = [
       makeEntry(850, { sourceType: 'purchased_electricity', activityKind: { kind: 'purchased_electricity', gridRegion: 'SEIN_PERU' }, rawUnit: 'MWh' }),
       makeEntry(840, { sourceType: 'purchased_electricity', activityKind: { kind: 'purchased_electricity', gridRegion: 'SEIN_PERU' }, rawUnit: 'MWh' }),
@@ -227,7 +227,7 @@ describe('AnomalyService.detect() — unit grouping', () => {
 
 // ── Calidad de mensajes ───────────────────────────────────────────────────────
 
-describe('AnomalyService.detect() — message content', () => {
+describe('AnomalyService.detect() - message content', () => {
   const svc = new AnomalyService();
 
   it('includes secondary in message when present', () => {
@@ -294,7 +294,7 @@ describe('AnomalyService._internals', () => {
   });
 
   it('zScore returns null when result would be Infinity (near-zero stddev from float precision)', () => {
-    // Valores extremadamente cercanos — stddev no es exactamente 0 pero z = value/stddev → Infinity
+    // Valores extremadamente cercanos - stddev no es exactamente 0 pero z = value/stddev → Infinity
     const tiny = Number.MIN_VALUE; // ~5e-324
     const pop = [tiny, tiny * 2, tiny * 3];
     const z = AnomalyService._internals.zScore(1e308, pop);
@@ -313,7 +313,7 @@ describe('AnomalyService._internals', () => {
   });
 
   it('zScore is signed (below mean returns negative z)', () => {
-    // 8 is 2σ below mean 10 — signed z should be -2.0
+    // 8 is 2σ below mean 10 - signed z should be -2.0
     const z = AnomalyService._internals.zScore(8, [9, 10, 11]);
     expect(z).toBeCloseTo(-2.0, 5);
   });
@@ -413,7 +413,7 @@ describe('AnomalyService._internals.groupKey', () => {
 
 // ── Casos límite ──────────────────────────────────────────────────────────────
 
-describe('AnomalyService.detect() — edge cases', () => {
+describe('AnomalyService.detect() - edge cases', () => {
   const svc = new AnomalyService();
 
   it('returns empty when current list is empty', () => {

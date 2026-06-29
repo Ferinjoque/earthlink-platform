@@ -23,7 +23,7 @@ export class AuditService {
         newValues: { status: 'locked' },
       });
     } catch {
-      // Log de auditoría no-crítico — no revertir un bloqueo ya aplicado en DB
+      // Log de auditoría no crítico: no revertir un bloqueo ya aplicado en DB
     }
     return locked;
   }
@@ -45,7 +45,7 @@ export class AuditService {
     const estadosPermitidos = AuditService.TRANSICIONES_VALIDAS[targetStatus];
     if (!estadosPermitidos.includes(period.status)) {
       throw new Error(
-        `Transición inválida: "${period.status}" → "${targetStatus}". Estado requerido: ${estadosPermitidos.join(' o ')}.`,
+        `Transición inválida: de "${period.status}" a "${targetStatus}". Estado requerido: ${estadosPermitidos.join(' o ')}.`,
       );
     }
 
@@ -56,7 +56,7 @@ export class AuditService {
         newValues: { status: targetStatus },
       });
     } catch {
-      // Log de auditoría no-crítico — no revertir una transición ya aplicada en DB
+      // Log de auditoría no crítico: no revertir una transición ya aplicada en DB
     }
     return updated;
   }

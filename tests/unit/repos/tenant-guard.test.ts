@@ -11,7 +11,7 @@ import { ActivityEntryRepository } from '../../../src/repos/ActivityEntryReposit
 import { ReportingPeriodRepository } from '../../../src/repos/ReportingPeriodRepository';
 import { AnomalyFlagRepository } from '../../../src/repos/AnomalyFlagRepository';
 
-describe('Guardia de tenant — repos tenant-scoped no exponen findAll()', () => {
+describe('Guardia de tenant - repos tenant-scoped no exponen findAll()', () => {
   const NULL_CLIENT = null as never;
 
   it('SupplierRepository.findAll() lanza error descriptivo', () => {

@@ -21,7 +21,7 @@ export interface VirtualMeter {
   supplier_id: string;
 }
 
-export type MonthData = Record<number, number>; // mes (1–12) → suma de cantidad
+export type MonthData = Record<number, number>; // mes (1 a 12) a suma de cantidad
 
 export interface MeterYearSummary {
   meter: VirtualMeter;
@@ -36,7 +36,7 @@ function meterId(e: EntryWithPeriod): string {
 
 function meterLabel(source_type: EmissionSourceType, secondary: string, unit: string): string {
   const fuente = ETIQUETAS_FUENTE[source_type] ?? source_type;
-  const sec = secondary ? ` — ${secondary}` : '';
+  const sec = secondary ? ` - ${secondary}` : '';
   const u = (ETIQUETA_UNIDAD as Record<string, string>)[unit] ?? unit;
   return `${fuente}${sec} (${u})`;
 }
@@ -84,7 +84,7 @@ export function aggregateByMonth(entries: EntryWithPeriod[], year: number): Mete
 
   for (const e of yearEntries) {
     const id = meterId(e);
-    const month = parsePeriodDate(e.period_start)!.month; // 1–12 (enero–diciembre)
+    const month = parsePeriodDate(e.period_start)!.month; // 1 a 12 (enero a diciembre)
 
     if (!meterMap.has(id)) {
       meterMap.set(id, {
@@ -136,7 +136,7 @@ export const MONTH_LABELS = [
 ];
 
 export function formatQuantity(value: number, unit: string): string {
-  if (value === 0) return '—';
+  if (value === 0) return '-';
   const formatted =
     value >= 1_000_000
       ? `${(value / 1_000_000).toFixed(2)} M`

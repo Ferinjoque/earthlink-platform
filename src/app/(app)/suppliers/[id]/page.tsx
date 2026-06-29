@@ -331,7 +331,7 @@ export default async function DetalleProveedorPage({
                             color: co2e ? 'var(--color-ink-1)' : 'var(--color-ink-3)',
                           }}
                         >
-                          {co2e !== undefined ? formatearCo2e(co2e) : '—'}
+                          {co2e !== undefined ? formatearCo2e(co2e) : '-'}
                         </td>
                       </tr>
                     );

@@ -22,10 +22,10 @@ export class AuditLogRepository {
   }
 
   update(): never {
-    throw new Error('AuditLogRepository es solo escritura — update no permitido');
+    throw new Error('AuditLogRepository es solo escritura: update no permitido');
   }
 
   delete(): never {
-    throw new Error('AuditLogRepository es solo escritura — delete no permitido');
+    throw new Error('AuditLogRepository es solo escritura: delete no permitido');
   }
 }

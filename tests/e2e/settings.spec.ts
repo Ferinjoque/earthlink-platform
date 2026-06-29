@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.use({ storageState: 'tests/e2e/.auth/user.json' });
 
-test.describe('Configuración — cuenta y organización', () => {
+test.describe('Configuración - cuenta y organización', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/settings');
     await page.waitForLoadState('networkidle');
@@ -13,8 +13,9 @@ test.describe('Configuración — cuenta y organización', () => {
   });
 
   test('muestra las 3 secciones: Cuenta, Organización, Permisos', async ({ page }) => {
-    await expect(page.getByText('Cuenta')).toBeVisible();
-    await expect(page.getByText('Organización')).toBeVisible();
+    // Headings exactos para evitar strict mode con breadcrumbs y párrafos
+    await expect(page.getByRole('heading', { name: 'Cuenta', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Organización', exact: true })).toBeVisible();
     await expect(page.getByText('Permisos y rol')).toBeVisible();
   });
 
@@ -23,8 +24,8 @@ test.describe('Configuración — cuenta y organización', () => {
   });
 
   test('muestra el rol del usuario', async ({ page }) => {
-    // Administrador, Consultor o Proveedor
-    await expect(page.getByText(/Administrador|Consultor|Proveedor/)).toBeVisible();
+    // Restringir a main para evitar match con "Proveedores" del sidebar
+    await expect(page.locator('main').getByText(/Administrador|Consultor|Proveedor/)).toBeVisible();
   });
 
   test('las secciones tienen animación de entrada stagger', async ({ page }) => {

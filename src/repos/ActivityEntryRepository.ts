@@ -11,9 +11,9 @@ export class ActivityEntryRepository extends SupabaseRepository<ActivityEntry> {
   protected readonly tableName = 'activity_entries';
   protected override readonly selectColumns = COLS;
 
-  /** Prohibido en repos tenant-scoped — usar findByPeriodId() o findByPeriodIds(). */
+  /** Prohibido en repos tenant-scoped. Usar findByPeriodId() o findByPeriodIds(). */
   override findAll(): never {
-    throw new Error('ActivityEntryRepository.findAll() no permitido — usar findByPeriodId()');
+    throw new Error('ActivityEntryRepository.findAll() no permitido. Usar findByPeriodId()');
   }
 
   async findByPeriodId(periodId: string): Promise<readonly ActivityEntry[]> {
