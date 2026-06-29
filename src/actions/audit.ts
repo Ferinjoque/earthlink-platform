@@ -114,15 +114,13 @@ export async function calculatePeriod(
     return { error: 'Error al calcular las emisiones del periodo. Intenta nuevamente.' };
   }
 
-  // Detección de anomalías usando entradas del año anterior como línea base
+  // Detección de anomalías usando todos los demás periodos del proveedor como línea base
   try {
-    const priorYear = period.startDate.getUTCFullYear() - 1;
     const { data: priorPeriodsRaw } = await supabase
       .from('reporting_periods')
       .select('id')
       .eq('supplier_id', period.supplierId)
-      .gte('start_date', `${priorYear}-01-01`)
-      .lte('start_date', `${priorYear}-12-31`);
+      .neq('id', periodId);
     const priorPeriodIds = (priorPeriodsRaw ?? []).map((p: { id: string }) => p.id);
 
     const [currentEntries, historicalEntries] = await Promise.all([
@@ -344,13 +342,11 @@ export async function recalculatePeriod(
 
   // Re-ejecutar detección de anomalías con los resultados actualizados
   try {
-    const priorYear = period.startDate.getUTCFullYear() - 1;
     const { data: priorPeriodsRaw } = await supabase
       .from('reporting_periods')
       .select('id')
       .eq('supplier_id', period.supplierId)
-      .gte('start_date', `${priorYear}-01-01`)
-      .lte('start_date', `${priorYear}-12-31`);
+      .neq('id', periodId);
     const priorPeriodIds = (priorPeriodsRaw ?? []).map((p: { id: string }) => p.id);
 
     const [currentEntries, historicalEntries] = await Promise.all([
@@ -485,22 +481,17 @@ export async function calculateYear(
     periodRepo,
   );
 
-  // Pre-cargar tablas de referencia una sola vez para todo el lote (K periodos → 1 fetch cada una)
-  const priorYear = year - 1;
-  const [factorTable, conversionTable, priorPeriodsYearRaw] = await Promise.all([
+  // Pre-cargar tablas de referencia una sola vez para todo el lote (K periodos → 1 fetch cada una).
+  // Línea base de anomalías: todas las entradas del proveedor; por candidato se excluye su propio periodo.
+  const [factorTable, conversionTable, allPeriodsRaw] = await Promise.all([
     emissionFactorRepoYear.buildFactorTable(),
     unitConversionRepoYear.buildConversionTable(),
-    supabase
-      .from('reporting_periods')
-      .select('id')
-      .eq('supplier_id', supplier_id)
-      .gte('start_date', `${priorYear}-01-01`)
-      .lte('start_date', `${priorYear}-12-31`),
+    supabase.from('reporting_periods').select('id').eq('supplier_id', supplier_id),
   ]);
-  const priorPeriodIdsYear = (
-    (priorPeriodsYearRaw as { data: Array<{ id: string }> | null }).data ?? []
+  const allPeriodIdsYear = (
+    (allPeriodsRaw as { data: Array<{ id: string }> | null }).data ?? []
   ).map((p) => p.id);
-  const historicalEntriesYear = await activityEntryRepoYear.findByPeriodIds(priorPeriodIdsYear);
+  const allSupplierEntries = await activityEntryRepoYear.findByPeriodIds(allPeriodIdsYear);
 
   const adminClientYear = createAdminClient();
   let calculated = 0;
@@ -518,10 +509,13 @@ export async function calculateYear(
     try {
       await evalSvc.evaluateWithCache(p.id, factorTable, conversionTable);
 
-      // Detección de anomalías contra línea base del año anterior (no crítica)
+      // Detección de anomalías contra el resto de periodos del proveedor (no crítica)
       try {
-        const currentEntries = await activityEntryRepoYear.findByPeriodId(p.id);
-        const anomalies = new AnomalyService().detect(currentEntries, historicalEntriesYear);
+        const currentEntries = allSupplierEntries.filter((e) => e.reportingPeriodId === p.id);
+        const historicalForCandidate = allSupplierEntries.filter(
+          (e) => e.reportingPeriodId !== p.id,
+        );
+        const anomalies = new AnomalyService().detect(currentEntries, historicalForCandidate);
         if (currentEntries.length > 0) {
           await supabase
             .from('anomaly_flags')

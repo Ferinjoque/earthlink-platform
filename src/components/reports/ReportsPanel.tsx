@@ -67,7 +67,13 @@ function sumarPeriodos(periodos: PeriodoExportable[]): {
 
 export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps) {
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set());
-  const [colapsados, setColapsados] = useState<Set<number>>(new Set());
+  // Al entrar, solo el año más reciente queda expandido; el resto colapsado.
+  const [colapsados, setColapsados] = useState<Set<number>>(() => {
+    const years = [...new Set(periodos.map((p) => p.year))];
+    if (years.length === 0) return new Set();
+    const maxYear = Math.max(...years);
+    return new Set(years.filter((y) => y !== maxYear));
+  });
   const [summaryMounted, setSummaryMounted] = useState(false);
   const [summaryIn, setSummaryIn] = useState(false);
   const [state, formAction, isPending] = useActionState<ExportCsvState | null, FormData>(
