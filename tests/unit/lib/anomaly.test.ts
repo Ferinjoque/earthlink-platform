@@ -29,7 +29,7 @@ describe('traducirMensajeAnomalia', () => {
     expect(result).not.toContain('consumption of');
   });
 
-  it('translates old AnomalyService English format — stationary_combustion', () => {
+  it('translates old AnomalyService English format - stationary_combustion', () => {
     const msg =
       'stationary_combustion quantity 1200 L is 3.50σ above historical mean of 500 L. Verify.';
     const result = traducirMensajeAnomalia(msg);
@@ -41,7 +41,7 @@ describe('traducirMensajeAnomalia', () => {
     expect(result).not.toContain('stationary_combustion quantity');
   });
 
-  it('translates old AnomalyService English format — purchased_electricity', () => {
+  it('translates old AnomalyService English format - purchased_electricity', () => {
     const msg =
       'purchased_electricity quantity 8000 kWh is 6.20σ above historical mean of 2000 kWh. Verify.';
     const result = traducirMensajeAnomalia(msg);
@@ -50,7 +50,7 @@ describe('traducirMensajeAnomalia', () => {
     expect(result).toContain('6.20σ');
   });
 
-  it('translates old AnomalyService English format — fugitive', () => {
+  it('translates old AnomalyService English format - fugitive', () => {
     const msg = 'fugitive quantity 45 kg is 45.88σ above historical mean of 1 kg. Verify.';
     const result = traducirMensajeAnomalia(msg);
     expect(result).toContain('Emisiones fugitivas');

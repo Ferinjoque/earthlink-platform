@@ -90,9 +90,9 @@ function CsvPreview({
                   {row.data
                     ? (supplierMap.get(row.data.supplier_id) ??
                       row.data.supplier_id.slice(0, 8) + '…')
-                    : '—'}
+                    : '-'}
                 </td>
-                <td style={tdPrev}>{row.data?.year_month ?? '—'}</td>
+                <td style={tdPrev}>{row.data?.year_month ?? '-'}</td>
                 <td style={tdPrev}>{row.data?.source_type ?? '?'}</td>
                 <td style={tdPrev}>{row.data?.raw_quantity ?? '?'}</td>
                 <td style={tdPrev}>{row.data?.raw_unit ?? '?'}</td>
@@ -415,7 +415,7 @@ function ArchivoTab({ suppliers }: { suppliers: Supplier[] }) {
                   margin: 'var(--space-1) 0 0',
                 }}
               >
-                .csv · .xlsx — hasta 5 MB
+                .csv · .xlsx - hasta 5 MB
               </p>
             </div>
           </div>
@@ -469,7 +469,7 @@ function ArchivoTab({ suppliers }: { suppliers: Supplier[] }) {
             }}
           >
             <span style={{ fontSize: '10px' }}>▶</span>
-            IDs de proveedores — necesarios para el CSV
+            IDs de proveedores - necesarios para el CSV
           </summary>
           <div
             style={{

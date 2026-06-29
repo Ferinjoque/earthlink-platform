@@ -210,7 +210,7 @@ export async function generateXlsxTemplate(suppliers: XlsxSupplier[]): Promise<U
     });
   }
 
-  const sepRow = ws.addRow(['← Borrar filas de ejemplo antes de importar →']);
+  const sepRow = ws.addRow(['Borrar filas de ejemplo antes de importar']);
   sepRow.getCell(1).font = { italic: true, color: { argb: 'FF888888' }, size: 9 };
 
   // Agregar 50 filas en blanco para datos
@@ -367,8 +367,8 @@ export async function generateXlsxTemplate(suppliers: XlsxSupplier[]): Promise<U
   wsHelp.addRow([]);
   const notaRow = wsHelp.addRow([
     'NOTAS',
-    'water_use y waste son indicadores GRESB — no afectan el CO₂e total.',
-    'kgal_us = mil galones US · ton_us = tonelada corta (EE.UU.) · Mes en formato YYYY-MM (ej: 2026-01)',
+    'water_use y waste son indicadores GRESB y no afectan el CO₂e total.',
+    'kgal_us = mil galones US; ton_us = tonelada corta (EE.UU.); Mes en formato YYYY-MM (ej: 2026-01)',
   ]);
   notaRow.getCell(1).font = { bold: true, size: 10 };
   notaRow.getCell(2).font = { size: 9, color: { argb: 'FF555555' } };

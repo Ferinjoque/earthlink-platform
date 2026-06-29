@@ -31,7 +31,7 @@ export function MonthlyChart({ summary }: MonthlyChartProps) {
       viewBox={`0 0 ${SVG_W} ${SVG_H}`}
       preserveAspectRatio="xMidYMid meet"
       role="img"
-      aria-label={`Consumo mensual — ${summary.meter.label}`}
+      aria-label={`Consumo mensual - ${summary.meter.label}`}
       style={{ maxHeight: '200px', display: 'block' }}
     >
       {/* Líneas de cuadrícula + etiquetas Y */}

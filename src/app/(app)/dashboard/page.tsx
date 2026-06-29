@@ -484,7 +484,7 @@ export default async function PanelPage({ searchParams }: PageProps) {
                     lineHeight: 1,
                   }}
                 >
-                  {verifiedCo2eKg > 0 ? verified.valor : '—'}
+                  {verifiedCo2eKg > 0 ? verified.valor : '-'}
                 </span>
                 {verifiedCo2eKg > 0 && (
                   <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-3)' }}>
@@ -1009,7 +1009,7 @@ export default async function PanelPage({ searchParams }: PageProps) {
                                       color: 'var(--color-ink-3)',
                                     }}
                                   >
-                                    —
+                                    -
                                   </span>
                                 </td>
                               );

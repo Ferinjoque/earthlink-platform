@@ -71,7 +71,7 @@ export function MonthlyTable({ summary }: MonthlyTableProps) {
                     width: '160px',
                   }}
                 >
-                  {val > 0 ? formatQuantity(val, summary.meter.unit) : '—'}
+                  {val > 0 ? formatQuantity(val, summary.meter.unit) : '-'}
                 </td>
                 <td style={{ padding: '7px 16px' }}>
                   {val > 0 && (

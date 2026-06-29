@@ -31,9 +31,9 @@ export default async function ConfiguracionPage() {
   const role = membership?.role ?? 'supplier';
   const roleLabel = ROLE_LABELS[role] ?? role;
 
-  let orgName = '—';
-  let orgCountry = '—';
-  let orgIndustry = '—';
+  let orgName = '-';
+  let orgCountry = '-';
+  let orgIndustry = '-';
 
   if (membership?.organization_id) {
     const { data: rawOrg } = await supabase
@@ -50,14 +50,14 @@ export default async function ConfiguracionPage() {
     }
   }
 
-  const email = user.email ?? '—';
+  const email = user.email ?? '-';
   const createdAt = user.created_at
     ? new Date(user.created_at).toLocaleDateString('es-PE', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
       })
-    : '—';
+    : '-';
 
   return (
     <>

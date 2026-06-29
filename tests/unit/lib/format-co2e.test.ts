@@ -10,7 +10,7 @@ function formatearCo2e(kg: number): { valor: string; unidad: string } {
   return { valor: kg.toFixed(1), unidad: 'kg CO₂e' };
 }
 
-describe('formatearCo2e — unidades correctas', () => {
+describe('formatearCo2e - unidades correctas', () => {
   it('0 kg → "0 kg"', () => {
     expect(formatearCo2e(0)).toEqual({ valor: '0', unidad: 'kg' });
   });

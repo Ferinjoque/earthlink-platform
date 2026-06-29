@@ -43,12 +43,12 @@ export default async function ActividadPage({ searchParams }: PageProps) {
     'organization_id' | 'supplier_id' | 'role'
   >[];
 
-  // Rol 'supplier' → acceso directo a su proveedor
+  // Rol 'supplier': acceso directo a su proveedor
   const supplierRoleIds = memberships
     .map((m) => m.supplier_id)
     .filter((id): id is string => id !== null);
 
-  // admin/consultant → acceso a todos los proveedores de sus orgs
+  // admin/consultant: acceso a todos los proveedores de sus orgs
   const adminOrgIds = memberships
     .filter((m) => m.role === 'admin' || m.role === 'consultant')
     .map((m) => m.organization_id);
@@ -131,7 +131,7 @@ export default async function ActividadPage({ searchParams }: PageProps) {
 
   const entryIds = entriesData.map((e) => e.id);
 
-  // Mapa period_id → label para mostrar etiqueta en la lista
+  // Mapa de period_id a label para mostrar etiqueta en la lista
   const periodLabelMap = new Map(periodsData.map((p) => [p.id, p.label]));
   const periodStatusMap = new Map(periodsData.map((p) => [p.id, p.status]));
 
@@ -176,7 +176,7 @@ export default async function ActividadPage({ searchParams }: PageProps) {
     return {
       id: e.id,
       period_id: e.reporting_period_id,
-      period_label: periodLabelMap.get(e.reporting_period_id) ?? '—',
+      period_label: periodLabelMap.get(e.reporting_period_id) ?? '-',
       period_status: periodStatusMap.get(e.reporting_period_id),
       source_type: e.source_type,
       raw_quantity: e.raw_quantity,
@@ -276,7 +276,7 @@ export default async function ActividadPage({ searchParams }: PageProps) {
           gap: 'var(--space-8)',
         }}
       >
-        {/* Registro de consumo — unified panel */}
+        {/* Registro de consumo: panel unificado */}
         <section className="animate-fade-up stagger-1">
           <CabeceraSección
             titulo="Registro de consumo"

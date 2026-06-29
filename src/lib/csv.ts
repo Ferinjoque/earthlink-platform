@@ -33,7 +33,7 @@ export interface ParsedCsvRow {
   errors: string[];
 }
 
-// Campo canónico → aliases aceptados de columna (en minúsculas, espacios normalizados)
+// Campo canónico y sus aliases aceptados de columna (en minúsculas, espacios normalizados)
 const COL_ALIASES: Record<string, string[]> = {
   supplier_id: ['supplier_id', 'id_proveedor', 'proveedor_id', 'id proveedor', 'proveedor'],
   year_month: [
@@ -162,7 +162,7 @@ function buildColMap(headerLine: string, sep: string): Map<string, number> | nul
 
 function looksLikeHeader(line: string): boolean {
   const firstCol = line.split(/[,;\t]/)[0]?.trim() ?? '';
-  // UUID en primera columna → fila de datos (supplier_id), no es encabezado
+  // UUID en primera columna: es fila de datos (supplier_id), no es encabezado
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(firstCol)) {
     return false;
   }
@@ -288,7 +288,7 @@ export function getCsvTemplate(suppliers?: SupplierRef[]): string {
     suppliers && suppliers.length > 0
       ? [
           '# ============================================================',
-          '# REFERENCIA DE PROVEEDORES — copiar el UUID correspondiente',
+          '# REFERENCIA DE PROVEEDORES - copiar el UUID correspondiente',
           ...suppliers.map((s) => `# ${s.name}: ${s.id}`),
           '# ============================================================',
         ]

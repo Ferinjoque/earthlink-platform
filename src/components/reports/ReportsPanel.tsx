@@ -252,7 +252,7 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
           overflow: hidden;
         }
 
-        /* (tarjeta resumen usa transición inline — no se necesita animación CSS) */
+        /* (tarjeta resumen usa transición inline; no se necesita animación CSS) */
       `}</style>
 
       {/* Enlace de descarga oculto */}
@@ -449,7 +449,7 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
           </p>
         ) : (
           <>
-            {/* ── Resumen de selección — animated mount/unmount ── */}
+            {/* Resumen de selección con mount/unmount animado */}
             {summaryMounted && (
               <div
                 style={{
@@ -647,7 +647,7 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
                       </button>
                     </div>
 
-                    {/* Tabla de periodos del año — siempre montada, colapsada via CSS */}
+                    {/* Tabla de periodos del año: siempre montada, colapsada via CSS */}
                     <div
                       className={`rp-year-content${colapsado ? ' rp-year-content--collapsed' : ''}`}
                     >
@@ -756,7 +756,7 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
                                       whiteSpace: 'nowrap',
                                     }}
                                   >
-                                    {p.scope1Kg > 0 ? formatearKg(p.scope1Kg) : '—'}
+                                    {p.scope1Kg > 0 ? formatearKg(p.scope1Kg) : '-'}
                                   </td>
                                   <td
                                     style={{
@@ -767,7 +767,7 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
                                       whiteSpace: 'nowrap',
                                     }}
                                   >
-                                    {p.scope2Kg > 0 ? formatearKg(p.scope2Kg) : '—'}
+                                    {p.scope2Kg > 0 ? formatearKg(p.scope2Kg) : '-'}
                                   </td>
                                   <td
                                     style={{
@@ -865,7 +865,7 @@ export function ReportsPanel({ periodos, historial, orgName }: ReportsPanelProps
                         fontFamily: 'var(--font-mono)',
                       }}
                     >
-                      Descarga iniciada — {state.filename}
+                      Descarga iniciada: {state.filename}
                     </span>
                     <span
                       style={{

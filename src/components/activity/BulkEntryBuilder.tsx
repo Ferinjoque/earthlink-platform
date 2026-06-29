@@ -764,7 +764,7 @@ function TableMode({
                           display: 'block',
                         }}
                       >
-                        —
+                        -
                       </span>
                     )}
                   </td>
@@ -992,7 +992,7 @@ export function BulkEntryBuilder({ suppliers, defaultSupplierId }: BulkEntryBuil
 
   function handleListo() {
     startUploadTransition(async () => {
-      // Promise.allSettled — un fallo no aborta los demás uploads
+      // Promise.allSettled: un fallo no aborta los demás uploads
       const settled = await Promise.allSettled(
         Array.from(pendingEvidences.entries()).map(([eid, file]) => {
           const fd = new FormData();

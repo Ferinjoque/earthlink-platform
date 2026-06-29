@@ -103,7 +103,7 @@ describe('AuditService.lock()', () => {
     expect(meta).toMatchObject({ oldValues: { status: 'open' } });
   });
 
-  it('no lanza si el log de auditoría falla — el bloqueo ya aplicado no debe revertirse', async () => {
+  it('no lanza si el log de auditoría falla - el bloqueo ya aplicado no debe revertirse', async () => {
     const repos = makeRepos();
     repos.auditLogRepo.log.mockRejectedValue(new Error('DB error'));
     const service = new AuditService(repos.reportingPeriodRepo, repos.auditLogRepo);
@@ -165,7 +165,7 @@ describe('AuditService.transitionStatus()', () => {
     expect(reportingPeriodRepo.updateStatus).toHaveBeenCalledWith('period-001', 'under_review');
   });
 
-  it('no lanza si el log de auditoría falla — la transición ya aplicada no debe revertirse', async () => {
+  it('no lanza si el log de auditoría falla - la transición ya aplicada no debe revertirse', async () => {
     const repos = makeRepos(makePeriod('open'));
     repos.auditLogRepo.log.mockRejectedValue(new Error('DB error'));
     const service = new AuditService(repos.reportingPeriodRepo, repos.auditLogRepo);

@@ -1,6 +1,6 @@
 /**
  * Tipos base del motor de cálculo FP.
- * Todos los tipos son readonly — la mutación nunca está permitida dentro de calc/.
+ * Todos los tipos son readonly: la mutación nunca está permitida dentro de calc/.
  */
 
 export type GridRegion = 'SEIN_PERU' | 'LATAM_AVG' | 'US_AVERAGE' | 'EU_AVERAGE';
@@ -10,7 +10,7 @@ export type WaterSubtype =
   | 'potable_mixed' // Potable mixto (interior/exterior)
   | 'potable_indoor' // Potable solo interior
   | 'reclaimed_mixed' // Recuperada mixta
-  | 'well_outdoor' // Pozo — exterior
+  | 'well_outdoor' // Pozo, exterior
   | 'other_mixed'; // Otra fuente mixta
 
 export type WasteSubtype =
@@ -34,7 +34,7 @@ export type ActivityKind =
 export type GhgScope = 'scope1' | 'scope2' | 'none';
 
 export type Unit =
-  // Energía — estándar para gas y electricidad
+  // Energía: estándar para gas y electricidad
   | 'kWh'
   | 'MWh'
   | 'GJ'
@@ -44,15 +44,15 @@ export type Unit =
   | 'MMBtu'
   | 'MBtu'
   | 'BTU'
-  | 'kBtu' // Mil BTU — gas natural / combustibles en EE.UU. (GRESB)
+  | 'kBtu' // Mil BTU: gas natural y combustibles en EE.UU. (GRESB)
   // Volumen de gas natural
   | 'm3_ng'
   | 'ft3_ng'
-  // Combustibles líquidos — estándar para diesel, GLP, gasolina, fuel oil
+  // Combustibles líquidos: estándar para diesel, GLP, gasolina, fuel oil
   | 'L'
   | 'gallon'
   | 'imp_gallon'
-  // Masa — estándar para refrigerantes
+  // Masa: estándar para refrigerantes
   | 'kg'
   | 'tonne'
   | 'lb'

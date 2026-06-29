@@ -41,7 +41,7 @@ const BASE_RESULT: EmissionResult = {
 
 // ── findByPeriodId ─────────────────────────────────────────────────────────────
 
-describe('EmissionResultRepository.findByPeriodId — mapeo de scope', () => {
+describe('EmissionResultRepository.findByPeriodId - mapeo de scope', () => {
   it('mapea scope=1 a scope1', async () => {
     const row = { activity_entry_id: 'e1', emission_factor_id: null, normalized_quantity: 100, normalized_unit: 'm3', co2e_kg: 210, scope: 1, calc_version: '1.0', calc_hash: 'h1' };
     const client = makeClient([row]);
@@ -111,7 +111,7 @@ describe('EmissionResultRepository.insertMany', () => {
 
 // ── append-only guards ─────────────────────────────────────────────────────────
 
-describe('EmissionResultRepository — métodos prohibidos', () => {
+describe('EmissionResultRepository - métodos prohibidos', () => {
   it('update lanza error en español', () => {
     const repo = new EmissionResultRepository({} as never);
     expect(() => repo.update()).toThrow(/solo escritura/);

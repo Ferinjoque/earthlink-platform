@@ -460,7 +460,7 @@ describe('exportCsv', () => {
       reporting_periods: [{ id: PERIOD_ID, label: 'Q1-2026', supplier_id: SUPPLIER_ID }],
       suppliers: [{ id: SUPPLIER_ID, name: 'Test Corp', organization_id: ORG_ID }],
       emission_results: resultsData,
-      // Solo la entrada activa — la anulada (ENTRY_ID) fue filtrada por .is('voided_at', null)
+      // Solo la entrada activa - la anulada (ENTRY_ID) fue filtrada por .is('voided_at', null)
       activity_entries: [{ id: ACTIVE_ENTRY_ID, source_type: 'purchased_electricity', raw_quantity: 10, raw_unit: 'kWh' }],
       report_exports: [],
     };

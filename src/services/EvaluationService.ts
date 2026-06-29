@@ -9,7 +9,7 @@ import type {
 import type { ReportingPeriod } from '../domain/ReportingPeriod';
 import type { ActivityEntry } from '../domain/ActivityEntry';
 
-// Categorías sin factor GHG — CO2e = 0, no se persisten en emission_results
+// Categorías sin factor GHG: CO2e = 0, no se persisten en emission_results
 const NO_GHG_KINDS: ReadonlySet<string> = new Set(['water_use', 'waste']);
 import type { ActivityEntryRepository } from '../repos/ActivityEntryRepository';
 import type { EmissionFactorRepository } from '../repos/EmissionFactorRepository';

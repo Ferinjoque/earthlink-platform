@@ -53,7 +53,7 @@ function makeEntry(notes?: string | null): ActivityEntry {
 
 // ── Dominio ActivityEntry ─────────────────────────────────────────────────────
 
-describe('ActivityEntry — campo notes', () => {
+describe('ActivityEntry - campo notes', () => {
   it('acepta notes como string y lo expone', () => {
     const entry = makeEntry('Caldera A');
     expect(entry.notes).toBe('Caldera A');
@@ -83,7 +83,7 @@ describe('ActivityEntry — campo notes', () => {
 
 // ── ActivityEntryRepository.toEntity (fila → entidad) ───────────────────────
 
-describe('ActivityEntryRepository.toEntity — notas', () => {
+describe('ActivityEntryRepository.toEntity - notas', () => {
   it('mapea notes string desde la fila de BD', () => {
     const repo = makeRepo();
     const row = { ...makeRowBase(), notes: 'Caldera A' };
@@ -108,7 +108,7 @@ describe('ActivityEntryRepository.toEntity — notas', () => {
 
 // ── ActivityEntryRepository.toRow (entidad → fila) ───────────────────────────
 
-describe('ActivityEntryRepository.toRow — notas', () => {
+describe('ActivityEntryRepository.toRow - notas', () => {
   it('incluye notes string en la fila resultante', () => {
     const repo = makeRepo();
     const entry = makeEntry('Generador de emergencia');

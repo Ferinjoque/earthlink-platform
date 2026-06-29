@@ -249,7 +249,7 @@ export async function getEvidenceFiles(entryId: string): Promise<EvidenceFileVie
 
 /**
  * Carga archivos de evidencia para múltiples entradas en una sola query.
- * Devuelve un mapa entry_id → archivos con URLs firmadas.
+ * Devuelve un mapa de entry_id a archivos con URLs firmadas.
  */
 const UUID_BATCH_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -369,7 +369,7 @@ export async function deleteEvidence(
 
   if (!file) return { error: 'Archivo no encontrado' };
 
-  // Verificar siempre que el usuario pertenece a la org — incluso si es el uploader,
+  // Verificar siempre que el usuario pertenece a la org, incluso si es el uploader,
   // porque su membresía puede haber sido revocada o degradada desde que subió el archivo.
   type EntryJoin = {
     reporting_periods: {
@@ -411,7 +411,7 @@ export async function deleteEvidence(
   const { error: dbError } = await supabase.from('evidence_files').delete().eq('id', fileId);
   if (dbError) return { error: 'Error al eliminar el registro. Intenta nuevamente.' };
 
-  // Borrar de Storage — si falla, el registro ya fue eliminado (archivo huérfano recuperable)
+  // Borrar de Storage; si falla, el registro ya fue eliminado (archivo huérfano recuperable)
   const admin = createAdminClient();
   await admin.storage.from('evidence').remove([file.storage_path]);
 

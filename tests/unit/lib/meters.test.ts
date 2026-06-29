@@ -194,8 +194,8 @@ describe('aggregateByMonth', () => {
 // ── formatQuantity ────────────────────────────────────────────────────────────
 
 describe('formatQuantity', () => {
-  it('returns em-dash for zero', () => {
-    expect(formatQuantity(0, 'kWh')).toBe('—');
+  it('returns hyphen for zero', () => {
+    expect(formatQuantity(0, 'kWh')).toBe('-');
   });
 
   it('formats small integer values without suffix', () => {

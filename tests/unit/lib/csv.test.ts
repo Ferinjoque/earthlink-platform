@@ -74,7 +74,7 @@ describe('parseCsvText', () => {
     expect(rows[0]!.errors.length).toBeGreaterThan(0);
   });
 
-  it('accepts zero quantity (nonnegative — useful for ESG periods with no consumption)', () => {
+  it('accepts zero quantity (nonnegative - useful for ESG periods with no consumption)', () => {
     const csv = `${VALID_UUID},${VALID_YM},stationary_combustion,diesel,0,L,`;
     const rows = parseCsvText(csv);
     expect(rows[0]!.errors).toHaveLength(0);
@@ -126,7 +126,7 @@ describe('parseCsvText', () => {
   });
 
   it('positional parse handles row with fewer than 7 columns (undefined fields default to empty)', () => {
-    // Fila con solo 4 columnas — raw_unit y notes undefined → activa el fallback ?? ''
+    // Fila con solo 4 columnas - raw_unit y notes undefined → activa el fallback ?? ''
     const csv = `${VALID_UUID},${VALID_YM},stationary_combustion,1000`;
     const rows = parseCsvText(csv);
     expect(rows).toHaveLength(1);
@@ -260,7 +260,7 @@ describe('getCsvTemplate', () => {
     expect(firstLine).toBe('supplier_id,year_month,source_type,secondary,raw_quantity,raw_unit,data_quality,notes');
   });
 
-  it('has at least 8 lines — one header plus example rows for all source types', () => {
+  it('has at least 8 lines - one header plus example rows for all source types', () => {
     const template = getCsvTemplate();
     const lines = template.split('\n').filter(Boolean);
     expect(lines.length).toBeGreaterThanOrEqual(8);
@@ -289,7 +289,7 @@ describe('getCsvTemplate', () => {
 
   // ── Pruebas con plantilla como entrada ───────────────────────────────────
 
-  it('header and comment lines are skipped — parseCsvText returns only data rows', () => {
+  it('header and comment lines are skipped - parseCsvText returns only data rows', () => {
     const template = getCsvTemplate();
     const dataLines = template
       .split('\n')
@@ -331,7 +331,7 @@ describe('getCsvTemplate', () => {
   });
 });
 
-describe('parseCsvText — Spanish alias header', () => {
+describe('parseCsvText - Spanish alias header', () => {
   // Usa el patrón de alias exacto documentado en getCsvTemplate
   it('recognizes proveedor_id,mes,fuente,combustible,cantidad,unidad,notas aliases', () => {
     const REAL_UUID = '00000000-0000-4000-8000-000000000001';
@@ -367,7 +367,7 @@ describe('parseCsvText — Spanish alias header', () => {
   });
 });
 
-describe('parseCsvText — detectDelimiter on multi-line input', () => {
+describe('parseCsvText - detectDelimiter on multi-line input', () => {
   it('detects semicolon delimiter from header + data row', () => {
     const REAL_UUID = '00000000-0000-4000-8000-000000000001';
     const csv = [

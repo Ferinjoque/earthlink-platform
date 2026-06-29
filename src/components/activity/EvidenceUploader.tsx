@@ -116,7 +116,7 @@ export function EvidenceUploader({
     const file = inputRef.current?.files?.[0];
     if (!file) return;
     setPendingFile(file);
-    // En modo batch: notificar al padre, no subir aquí
+    // En modo batch solo se notifica al padre; la subida ocurre después
     onPendingFileChange?.(file);
   }
 

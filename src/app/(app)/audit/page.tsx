@@ -265,7 +265,7 @@ export default async function AuditoriaPage({ searchParams }: PageProps) {
     id: p.id,
     label: p.label,
     supplier_id: p.supplier_id,
-    supplier_name: supplierMap.get(p.supplier_id) ?? '—',
+    supplier_name: supplierMap.get(p.supplier_id) ?? '-',
     status: p.status as PeriodStatus,
     start_date: p.start_date,
     end_date: p.end_date,
@@ -390,7 +390,7 @@ export default async function AuditoriaPage({ searchParams }: PageProps) {
                   margin: 'var(--space-1) 0 0',
                 }}
               >
-                Registros CO₂e inmutables para {selectedYear} — estas cifras ya no pueden
+                Registros CO₂e inmutables para {selectedYear}. Estas cifras ya no pueden
                 modificarse.
               </p>
             </div>

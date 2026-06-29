@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     template: '%s · EarthLink',
   },
   description:
-    'Plataforma de auditoría de huella de carbono para cadenas de suministro — Alcance 1 y 2.',
+    'Plataforma de auditoría de huella de carbono para cadenas de suministro de Alcance 1 y 2.',
 };
 
 export const viewport: Viewport = {

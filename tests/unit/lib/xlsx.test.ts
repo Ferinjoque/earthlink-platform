@@ -21,7 +21,7 @@ describe('generateXlsxTemplate', () => {
 
   it('produces a valid XLSX binary (starts with PK zip magic bytes)', async () => {
     const buf = await generateXlsxTemplate([TEST_SUPPLIER]);
-    // Los archivos XLSX son ZIP — los primeros dos bytes son 0x50 0x4B ('PK')
+    // Los archivos XLSX son ZIP - los primeros dos bytes son 0x50 0x4B ('PK')
     expect(buf[0]).toBe(0x50);
     expect(buf[1]).toBe(0x4b);
   });
@@ -44,7 +44,7 @@ describe('generateXlsxTemplate', () => {
 
 // ── parseXlsxBuffer roundtrip ────────────────────────────────────────────────
 
-describe('parseXlsxBuffer — roundtrip with generateXlsxTemplate', () => {
+describe('parseXlsxBuffer - roundtrip with generateXlsxTemplate', () => {
   it('returns an array of ParsedCsvRow objects', async () => {
     const buf = await generateXlsxTemplate([TEST_SUPPLIER]);
     const rows = await parseXlsxBuffer(buf.buffer as ArrayBuffer);
@@ -64,7 +64,7 @@ describe('parseXlsxBuffer — roundtrip with generateXlsxTemplate', () => {
     }
   });
 
-  it('example rows parse successfully — supplier UUID matches the one passed in', async () => {
+  it('example rows parse successfully - supplier UUID matches the one passed in', async () => {
     const buf = await generateXlsxTemplate([TEST_SUPPLIER]);
     const rows = await parseXlsxBuffer(buf.buffer as ArrayBuffer);
     const validRows = rows.filter((r) => r.data !== null);
@@ -77,7 +77,7 @@ describe('parseXlsxBuffer — roundtrip with generateXlsxTemplate', () => {
   it('separator row (← Borrar filas…) is skipped and not present in output', async () => {
     const buf = await generateXlsxTemplate([TEST_SUPPLIER]);
     const rows = await parseXlsxBuffer(buf.buffer as ArrayBuffer);
-    // La fila separadora empieza con '←' — no debe aparecer como fila de datos
+    // La fila separadora empieza con '←' - no debe aparecer como fila de datos
     const hasSeparator = rows.some(
       (r) =>
         r.data === null &&
@@ -94,7 +94,7 @@ describe('parseXlsxBuffer — roundtrip with generateXlsxTemplate', () => {
     );
     const sourceTypes = new Set(validRows.map((r) => r.data.source_type));
     // La plantilla incluye stationary_combustion (×2), purchased_electricity, mobile_combustion,
-    // fugitive, purchased_steam, water_use, waste — 7 tipos distintos
+    // fugitive, purchased_steam, water_use, waste - 7 tipos distintos
     expect(sourceTypes.size).toBe(7);
   });
 
@@ -157,13 +157,13 @@ describe('parseXlsxBuffer — roundtrip with generateXlsxTemplate', () => {
   it('returns empty array for an empty ArrayBuffer', async () => {
     const emptyBuffer = new ArrayBuffer(0);
     // ExcelJS lanzará error con buffer inválido; parseXlsxBuffer debe propagarlo
-    // Este test documenta ese comportamiento — puede lanzar en lugar de devolver []
+    // Este test documenta ese comportamiento - puede lanzar en lugar de devolver []
     try {
       const rows = await parseXlsxBuffer(emptyBuffer);
       // Si no lanza, el resultado debe ser un array
       expect(Array.isArray(rows)).toBe(true);
     } catch (err) {
-      // Aceptable — ExcelJS rechaza buffers malformados
+      // Aceptable - ExcelJS rechaza buffers malformados
       expect(err).toBeDefined();
     }
   });
@@ -180,9 +180,9 @@ describe('parseXlsxBuffer — roundtrip with generateXlsxTemplate', () => {
   });
 });
 
-// ── parseXlsxBuffer — multiple suppliers ────────────────────────────────────
+// ── parseXlsxBuffer - multiple suppliers ────────────────────────────────────
 
-describe('parseXlsxBuffer — fallback supplier UUID when none provided', () => {
+describe('parseXlsxBuffer - fallback supplier UUID when none provided', () => {
   it('uses fallback UUID 00000000-0000-4000-8000-000000000001 for empty supplier list', async () => {
     const buf = await generateXlsxTemplate([]);
     const rows = await parseXlsxBuffer(buf.buffer as ArrayBuffer);

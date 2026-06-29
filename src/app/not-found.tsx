@@ -34,7 +34,7 @@ export default function NotFound() {
       `}</style>
 
       <main className="nf-root">
-        {/* Ilustración SVG — árbol con hoja caída, paleta forest */}
+        {/* Ilustración SVG - árbol con hoja caída, paleta forest */}
         <svg
           className="nf-illustration"
           xmlns="http://www.w3.org/2000/svg"
@@ -128,7 +128,7 @@ export default function NotFound() {
             transition: 'background var(--duration-fast), color var(--duration-fast)',
           }}
         >
-          ← Volver al panel
+          Volver al panel
         </Link>
       </main>
     </>

@@ -57,8 +57,8 @@ export function PeriodActions({ periodId, status }: PeriodActionsProps) {
 
   useEffect(() => {
     if (calcState?.success) {
-      const tco2e = calcState.totals ? (calcState.totals.totalCo2eKg / 1000).toFixed(3) : '—';
-      toast(`Listo — ${tco2e} tCO₂e calculados. Pendiente de revisión.`, 'success');
+      const tco2e = calcState.totals ? (calcState.totals.totalCo2eKg / 1000).toFixed(3) : '-';
+      toast(`Listo: ${tco2e} tCO₂e calculados. Pendiente de revisión.`, 'success');
       router.refresh();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -66,7 +66,7 @@ export function PeriodActions({ periodId, status }: PeriodActionsProps) {
 
   useEffect(() => {
     if (lockState?.success) {
-      toast('Periodo bloqueado — los datos son ahora inmutables.', 'success');
+      toast('Periodo bloqueado. Los datos son ahora inmutables.', 'success');
       router.refresh();
     }
   }, [lockState?.success, toast, router]);

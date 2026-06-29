@@ -69,7 +69,7 @@ export const OPCIONES_SECUNDARIAS: Partial<
   purchased_electricity: [
     {
       value: 'SEIN_PERU',
-      label: 'SEIN — Perú',
+      label: 'SEIN - Perú',
       ayuda:
         'Sistema Eléctrico Interconectado Nacional del Perú. Factor MINEM 2023: ~0.4517 kg CO₂e/kWh.',
     },
