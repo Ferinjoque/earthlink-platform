@@ -47,5 +47,9 @@
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^4.1.6"
   },
-  "packageManager": "npm@10"
+  "packageManager": "npm@10",
+  "overrides": {
+    "handlebars": "^4.7.9",
+    "postcss": "^8.5.16"
+  }
 }
