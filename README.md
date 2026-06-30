@@ -1,7 +1,7 @@
 # EarthLink Platform
 
 [![Gate · main](https://github.com/Ferinjoque/earthlink-platform/actions/workflows/main-gate.yml/badge.svg)](https://github.com/Ferinjoque/earthlink-platform/actions/workflows/main-gate.yml)
-![Version](https://img.shields.io/badge/version-1.1.0-blue)
+![Version](https://img.shields.io/badge/version-1.2.1-blue)
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5%20strict-3178C6)
 ![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20RLS-3ECF8E)
@@ -30,8 +30,6 @@ Multi-tenant SaaS platform for Scope 1 and Scope 2 greenhouse gas (GHG) accounti
 the GHG Protocol. Replaces manual spreadsheet tracking with an audited, immutable ledger:
 every tCO₂e reported is traceable back to the raw input, the versioned emission factor, the
 calculation engine version, and the submitting user.
-
-**Live demo:** [earthlink-rust.vercel.app](https://earthlink-rust.vercel.app)
 
 ---
 
