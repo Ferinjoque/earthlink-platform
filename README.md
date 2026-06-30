@@ -1,7 +1,7 @@
 # EarthLink Platform
 
 [![Gate · main](https://github.com/Ferinjoque/earthlink-platform/actions/workflows/main-gate.yml/badge.svg)](https://github.com/Ferinjoque/earthlink-platform/actions/workflows/main-gate.yml)
-[![Release](https://img.shields.io/github/v/release/Ferinjoque/earthlink-platform?label=release&color=blue)](https://github.com/Ferinjoque/earthlink-platform/releases/latest)
+[![Release](https://img.shields.io/badge/release-v1.2.2-blue)](https://github.com/Ferinjoque/earthlink-platform/releases/latest)
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5%20strict-3178C6)
 ![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20RLS-3ECF8E)
