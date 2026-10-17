@@ -49,7 +49,7 @@
   },
   "packageManager": "npm@10",
   "overrides": {
-    "handlebars": "^4.7.9",
+    "handlebars": "^4.7.10",
     "postcss": "^8.5.16"
   }
 }
